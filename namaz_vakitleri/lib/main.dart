@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
-import 'config/color_system.dart';
-import 'config/localization.dart';
-import 'providers/app_settings.dart';
-import 'providers/prayer_provider.dart';
-import 'screens/home_screen.dart';
-import 'services/notification_service.dart';
+import 'package:namaz_vakitleri/config/color_system.dart';
+import 'package:namaz_vakitleri/config/localization.dart';
+import 'package:namaz_vakitleri/providers/app_settings.dart';
+import 'package:namaz_vakitleri/providers/prayer_provider.dart';
+import 'package:namaz_vakitleri/screens/home_screen.dart';
+import 'package:namaz_vakitleri/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

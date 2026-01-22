@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../config/color_system.dart';
-import '../config/localization.dart';
-import '../providers/app_settings.dart';
+import 'package:namaz_vakitleri/config/color_system.dart';
+import 'package:namaz_vakitleri/config/localization.dart';
+import 'package:namaz_vakitleri/providers/app_settings.dart';
 import '../providers/prayer_provider.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/qibla_compass_widget.dart';
@@ -14,191 +14,186 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-
+class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-    _animationController.repeat();
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Consumer2<AppSettings, PrayerProvider>(
-        builder: (context, settings, prayerProvider, _) {
-          final isDark = Theme.of(context).brightness == Brightness.dark;
-          final locale = settings.language;
-          final isRTL = AppLocalizations.isRTL(locale);
+    return Consumer2<AppSettings, PrayerProvider>(
+      builder: (context, settings, prayerProvider, _) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final locale = settings.language;
+        final isRTL = AppLocalizations.isRTL(locale);
 
-          return Directionality(
-            textDirection:
-                isRTL ? TextDirection.rtl : TextDirection.ltr,
-            child: Column(
-              children: [
-                // Top Bar
-                _buildTopBar(
-                  context,
-                  settings,
-                  prayerProvider,
-                  isDark,
-                  locale,
-                ),
+        // Choose home background based on current active prayer (fallback to next prayer)
+        final currentPrayerName = prayerProvider.activePrayer?.name ?? prayerProvider.nextPrayer?.name;
+        final homeBackground = currentPrayerName != null
+                ? AppColors.getPrayerTimeBackground(currentPrayerName, isDark)
+                : AppColors.getBackground(isDark);
 
-                // Main Content - Scrollable
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.xl,
-                        vertical: AppSpacing.xl,
-                      ),
-                      child: Column(
-                        children: [
-                          // Loading State
-                          if (prayerProvider.isLoading)
-                            Center(
-                              child: Column(
-                                children: [
-                                  SizedBox(height: AppSpacing.xxxl),
-                                  const CircularProgressIndicator(),
-                                  SizedBox(height: AppSpacing.lg),
-                                  Text(
-                                    AppLocalizations.translate('loading', locale),
-                                    style: AppTypography.bodySmall.copyWith(
-                                      color: isDark
-                                          ? AppColors.darkTextSecondary
-                                          : AppColors.textSecondary,
-                                    ),
-                                  ),
-                                  SizedBox(height: AppSpacing.xxxl),
-                                ],
-                              ),
-                            ),
-
-                          // Error State
-                          if (prayerProvider.errorMessage.isNotEmpty &&
-                              !prayerProvider.isLoading)
-                            Center(
-                              child: Column(
-                                children: [
-                                  SizedBox(height: AppSpacing.xxxl),
-                                  Icon(
-                                    Icons.error_outline,
-                                    color: isDark
-                                        ? AppColors.darkAccentSecondary
-                                        : AppColors.accentSecondary,
-                                    size: 48,
-                                  ),
-                                  SizedBox(height: AppSpacing.lg),
-                                  Text(
-                                    'Hata',
-                                    style: AppTypography.h3.copyWith(
-                                      color: isDark
-                                          ? AppColors.darkTextPrimary
-                                          : AppColors.textPrimary,
-                                    ),
-                                  ),
-                                  SizedBox(height: AppSpacing.md),
-                                  Text(
-                                    prayerProvider.errorMessage,
-                                    textAlign: TextAlign.center,
-                                    style: AppTypography.bodySmall.copyWith(
-                                      color: isDark
-                                          ? AppColors.darkTextSecondary
-                                          : AppColors.textSecondary,
-                                    ),
-                                  ),
-                                  SizedBox(height: AppSpacing.xl),
-                                  SoftButton(
-                                    label: 'Tekrar Dene',
-                                    onPressed: () {
-                                      prayerProvider.fetchPrayerTimes();
-                                    },
-                                    locale: locale,
-                                  ),
-                                  SizedBox(height: AppSpacing.xxxl),
-                                ],
-                              ),
-                            ),
-
-                          // Countdown Section
-                          if (prayerProvider.nextPrayer != null &&
-                              !prayerProvider.isLoading &&
-                              prayerProvider.errorMessage.isEmpty)
-                            _buildCountdownSection(
-                              context,
-                              prayerProvider,
-                              settings,
-                              isDark,
-                              locale,
-                            ),
-
-                          SizedBox(height: AppSpacing.xxxl),
-
-                          // Prayer Times List
-                          if (prayerProvider.currentPrayerTimes != null &&
-                              !prayerProvider.isLoading &&
-                              prayerProvider.errorMessage.isEmpty)
-                            _buildPrayerTimesList(
-                              context,
-                              prayerProvider,
-                              isDark,
-                              locale,
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Footer - Nearby Mosques
-                Container(
-                  padding: EdgeInsets.all(AppSpacing.lg),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.darkBgSecondary
-                        : AppColors.lightBgSecondary,
-                    border: Border(
-                      top: BorderSide(
-                        color: isDark
-                            ? AppColors.darkDivider
-                            : AppColors.divider,
-                        width: 0.5,
-                      ),
-                    ),
-                  ),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: SoftButton(
-                      label: AppLocalizations.translate(
-                        'nearby_mosques',
-                        locale,
-                      ),
-                      onPressed: () {
-                        _showComingSoon(context, locale);
-                      },
-                      locale: locale,
-                    ),
-                  ),
-                ),
-              ],
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: isDark
+                    ? [AppColors.darkBg, AppColors.darkBgSecondary]
+                    : [AppColors.getBackground(false), Color(0xFF90CAF9)],
+              ),
             ),
-          );
-        },
-      ),
+            child: Directionality(
+              textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
+              child: Column(
+                children: [
+                  _buildTopBar(
+                    context,
+                    settings,
+                    prayerProvider,
+                    isDark,
+                    locale,
+                    homeBackground,
+                  ),
+
+                  // Main Content - Scrollable
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.md,
+                        ),
+                        child: Column(
+                          children: [
+                            // Loading State
+                            if (prayerProvider.isLoading)
+                              Center(
+                                child: Column(
+                                  children: [
+                                    SizedBox(height: AppSpacing.huge),
+                                    const CircularProgressIndicator(),
+                                    SizedBox(height: AppSpacing.lg),
+                                    Text(
+                                      AppLocalizations.translate('loading', locale),
+                                      style: AppTypography.bodySmall.copyWith(
+                                        color: isDark
+                                            ? AppColors.darkTextSecondary
+                                            : AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    SizedBox(height: AppSpacing.xxxl),
+                                  ],
+                                ),
+                              ),
+
+                            // Error State
+                            if (prayerProvider.errorMessage.isNotEmpty &&
+                                !prayerProvider.isLoading)
+                              Center(
+                                child: Column(
+                                  children: [
+                                    SizedBox(height: AppSpacing.xxxl),
+                                    Icon(
+                                      Icons.error_outline,
+                                      color: isDark
+                                          ? AppColors.darkAccentSecondary
+                                          : AppColors.accentSecondary,
+                                      size: 48,
+                                    ),
+                                    SizedBox(height: AppSpacing.lg),
+                                    Text(
+                                      'Hata',
+                                      style: AppTypography.h3.copyWith(
+                                        color: isDark
+                                            ? AppColors.darkTextPrimary
+                                            : AppColors.textPrimary,
+                                      ),
+                                    ),
+                                    SizedBox(height: AppSpacing.md),
+                                    Text(
+                                      prayerProvider.errorMessage,
+                                      textAlign: TextAlign.center,
+                                      style: AppTypography.bodySmall.copyWith(
+                                        color: isDark
+                                            ? AppColors.darkTextSecondary
+                                            : AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    SizedBox(height: AppSpacing.xl),
+                                    SoftButton(
+                                      label: 'Tekrar Dene',
+                                      onPressed: () {
+                                        prayerProvider.fetchPrayerTimes();
+                                      },
+                                      locale: locale,
+                                    ),
+                                    SizedBox(height: AppSpacing.xxxl),
+                                  ],
+                                ),
+                              ),
+
+                            // Countdown Section
+                            if (prayerProvider.nextPrayer != null &&
+                                !prayerProvider.isLoading &&
+                                prayerProvider.errorMessage.isEmpty)
+                              _buildCountdownSection(
+                                context,
+                                prayerProvider,
+                                settings,
+                                isDark,
+                                locale,
+                              ),
+
+                            SizedBox(height: AppSpacing.xxxl),
+
+                            // Prayer Times List
+                            if (prayerProvider.currentPrayerTimes != null &&
+                                !prayerProvider.isLoading &&
+                                prayerProvider.errorMessage.isEmpty)
+                              _buildPrayerTimesList(
+                                context,
+                                prayerProvider,
+                                isDark,
+                                locale,
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Footer - Nearby Mosques (transparent so background matches)
+                  Container(
+                    padding: EdgeInsets.all(AppSpacing.lg),
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                    ),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: SoftButton(
+                        label: AppLocalizations.translate('nearby_mosques', locale),
+                        onPressed: () {
+                          _showComingSoon(context, locale);
+                        },
+                        locale: locale,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -208,19 +203,15 @@ class _HomeScreenState extends State<HomeScreen>
     PrayerProvider prayerProvider,
     bool isDark,
     String locale,
+    Color homeBackground,
   ) {
     final isRTL = AppLocalizations.isRTL(locale);
 
     return Container(
       padding: EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkBg : AppColors.lightBg,
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? AppColors.darkDivider : AppColors.divider,
-            width: 0.5,
-          ),
-        ),
+        // transparent so top bar appears as part of the gradient/background
+        color: Colors.transparent,
       ),
       child: SafeArea(
         child: Row(
@@ -257,12 +248,12 @@ class _HomeScreenState extends State<HomeScreen>
                       children: [
                         Icon(
                           Icons.location_on_outlined,
-                          size: 16,
+                          size: 18,
                           color: isDark
                               ? AppColors.darkTextSecondary
                               : AppColors.textSecondary,
                         ),
-                        SizedBox(width: AppSpacing.sm),
+                        SizedBox(width: AppSpacing.md),
                         Flexible(
                           child: Text(
                             prayerProvider.savedCity.isEmpty
@@ -272,10 +263,11 @@ class _HomeScreenState extends State<HomeScreen>
                                   )
                                 : prayerProvider.savedCity,
                             style: AppTypography.bodySmall.copyWith(
+                              fontSize: 15,
                               color: isDark
                                   ? AppColors.darkTextPrimary
                                   : AppColors.textPrimary,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -329,23 +321,33 @@ class _HomeScreenState extends State<HomeScreen>
 
     return Column(
       children: [
-        Text(
-          '${AppLocalizations.translate(
-            nextPrayer.name.toLowerCase(),
-            locale,
-          )} ${AppLocalizations.translate('prayer_time_label', locale)}',
-          textAlign: TextAlign.center,
-          style: AppTypography.bodySmall.copyWith(
-            color: isDark
-                ? AppColors.darkTextSecondary
-                : AppColors.textSecondary,
-            fontWeight: FontWeight.w500,
+        Container(
+          constraints: BoxConstraints(minHeight: 120),
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          width: double.infinity,
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${AppLocalizations.translate(
+                  nextPrayer.name.toLowerCase(),
+                  locale,
+                )} ${AppLocalizations.translate('prayer_time_label', locale)}',
+                textAlign: TextAlign.center,
+                style: AppTypography.bodySmall.copyWith(
+                  fontSize: 16,
+                  color: isDark ? AppColors.darkAccentPrimary : AppColors.accentPrimary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              SizedBox(height: AppSpacing.xs),
+              CountdownDisplay(
+                countdown: prayerProvider.countdownDuration,
+                locale: locale,
+              ),
+            ],
           ),
-        ),
-        SizedBox(height: AppSpacing.lg),
-        CountdownDisplay(
-          countdown: prayerProvider.countdownDuration,
-          locale: locale,
         ),
       ],
     );
@@ -358,25 +360,57 @@ class _HomeScreenState extends State<HomeScreen>
     String locale,
   ) {
     final prayers = prayerProvider.currentPrayerTimes?.prayerTimesList ?? [];
+    Color mapPrayerToColor(String name) {
+      final n = name.toLowerCase();
+      if (n.contains('fajr') || n.contains('sabah') || n.contains('imsak')) return const Color(0xFFBBDEFB);
+      if (n.contains('dhuhr') || n.contains('öğle')) return const Color(0xFF90CAF9);
+      if (n.contains('asr') || n.contains('ikindi')) return const Color(0xFF64B5F6);
+      if (n.contains('maghrib') || n.contains('akşam')) return const Color(0xFF42A5F5);
+      if (n.contains('isha') || n.contains('yatsı')) return const Color(0xFF1E88E5);
+      return isDark ? AppColors.darkAccentPrimary : AppColors.accentPrimary;
+    }
 
     return Column(
       children: [
-        ...prayers.map(
-          (prayer) {
+        for (var i = 0; i < prayers.length; i++)
+          ...[(() {
+            final prayer = prayers[i];
+            final next = i + 1 < prayers.length ? prayers[i + 1] : null;
             final timeStr =
                 '${prayer.time.hour.toString().padLeft(2, '0')}:${prayer.time.minute.toString().padLeft(2, '0')}';
 
+            final currColor = mapPrayerToColor(prayer.name);
+            final nextColor = next != null ? mapPrayerToColor(next.name) : currColor;
+
             return Padding(
-              padding: EdgeInsets.only(bottom: AppSpacing.md),
-              child: PrayerTimeRow(
-                prayerName: prayer.name,
-                prayerTime: timeStr,
-                isActive: prayer.isActive,
-                locale: locale,
+              padding: EdgeInsets.only(bottom: AppSpacing.xs),
+              child: Column(
+                children: [
+                  PrayerTimeRow(
+                    prayerName: prayer.name,
+                    prayerTime: timeStr,
+                    isActive: prayer.isActive,
+                    locale: locale,
+                  ),
+                  if (next != null)
+                    Container(
+                      height: 2,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [
+                            currColor.withOpacity(0.12),
+                            nextColor.withOpacity(0.12),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
             );
-          },
-        ),
+          }())],
       ],
     );
   }
@@ -937,6 +971,8 @@ class CitySearchDialog extends StatefulWidget {
 class _CitySearchDialogState extends State<CitySearchDialog> {
   final TextEditingController _controller = TextEditingController();
   bool _isLoading = false;
+  final FocusNode _focusNode = FocusNode();
+  bool _hasFocus = false;
 
   // Popular cities in Turkey
   final List<String> _popularCities = [
@@ -989,6 +1025,16 @@ class _CitySearchDialogState extends State<CitySearchDialog> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      setState(() {
+        _hasFocus = _focusNode.hasFocus;
+      });
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = context.read<AppSettings>().language;
@@ -1017,6 +1063,8 @@ class _CitySearchDialogState extends State<CitySearchDialog> {
             // Search Field
             TextField(
               controller: _controller,
+              focusNode: _focusNode,
+              autofocus: true,
               enabled: !_isLoading,
               decoration: InputDecoration(
                 hintText: 'Istanbul, Ankara, Izmir...',
@@ -1078,56 +1126,58 @@ class _CitySearchDialogState extends State<CitySearchDialog> {
             
             SizedBox(height: AppSpacing.xl),
 
-            // Popular Cities
-            Text(
-              'Popüler Şehirler',
-              style: AppTypography.bodySmall.copyWith(
-                color: isDark
-                    ? AppColors.darkTextSecondary
-                    : AppColors.textSecondary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            SizedBox(height: AppSpacing.md),
-
-            // Cities Grid
-            Flexible(
-              child: SingleChildScrollView(
-                child: Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: _popularCities.map((city) {
-                    return GestureDetector(
-                      onTap: _isLoading ? null : () => _selectCity(city),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                          vertical: AppSpacing.sm,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.darkBgSecondary
-                              : AppColors.lightBgSecondary,
-                          border: Border.all(
-                            color: AppColors.divider,
-                            width: 0.5,
-                          ),
-                          borderRadius: BorderRadius.circular(AppRadius.md),
-                        ),
-                        child: Text(
-                          city,
-                          style: AppTypography.bodySmall.copyWith(
-                            color: isDark
-                                ? AppColors.darkTextPrimary
-                                : AppColors.textPrimary,
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
+            // Show Popular Cities only when field is not focused and empty
+            if (!_hasFocus && _controller.text.trim().isEmpty) ...[
+              Text(
+                'Popüler Şehirler',
+                style: AppTypography.bodySmall.copyWith(
+                  color: isDark
+                      ? AppColors.darkTextSecondary
+                      : AppColors.textSecondary,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-            ),
+              SizedBox(height: AppSpacing.md),
+
+              // Cities Grid
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: _popularCities.map((city) {
+                      return GestureDetector(
+                        onTap: _isLoading ? null : () => _selectCity(city),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                            vertical: AppSpacing.sm,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? AppColors.darkBgSecondary
+                                : AppColors.lightBgSecondary,
+                            border: Border.all(
+                              color: AppColors.divider,
+                              width: 0.5,
+                            ),
+                            borderRadius: BorderRadius.circular(AppRadius.md),
+                          ),
+                          child: Text(
+                            city,
+                            style: AppTypography.bodySmall.copyWith(
+                              color: isDark
+                                  ? AppColors.darkTextPrimary
+                                  : AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
             
             SizedBox(height: AppSpacing.xl),
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../config/color_system.dart';
+import 'package:namaz_vakitleri/config/color_system.dart';
 
 /// Qibla Compass - Shows direction to Mecca
 class QiblaCompass extends StatelessWidget {

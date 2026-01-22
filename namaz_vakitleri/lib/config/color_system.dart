@@ -1,231 +1,199 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
-/// Soft Pastel Color System - Lavender Theme
-/// All colors are low saturation, calm, spiritual tones
 class AppColors {
-  // Light Mode - Lavender Palette
-  static const Color lightBg = Color(0xFFEDE8FF); // LavenderVariant
-  static const Color lightBgSecondary = Color(0xFFF6F5FF); // OffWhite
+  // Light mode backgrounds
+  static const Color lightBg = Color(0xFFEBF5FB);
+  static const Color lightBgSecondary = Color(0xFFFAFAFA);
   
-  // Prayer Time Colors - Subtle Tints
-  static const Color fajrBg = Color(0xFFF0EAFF); // Purple-tinted
-  static const Color dhuhrBg = Color(0xFFF3F0FF); // Lavender-tinted
-  static const Color asrBg = Color(0xFFF1ECFF); // Purple-tinted
-  static const Color maghribBg = Color(0xFFF4F1FF); // Lavender-tinted
-  static const Color ishaBg = Color(0xFFEFEAFF); // Deep purple-tinted
+  // Prayer time backgrounds (light mode)
+  static const Color lightFajrBg = Color(0xFFD6EAF8);
+  static const Color lightSunriseBg = Color(0xFFAED6F1);
+  static const Color lightDhuhrBg = Color(0xFF5DADE2);
+  static const Color lightAsrBg = Color(0xFF3498DB);
+  static const Color lightMaghribBg = Color(0xFF2E86C1);
+  static const Color lightIshaBg = Color(0xFF1B4F72);
   
-  // Text Colors - Light Mode
-  static const Color textPrimary = Color(0xFF1C1820); // NearBlack
-  static const Color textSecondary = Color(0xFF2E2A36); // OnBackground
-  static const Color textLight = Color(0xFF655F76); // Muted lavender-gray
+  // Dark mode backgrounds
+  static const Color darkBg = Color(0xFF2A2633);
+  static const Color darkBgSecondary = Color(0xFF3D3645);
   
-  // Accent Colors
-  static const Color accentPrimary = Color(0xFF6359B1); // LavenderPrimary
-  static const Color accentSecondary = Color(0xFFD7D1F7); // LavenderSecondary
-  static const Color accentMint = Color(0xFFBEECD5); // MintPastel
+  // Prayer time backgrounds (dark mode)
+  static const Color darkFajrBg = Color(0xFF3B354E);
+  static const Color darkSunriseBg = Color(0xFF4A4359);
+  static const Color darkDhuhrBg = Color(0xFF3B354E);
+  static const Color darkAsrBg = Color(0xFF5A5268);
+  static const Color darkMaghribBg = Color(0xFF6B6379);
+  static const Color darkIshaBg = Color(0xFF7A7288);
   
-  // Dark Mode
-  static const Color darkBg = Color(0xFF2A2633); // Dark lavender
-  static const Color darkBgSecondary = Color(0xFF342E42); // Slightly lighter
+  // Text colors (all black per user requirement)
+  static const Color textPrimary = Color(0xFF000000);
+  static const Color textSecondary = Color(0xFF000000);
+  static const Color textLight = Color(0xFF000000);
+  static const Color darkTextPrimary = Color(0xFF000000);
+  static const Color darkTextSecondary = Color(0xFF000000);
+  static const Color darkTextLight = Color(0xFF000000);
   
-  // Prayer Time Colors - Dark Mode
-  static const Color darkFajrBg = Color(0xFF3D3651); // Dark purple-tinted
-  static const Color darkDhuhrBg = Color(0xFF3B354E); // Dark lavender-tinted
-  static const Color darkAsrBg = Color(0xFF3C354F); // Dark purple-tinted
-  static const Color darkMaghribBg = Color(0xFF39334C); // Dark lavender
-  static const Color darkIshaBg = Color(0xFF37304A); // Dark deep purple
+  // UI elements
+  static const Color accentMint = Color(0xFFBEECD5);
+  static const Color darkAccentMint = Color(0xFF8B9FA3);
+  static const Color accentPrimary = Color(0xFF5DADE2);
+  static const Color darkAccentPrimary = Color(0xFF3B80C0);
+  static const Color accentSecondary = Color(0xFF85C1E2);
+  static const Color darkAccentSecondary = Color(0xFF6AACDB);
   
-  // Text Colors - Dark Mode
-  static const Color darkTextPrimary = Color(0xFFFAF8FE); // Very light lavender
-  static const Color darkTextSecondary = Color(0xFFE8E4F0); // Light lavender-gray
-  static const Color darkTextLight = Color(0xFF9B96AB); // Muted lavender
+  // Dividers
+  static const Color divider = Color(0xFFE0E0E0);
+  static const Color darkDivider = Color(0xFF4A4359);
+  static const Color lightDivider = Color(0xFFE0E0E0);
   
-  // Accent Colors - Dark Mode
-  static const Color darkAccentPrimary = Color(0xFF9E95D6); // Lighter lavender
-  static const Color darkAccentSecondary = Color(0xFFB5ADCE); // Soft lavender
-  static const Color darkAccentMint = Color(0xFF97D4B3); // Soft mint
-  
-  // Borders & Dividers
-  static const Color divider = Color(0xFFCBC6E8); // SoftStroke
-  static const Color darkDivider = Color(0xFF4A4359); // Dark stroke
-  
-  // Active State (for prayer countdown)
-  static const Color activeCardBg = Color(0xFFF6F2FE); // LavenderPrimary @8%
-  
-  // Status Colors (Subtle)
+  // Status colors
   static const Color success = Color(0xFFB5D4A8);
   static const Color error = Color(0xFFD4A8A8);
   static const Color warning = Color(0xFFD4C4A8);
   
-  static Color getTextPrimary(bool isDark) =>
-      isDark ? darkTextPrimary : textPrimary;
+  // Theme-aware getters
+  static Color getTextPrimary(bool isDark) => isDark ? darkTextPrimary : textPrimary;
+  static Color getTextSecondary(bool isDark) => isDark ? darkTextSecondary : textSecondary;
+  static Color getTextLight(bool isDark) => isDark ? darkTextLight : textLight;
+  static Color getBackground(bool isDark) => isDark ? darkBg : lightBg;
+  static Color getDivider(bool isDark) => isDark ? darkDivider : lightDivider;
   
-  static Color getTextSecondary(bool isDark) =>
-      isDark ? darkTextSecondary : textSecondary;
-  
-  static Color getTextLight(bool isDark) =>
-      isDark ? darkTextLight : textLight;
-  
-  static Color getBackground(bool isDark) =>
-      isDark ? darkBg : lightBg;
-  
-  static Color getBackgroundSecondary(bool isDark) =>
-      isDark ? darkBgSecondary : lightBgSecondary;
-  
+  // Prayer time background getter with name mapping
   static Color getPrayerTimeBackground(String prayerName, bool isDark) {
-    if (isDark) {
-      switch (prayerName.toLowerCase()) {
-        case 'fajr':
-          return darkFajrBg;
-        case 'dhuhr':
-          return darkDhuhrBg;
-        case 'asr':
-          return darkAsrBg;
-        case 'maghrib':
-          return darkMaghribBg;
-        case 'isha':
-          return darkIshaBg;
-        default:
-          return darkBgSecondary;
-      }
-    } else {
-      switch (prayerName.toLowerCase()) {
-        case 'fajr':
-          return fajrBg;
-        case 'dhuhr':
-          return dhuhrBg;
-        case 'asr':
-          return asrBg;
-        case 'maghrib':
-          return maghribBg;
-        case 'isha':
-          return ishaBg;
-        default:
-          return lightBgSecondary;
-      }
+    final name = prayerName.toLowerCase().trim();
+    
+    // Imsak (Fajr) variants
+    if (name == 'imsak' || name == 'fajr' || name == 'sabah') {
+      return isDark ? darkFajrBg : lightFajrBg;
     }
+    
+    // Sunrise variants
+    if (name == 'sunrise' || name == 'gunes' || name == 'güneş') {
+      return isDark ? darkSunriseBg : lightSunriseBg;
+    }
+    
+    // Dhuhr (Noon) variants
+    if (name == 'dhuhr' || name == 'ogle' || name == 'öğle' || name == 'zuhr') {
+      return isDark ? darkDhuhrBg : lightDhuhrBg;
+    }
+    
+    // Asr (Afternoon) variants
+    if (name == 'asr' || name == 'ikindi' || name == 'asir') {
+      return isDark ? darkAsrBg : lightAsrBg;
+    }
+    
+    // Maghrib (Sunset) variants
+    if (name == 'maghrib' || name == 'akşam' || name == 'aksam' || name == 'magrib') {
+      return isDark ? darkMaghribBg : lightMaghribBg;
+    }
+    
+    // Isha (Night) variants
+    if (name == 'isha' || name == 'yatsi' || name == 'yatsı' || name == 'esha') {
+      return isDark ? darkIshaBg : lightIshaBg;
+    }
+    
+    // Default fallback
+    return isDark ? darkBg : lightBg;
   }
 }
 
-/// Spacing System - Inspired by Tailwind
 class AppSpacing {
-  static const double xs = 2;
-  static const double sm = 4;
-  static const double md = 8;
-  static const double lg = 12;
-  static const double xl = 16;
-  static const double xxl = 24;
-  static const double xxxl = 32;
-  static const double huge = 48;
+  static const double xs = 2.0;
+  static const double sm = 4.0;
+  static const double md = 8.0;
+  static const double lg = 12.0;
+  static const double xl = 16.0;
+  static const double xxl = 24.0;
+  static const double xxxl = 32.0;
+  static const double huge = 48.0;
 }
 
-/// Typography System
 class AppTypography {
-  static const String fontFamily = 'Inter'; // Modern, clean
-  
-  // Heading Styles
   static const TextStyle h1 = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 32,
-    fontWeight: FontWeight.w700,
-    letterSpacing: -0.5,
+    fontSize: 32.0,
+    fontWeight: FontWeight.bold,
+    color: Color(0xFF000000),
   );
   
   static const TextStyle h2 = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 24,
-    fontWeight: FontWeight.w700,
-    letterSpacing: -0.3,
+    fontSize: 24.0,
+    fontWeight: FontWeight.bold,
+    color: Color(0xFF000000),
   );
   
   static const TextStyle h3 = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 20,
-    fontWeight: FontWeight.w600,
-    letterSpacing: -0.2,
+    fontSize: 20.0,
+    fontWeight: FontWeight.bold,
+    color: Color(0xFF000000),
   );
   
-  // Body Styles
   static const TextStyle bodyLarge = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 16,
-    fontWeight: FontWeight.w500,
-    letterSpacing: -0.1,
+    fontSize: 16.0,
+    fontWeight: FontWeight.normal,
+    color: Color(0xFF000000),
   );
   
   static const TextStyle bodyMedium = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 14,
-    fontWeight: FontWeight.w400,
-    letterSpacing: 0,
+    fontSize: 14.0,
+    fontWeight: FontWeight.normal,
+    color: Color(0xFF000000),
   );
   
   static const TextStyle bodySmall = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 12,
-    fontWeight: FontWeight.w400,
-    letterSpacing: 0.2,
+    fontSize: 12.0,
+    fontWeight: FontWeight.normal,
+    color: Color(0xFF000000),
   );
   
-  // Special Styles
   static const TextStyle caption = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 11,
-    fontWeight: FontWeight.w400,
-    letterSpacing: 0.4,
+    fontSize: 10.0,
+    fontWeight: FontWeight.normal,
+    color: Color(0xFF000000),
   );
   
   static const TextStyle countdownLarge = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 56,
-    fontWeight: FontWeight.w700,
-    letterSpacing: -1,
+    fontSize: 48.0,
+    fontWeight: FontWeight.bold,
+    color: Color(0xFF000000),
   );
   
   static const TextStyle countdownLabel = TextStyle(
-    fontFamily: fontFamily,
-    fontSize: 14,
-    fontWeight: FontWeight.w400,
-    letterSpacing: 0.2,
+    fontSize: 12.0,
+    fontWeight: FontWeight.normal,
+    color: Color(0xFF000000),
   );
 }
 
-/// Opacity System
 class AppOpacity {
   static const double full = 1.0;
   static const double high = 0.87;
-  static const double medium = 0.6;
+  static const double medium = 0.60;
   static const double low = 0.38;
   static const double veryLow = 0.12;
 }
 
-/// Border Radius - Soft, modern
 class AppRadius {
-  static const double none = 0;
-  static const double sm = 6;
-  static const double md = 12;
-  static const double lg = 16;
-  static const double xl = 24;
-  static const double full = 999;
+  static const double none = 0.0;
+  static const double xs = 4.0;
+  static const double sm = 8.0;
+  static const double md = 12.0;
+  static const double lg = 16.0;
+  static const double xl = 20.0;
+  static const double full = 999.0;
 }
 
-/// Shadow System - Very subtle
 class AppShadows {
-  static const List<BoxShadow> subtle = [
-    BoxShadow(
-      color: Color(0x00000000),
-      blurRadius: 2,
-      offset: Offset(0, 1),
-    ),
-  ];
+  static const BoxShadow subtle = BoxShadow(
+    color: Color(0x1A000000),
+    blurRadius: 2.0,
+    offset: Offset(0, 1),
+  );
   
-  static const List<BoxShadow> soft = [
-    BoxShadow(
-      color: Color(0x0A000000),
-      blurRadius: 8,
-      offset: Offset(0, 2),
-    ),
-  ];
+  static const BoxShadow soft = BoxShadow(
+    color: Color(0x24000000),
+    blurRadius: 8.0,
+    offset: Offset(0, 2),
+  );
   
-  static const List<BoxShadow> none = [];
+  static const BoxShadow none = BoxShadow(color: Colors.transparent);
 }

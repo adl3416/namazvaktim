@@ -48,7 +48,8 @@ class NotificationService {
     try {
       final labels = {
         'tr': {
-          'Fajr': 'Sabah namaz vakti',
+          'Fajr': 'İmsak namaz vakti',
+          'Sunrise': 'Güneş vakti',
           'Dhuhr': 'Öğle namaz vakti',
           'Asr': 'İkindi namaz vakti',
           'Maghrib': 'Akşam namaz vakti',
@@ -56,13 +57,15 @@ class NotificationService {
         },
         'en': {
           'Fajr': 'Time for Fajr prayer',
+          'Sunrise': 'Sunrise',
           'Dhuhr': 'Time for Dhuhr prayer',
           'Asr': 'Time for Asr prayer',
           'Maghrib': 'Time for Maghrib prayer',
           'Isha': 'Time for Isha prayer',
         },
         'ar': {
-          'Fajr': 'حان وقت صلاة الفجر',
+          'Fajr': 'حان وقت الإِمساك',
+          'Sunrise': 'شروق الشمس',
           'Dhuhr': 'حان وقت صلاة الظهر',
           'Asr': 'حان وقت صلاة العصر',
           'Maghrib': 'حان وقت صلاة المغرب',

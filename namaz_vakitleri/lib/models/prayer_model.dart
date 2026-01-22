@@ -122,13 +122,21 @@ class PrayerTimes {
   }
 
   List<PrayerTime> get prayerTimesList {
-    const prayerOrder = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+    // Include Sunrise between Fajr (İmsak) and Dhuhr
+    const prayerOrder = ['Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
     final result = <PrayerTime>[];
     
     for (int i = 0; i < prayerOrder.length; i++) {
       final name = prayerOrder[i];
       final lowerName = name.toLowerCase();
-      final time = times[lowerName];
+      DateTime? time;
+
+      // Special handling: prefer 'imsak' if available for Fajr
+      if (lowerName == 'fajr') {
+        time = times['imsak'] ?? times['fajr'];
+      } else {
+        time = times[lowerName];
+      }
       
       if (time == null) {
         print('⚠️ Missing time for prayer: $lowerName');
@@ -140,7 +148,14 @@ class PrayerTimes {
       
       if (i < prayerOrder.length - 1) {
         final nextName = prayerOrder[i + 1].toLowerCase();
-        nextTime = times[nextName];
+        // For Sunrise, the key is 'sunrise' in parsed times
+        if (nextName == 'sunrise') {
+          nextTime = times['sunrise'];
+        } else if (nextName == 'fajr') {
+          nextTime = times['imsak'] ?? times['fajr'];
+        } else {
+          nextTime = times[nextName];
+        }
       } else {
         // Last prayer, next is tomorrow's Fajr
         final tomorrow = DateTime.now().add(Duration(days: 1));
@@ -158,7 +173,6 @@ class PrayerTimes {
       ));
     }
     
-    print('✅ Prayer times list created with ${result.length} prayers');
     return result;
   }
 
@@ -174,12 +188,11 @@ class PrayerTimes {
       // Find first prayer after now
       final future = list.where((p) => p.time.isAfter(now)).toList();
       if (future.isNotEmpty) {
-        print('✅ nextPrayer: ${future.first.name} at ${future.first.time.hour}:${future.first.time.minute.toString().padLeft(2, '0')}');
         return future.first;
       }
       
       // If no future prayer today, return first prayer (tomorrow)
-      print('ℹ️ nextPrayer: No future prayers today, returning first prayer');
+      // No future prayers today; return first (tomorrow's first)
       return list.first;
     } catch (e, stacktrace) {
       print('❌ Error getting nextPrayer: $e');

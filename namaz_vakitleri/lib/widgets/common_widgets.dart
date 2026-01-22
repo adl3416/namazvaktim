@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../config/color_system.dart';
-import '../../config/localization.dart';
+import 'package:namaz_vakitleri/config/color_system.dart';
+import 'package:namaz_vakitleri/config/localization.dart';
 
 class SoftButton extends StatelessWidget {
   final String label;
@@ -146,51 +146,27 @@ class PrayerTimeRow extends StatelessWidget {
 
   // Get color intensity based on prayer type
   Color _getPrayerTimeColor(String prayerName, bool isDark) {
-    // Prayer times get progressively darker throughout the day
-    // Sabah (Fajr) - Light
-    // Öğle (Dhuhr) - Medium Light
-    // İkindi (Asr) - Medium Dark
-    // Akşam (Maghrib) - Dark
-    // Yatsı (Isha) - Darkest
-    
-    final baseColor = isDark
-        ? AppColors.darkTextPrimary
-        : AppColors.textPrimary;
-
     final name = prayerName.toLowerCase();
-    
-    if (name.contains('fajr') || name.contains('sabah')) {
-      // Lightest - 35% opacity
-      return baseColor.withOpacity(isDark ? 0.35 : 0.25);
-    } else if (name.contains('dhuhr') || name.contains('öğle')) {
-      // Light - 45% opacity
-      return baseColor.withOpacity(isDark ? 0.50 : 0.35);
-    } else if (name.contains('asr') || name.contains('ikindi')) {
-      // Medium - 60% opacity
-      return baseColor.withOpacity(isDark ? 0.65 : 0.50);
-    } else if (name.contains('maghrib') || name.contains('akşam')) {
-      // Dark - 75% opacity
-      return baseColor.withOpacity(isDark ? 0.80 : 0.65);
-    } else if (name.contains('isha') || name.contains('yatsı')) {
-      // Darkest - 90% opacity
-      return baseColor.withOpacity(isDark ? 0.95 : 0.80);
-    }
-    
-    // Default
-    return baseColor.withOpacity(isDark ? 0.70 : 0.60);
+
+    // Prayer-specific blue palette
+    const fajr = Color(0xFFBBDEFB); // sabah
+    const dhuhr = Color(0xFF90CAF9); // öğle
+    const asr = Color(0xFF64B5F6); // ikindi
+    const maghrib = Color(0xFF42A5F5); // akşam
+    const isha = Color(0xFF1E88E5); // yatsı
+
+    if (name.contains('fajr') || name.contains('sabah') || name.contains('imsak')) return fajr;
+    if (name.contains('dhuhr') || name.contains('öğle')) return dhuhr;
+    if (name.contains('asr') || name.contains('ikindi')) return asr;
+    if (name.contains('maghrib') || name.contains('akşam')) return maghrib;
+    if (name.contains('isha') || name.contains('yatsı')) return isha;
+
+    return isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // Pattern background using dots
-    final patternPaint = Paint()
-      ..color = (isDark
-              ? AppColors.darkTextPrimary
-              : AppColors.textPrimary)
-          .withOpacity(0.05)
-      ..strokeWidth = 1;
 
     final timeColor = _getPrayerTimeColor(prayerName, isDark);
 
@@ -201,28 +177,13 @@ class PrayerTimeRow extends StatelessWidget {
       ),
       margin: EdgeInsets.only(bottom: AppSpacing.md),
       decoration: BoxDecoration(
-        color: isActive
-            ? (isDark
-                ? AppColors.accentPrimary.withOpacity(0.2)
-                : AppColors.accentPrimary.withOpacity(0.12))
-            : (isDark
-                ? AppColors.darkBgSecondary.withOpacity(0.4)
-                : AppColors.lightBgSecondary.withOpacity(0.3)),
+        // Transparent so the card blends with the parent background
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       child: Stack(
         children: [
-          // Pattern overlay
-          Positioned.fill(
-            child: CustomPaint(
-              painter: DottedPatternPainter(
-                color: (isDark
-                        ? AppColors.darkTextPrimary
-                        : AppColors.textPrimary)
-                    .withOpacity(0.04),
-              ),
-            ),
-          ),
+          // (pattern overlay removed per user request)
           // Content
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -244,7 +205,7 @@ class PrayerTimeRow extends StatelessWidget {
                 ),
               ),
               SizedBox(width: AppSpacing.lg),
-              // Prayer time - color-coded background
+              // Prayer time - neutral background (no per-prayer color)
               Container(
                 padding: EdgeInsets.symmetric(
                   horizontal: AppSpacing.md + 4,
@@ -257,7 +218,7 @@ class PrayerTimeRow extends StatelessWidget {
                 child: Text(
                   prayerTime,
                   style: AppTypography.bodyLarge.copyWith(
-                    color: timeColor,
+                    color: (timeColor.computeLuminance() > 0.6) ? Colors.black : timeColor,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.5,
                   ),
@@ -328,19 +289,49 @@ class CountdownDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Build a RichText so numeric parts are large and labels are smaller/lighter
+    final hours = countdown?.inHours ?? 0;
+    final minutes = countdown?.inMinutes.remainder(60) ?? 0;
+    final seconds = countdown?.inSeconds.remainder(60) ?? 0;
+
+    final accentColor = isDark ? AppColors.darkAccentPrimary : const Color(0xFFE3F2FD);
+    TextStyle numberStyle = AppTypography.countdownLarge.copyWith(
+      fontSize: 62,
+      color: accentColor,
+      fontWeight: FontWeight.w600,
+    );
+    TextStyle labelStyle = AppTypography.bodySmall.copyWith(
+      fontSize: 22,
+      color: accentColor,
+      fontWeight: FontWeight.w500,
+    );
+
+    List<InlineSpan> spans = [];
+    final isTr = locale.toLowerCase().startsWith('tr');
+    final hourLabelText = isTr ? 'sa' : AppLocalizations.translate('hour', locale);
+    final minuteLabelText = isTr ? 'dk' : AppLocalizations.translate('minute', locale);
+    final secondLabelText = isTr ? 'sn' : AppLocalizations.translate('second', locale);
+
+    if (hours > 0) {
+      spans.add(TextSpan(text: '$hours', style: numberStyle));
+      spans.add(TextSpan(text: ' $hourLabelText', style: labelStyle));
+      spans.add(TextSpan(text: '  '));
+      spans.add(TextSpan(text: '${minutes.toString().padLeft(2, '0')}', style: numberStyle));
+      spans.add(TextSpan(text: ' $minuteLabelText', style: labelStyle));
+    } else {
+      spans.add(TextSpan(text: '${minutes.toString()}', style: numberStyle));
+      spans.add(TextSpan(text: ' $minuteLabelText', style: labelStyle));
+      spans.add(TextSpan(text: '  '));
+      spans.add(TextSpan(text: '${seconds.toString().padLeft(2, '0')}', style: numberStyle.copyWith(fontSize: 44)));
+      spans.add(TextSpan(text: ' $secondLabelText', style: labelStyle));
+    }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          _formatCountdown(),
-          style: AppTypography.countdownLarge.copyWith(
-            // Slightly reduce the displayed countdown font without changing global style
-            fontSize: 50,
-            color: isDark
-                ? AppColors.darkAccentPrimary
-                : AppColors.accentPrimary,
-          ),
+        RichText(
+          textAlign: TextAlign.center,
+          text: TextSpan(children: spans),
         ),
       ],
     );

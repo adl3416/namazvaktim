@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart' as geo;
 import '../models/prayer_model.dart';
@@ -27,10 +28,51 @@ class LocationService {
       final hasPermission = await requestLocationPermission();
       if (!hasPermission) return null;
 
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-        timeLimit: const Duration(seconds: 10),
-      );
+      // Try a quick last-known position first to avoid waiting on slow GPS startups
+      Position? last = await Geolocator.getLastKnownPosition();
+      final now = DateTime.now();
+      if (last != null && last.timestamp != null) {
+        final age = now.difference(last.timestamp!);
+        if (age.inMinutes <= 5) {
+          // recent enough, use it
+          final placemarks = await geo.placemarkFromCoordinates(
+            last.latitude,
+            last.longitude,
+          );
+          if (placemarks.isNotEmpty) {
+            final place = placemarks.first;
+            return GeoLocation(
+              latitude: last.latitude,
+              longitude: last.longitude,
+              city: place.locality ?? 'Unknown',
+              state: place.administrativeArea ?? 'Unknown',
+              country: place.country ?? 'Unknown',
+            );
+          }
+          return GeoLocation(
+            latitude: last.latitude,
+            longitude: last.longitude,
+            city: 'Unknown',
+            state: 'Unknown',
+            country: 'Unknown',
+          );
+        }
+      }
+
+      // If last-known is stale or missing, ask for a fresh position but allow a longer timeout
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 20),
+        );
+      } on TimeoutException catch (e) {
+        // fallback to last known if available
+        print('Location request timed out, falling back to last known: $e');
+        position = await Geolocator.getLastKnownPosition();
+      }
+
+      if (position == null) return null;
 
       final placemarks = await geo.placemarkFromCoordinates(
         position.latitude,

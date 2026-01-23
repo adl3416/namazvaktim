@@ -292,7 +292,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       transitionDuration: const Duration(milliseconds: 700),
                       reverseTransitionDuration: const Duration(milliseconds: 700),
                       pageBuilder: (context, animation, secondaryAnimation) {
-                        return QiblaFullScreen(locale: locale);
+                        return QiblaFullScreen(
+                          locale: locale,
+                          userLocation: Provider.of<PrayerProvider>(context, listen: false).currentLocation,
+                        );
                       },
                       transitionsBuilder: (context, animation, secondaryAnimation, child) {
                         // No extra transition; hero handles the motion
@@ -337,8 +340,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 textAlign: TextAlign.center,
                 style: AppTypography.bodySmall.copyWith(
                   fontSize: 16,
-                  color: isDark ? AppColors.darkAccentPrimary : AppColors.accentPrimary,
-                  fontWeight: FontWeight.w500,
+                  color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               SizedBox(height: AppSpacing.xs),
@@ -383,7 +386,7 @@ class _HomeScreenState extends State<HomeScreen> {
             final nextColor = next != null ? mapPrayerToColor(next.name) : currColor;
 
             return Padding(
-              padding: EdgeInsets.only(bottom: AppSpacing.xs),
+              padding: EdgeInsets.only(bottom: 0),
               child: Column(
                 children: [
                   PrayerTimeRow(

@@ -14,14 +14,16 @@ class QiblaCompassWidget extends StatefulWidget {
   final VoidCallback? onTap;
   final double sensitivity; // degrees margin for alignment
   final Color? alignmentColor;
+  final GeoLocation? userLocation; // User's location for accurate qibla calculation
 
   const QiblaCompassWidget({
     Key? key,
     required this.locale,
     this.startRotationDelay = const Duration(milliseconds: 700),
     this.onTap,
-    this.sensitivity = 3.0,
+    this.sensitivity = 2.0, // 2 degrees sensitivity for alignment
     this.alignmentColor,
+    this.userLocation,
   }) : super(key: key);
 
   @override
@@ -74,15 +76,23 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
     Future.delayed(widget.startRotationDelay, () {
       // Try to listen to device compass. If there's no valid heading, fallback to animated rotation
       try {
-        // Try to get device location to compute Qibla bearing
-        LocationService.getCurrentLocation().then((loc) {
-          if (loc != null && mounted) {
-            setState(() {
-              _deviceLocation = loc;
-              _qiblaBearingRad = _computeQiblaBearing(loc.latitude, loc.longitude);
-            });
-          }
-        }).catchError((_) {});
+        // Use provided userLocation or get current location
+        if (widget.userLocation != null && mounted) {
+          setState(() {
+            _deviceLocation = widget.userLocation;
+            _qiblaBearingRad = _computeQiblaBearing(widget.userLocation!.latitude, widget.userLocation!.longitude);
+          });
+        } else {
+          // Fallback: get device location if not provided
+          LocationService.getCurrentLocation().then((loc) {
+            if (loc != null && mounted) {
+              setState(() {
+                _deviceLocation = loc;
+                _qiblaBearingRad = _computeQiblaBearing(loc.latitude, loc.longitude);
+              });
+            }
+          }).catchError((_) {});
+        }
 
         _compassSub = FlutterCompass.events?.listen((event) {
           final hd = event.heading;
@@ -171,6 +181,19 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
         final sensitivityRad = widget.sensitivity * (math.pi / 180.0);
         final aligned = _hasHeading && (_normalizeAngle(_displayHeading).abs() < sensitivityRad);
         final alignColor = widget.alignmentColor ?? (isDark ? AppColors.darkAccentMint : AppColors.accentMint);
+        
+        // Debug: Print qibla accuracy info
+        if (_qiblaBearingRad != null && _hasHeading) {
+          final headingDeg = (_displayHeading * 180 / math.pi).toStringAsFixed(1);
+          final qiblaDeg = (_qiblaBearingRad! * 180 / math.pi).toStringAsFixed(1);
+          final diffDeg = (_normalizeAngle(_displayHeading) * 180 / math.pi).toStringAsFixed(1);
+          print('🧭 Qibla Debug: Heading=$headingDeg°, Qibla=$qiblaDeg°, Diff=$diffDeg°, Aligned=$aligned');
+          
+          // Print location if available
+          if (_deviceLocation != null) {
+            print('📍 Location: ${_deviceLocation!.latitude}, ${_deviceLocation!.longitude}');
+          }
+        }
       // Wrap with scale animation when used as a tappable, full-screen element
       Widget content = Column(
         mainAxisSize: MainAxisSize.min,
@@ -377,8 +400,13 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
 /// Fullscreen wrapper that participates in a Hero shared element
 class QiblaFullScreen extends StatelessWidget {
   final String locale;
+  final GeoLocation? userLocation;
 
-  const QiblaFullScreen({Key? key, required this.locale}) : super(key: key);
+  const QiblaFullScreen({
+    Key? key,
+    required this.locale,
+    this.userLocation,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -411,6 +439,7 @@ class QiblaFullScreen extends StatelessWidget {
                   alignment: Alignment.center,
                   child: QiblaCompassWidget(
                     locale: locale,
+                    userLocation: userLocation,
                     startRotationDelay: const Duration(milliseconds: 420),
                     onTap: () {
                       Navigator.of(context).pop();

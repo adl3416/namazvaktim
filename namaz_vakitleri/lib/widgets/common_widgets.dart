@@ -146,22 +146,30 @@ class PrayerTimeRow extends StatelessWidget {
 
   // Get color intensity based on prayer type
   Color _getPrayerTimeColor(String prayerName, bool isDark) {
+    // All prayers use the same text color for professional appearance
+    return isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+  }
+  
+  // Get background color for prayer container
+  Color _getPrayerBackgroundColor(String prayerName, bool isDark) {
     final name = prayerName.toLowerCase();
 
-    // Prayer-specific blue palette
-    const fajr = Color(0xFFBBDEFB); // sabah
-    const dhuhr = Color(0xFF90CAF9); // öğle
-    const asr = Color(0xFF64B5F6); // ikindi
-    const maghrib = Color(0xFF42A5F5); // akşam
-    const isha = Color(0xFF1E88E5); // yatsı
+    // Light colors for background - prayer specific backgrounds
+    const fajrBg = Color(0xFFD6EAF8); // İmsak
+    const sunriseBg = Color(0xFFAED6F1); // Güneş
+    const dhuhrBg = Color(0xFF5DADE2); // Öğle
+    const asrBg = Color(0xFF3498DB); // İkindi
+    const maghribBg = Color(0xFF2E86C1); // Akşam
+    const ishaBg = Color(0xFF1B4F72); // Yatsı
 
-    if (name.contains('fajr') || name.contains('sabah') || name.contains('imsak')) return fajr;
-    if (name.contains('dhuhr') || name.contains('öğle')) return dhuhr;
-    if (name.contains('asr') || name.contains('ikindi')) return asr;
-    if (name.contains('maghrib') || name.contains('akşam')) return maghrib;
-    if (name.contains('isha') || name.contains('yatsı')) return isha;
+    if (name.contains('fajr') || name.contains('sabah') || name.contains('imsak')) return fajrBg;
+    if (name.contains('sunrise') || name.contains('gunes') || name.contains('güneş')) return sunriseBg;
+    if (name.contains('dhuhr') || name.contains('öğle')) return dhuhrBg;
+    if (name.contains('asr') || name.contains('ikindi')) return asrBg;
+    if (name.contains('maghrib') || name.contains('akşam')) return maghribBg;
+    if (name.contains('isha') || name.contains('yatsı')) return ishaBg;
 
-    return isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+    return isDark ? AppColors.darkBg : AppColors.lightBg;
   }
 
   @override
@@ -169,13 +177,14 @@ class PrayerTimeRow extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final timeColor = _getPrayerTimeColor(prayerName, isDark);
+    final bgColor = _getPrayerBackgroundColor(prayerName, isDark);
 
     return Container(
       padding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.xl,
-        vertical: AppSpacing.lg + 4,
+        horizontal: AppSpacing.xl + 4,
+        vertical: AppSpacing.md,
       ),
-      margin: EdgeInsets.only(bottom: AppSpacing.md),
+      margin: EdgeInsets.only(bottom: AppSpacing.sm),
       decoration: BoxDecoration(
         // Transparent so the card blends with the parent background
         color: Colors.transparent,
@@ -189,36 +198,31 @@ class PrayerTimeRow extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // Prayer name
-              Expanded(
-                child: Text(
-                  AppLocalizations.translate(
-                    prayerName.toLowerCase(),
-                    locale,
-                  ),
-                  style: AppTypography.bodyLarge.copyWith(
-                    color: isDark
-                        ? AppColors.darkTextPrimary
-                        : AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.3,
-                  ),
+              Text(
+                AppLocalizations.translate(
+                  prayerName.toLowerCase(),
+                  locale,
+                ),
+                style: AppTypography.bodyLarge.copyWith(
+                  color: timeColor,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
                 ),
               ),
-              SizedBox(width: AppSpacing.lg),
-              // Prayer time - neutral background (no per-prayer color)
+              // Prayer time - background with prayer color
               Container(
                 padding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md + 4,
+                  horizontal: AppSpacing.lg,
                   vertical: AppSpacing.sm + 2,
                 ),
                 decoration: BoxDecoration(
-                  color: timeColor.withOpacity(0.12),
+                  color: bgColor.withOpacity(0.20),
                   borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: Text(
                   prayerTime,
                   style: AppTypography.bodyLarge.copyWith(
-                    color: (timeColor.computeLuminance() > 0.6) ? Colors.black : timeColor,
+                    color: timeColor,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.5,
                   ),
@@ -294,16 +298,16 @@ class CountdownDisplay extends StatelessWidget {
     final minutes = countdown?.inMinutes.remainder(60) ?? 0;
     final seconds = countdown?.inSeconds.remainder(60) ?? 0;
 
-    final accentColor = isDark ? AppColors.darkAccentPrimary : const Color(0xFFE3F2FD);
+    final textColor = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
     TextStyle numberStyle = AppTypography.countdownLarge.copyWith(
       fontSize: 62,
-      color: accentColor,
-      fontWeight: FontWeight.w600,
+      color: textColor,
+      fontWeight: FontWeight.w700,
     );
     TextStyle labelStyle = AppTypography.bodySmall.copyWith(
       fontSize: 22,
-      color: accentColor,
-      fontWeight: FontWeight.w500,
+      color: textColor,
+      fontWeight: FontWeight.w600,
     );
 
     List<InlineSpan> spans = [];

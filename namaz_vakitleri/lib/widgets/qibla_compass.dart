@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:namaz_vakitleri/config/color_system.dart';
+import 'dart:math' as math;
 
 /// Qibla Compass - Shows direction to Mecca
 class QiblaCompass extends StatelessWidget {
@@ -209,71 +210,40 @@ class QiblaCompass extends StatelessWidget {
 
 /// Calculate qibla direction for a given location
 class QiblaCalculator {
-  // Kaaba coordinates
-  static const double kabaaLatitude = 21.4225;
-  static const double kabaaLongitude = 39.8262;
-  static const double pi = 3.14159265359;
+  // Kaaba coordinates (Mecca)
+  static const double kabaaLatitude = 21.422487;
+  static const double kabaaLongitude = 39.826206;
 
   /// Calculate qibla direction (bearing) from a location
-  /// Returns angle in degrees (0-360)
+  /// Returns angle in radians (0 to 2π)
   static double calculateQiblaDirection(
     double userLatitude,
     double userLongitude,
   ) {
-    final latitude1 = userLatitude * pi / 180;
-    final longitude1 = userLongitude * pi / 180;
-    final latitude2 = kabaaLatitude * pi / 180;
-    final longitude2 = kabaaLongitude * pi / 180;
+    final lat1 = userLatitude * math.pi / 180.0;
+    final lon1 = userLongitude * math.pi / 180.0;
+    final lat2 = kabaaLatitude * math.pi / 180.0;
+    final lon2 = kabaaLongitude * math.pi / 180.0;
 
-    final dLongitude = longitude2 - longitude1;
-
-    final x = _sin(dLongitude) * _cos(latitude2);
-    final y = _cos(latitude1) * _sin(latitude2) -
-        _sin(latitude1) * _cos(latitude2) * _cos(dLongitude);
-
-    var bearing = _atan2(x, y) * 180 / pi;
-    bearing = (bearing + 360) % 360;
-
-    return bearing;
+    final dLon = lon2 - lon1;
+    final x = math.sin(dLon) * math.cos(lat2);
+    final y = math.cos(lat1) * math.sin(lat2) - 
+              math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
+    
+    final bearing = math.atan2(x, y); // radians
+    // Normalize to 0..2π
+    final bearingNorm = (bearing + 2 * math.pi) % (2 * math.pi);
+    
+    return bearingNorm;
   }
 
-  // Simple sin calculation
-  static double _sin(double angle) {
-    final x = angle;
-    return x -
-        (x * x * x) / 6 +
-        (x * x * x * x * x) / 120 -
-        (x * x * x * x * x * x * x) / 5040;
+  /// Convert radians to degrees
+  static double radiansToDegrees(double radians) {
+    return radians * 180.0 / math.pi;
   }
 
-  // Simple cos calculation
-  static double _cos(double angle) {
-    final x = angle;
-    return 1 - (x * x) / 2 + (x * x * x * x) / 24 - (x * x * x * x * x * x) / 720;
-  }
-
-  // Simple atan2 calculation
-  static double _atan2(double y, double x) {
-    if (x > 0) {
-      return _atan(y / x);
-    } else if (x < 0 && y >= 0) {
-      return _atan(y / x) + pi;
-    } else if (x < 0 && y < 0) {
-      return _atan(y / x) - pi;
-    } else if (x == 0 && y > 0) {
-      return pi / 2;
-    } else if (x == 0 && y < 0) {
-      return -pi / 2;
-    }
-    return 0;
-  }
-
-  // Simple atan calculation (Taylor series)
-  static double _atan(double x) {
-    final x2 = x * x;
-    final x3 = x2 * x;
-    final x5 = x3 * x2;
-    final x7 = x5 * x2;
-    return x - x3 / 3 + x5 / 5 - x7 / 7;
+  /// Convert degrees to radians
+  static double degreesToRadians(double degrees) {
+    return degrees * math.pi / 180.0;
   }
 }

@@ -15,6 +15,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int _selectedBottomIndex = 0;
   @override
   void initState() {
     super.initState();
@@ -35,9 +36,160 @@ class _HomeScreenState extends State<HomeScreen> {
 
         // Choose home background based on current active prayer (fallback to next prayer)
         final currentPrayerName = prayerProvider.activePrayer?.name ?? prayerProvider.nextPrayer?.name;
-        final homeBackground = currentPrayerName != null
-                ? AppColors.getPrayerTimeBackground(currentPrayerName, isDark)
-                : AppColors.getBackground(isDark);
+        final Color computedBg = currentPrayerName != null
+          ? AppColors.getPrayerTimeBackground(currentPrayerName, isDark)
+          : AppColors.getBackground(isDark);
+
+        // If user has an active preset, use it; otherwise use computed
+        final paletteMap = settings.activePaletteMapping;
+        Color? paletteColor;
+        // If current time is between öğle and ikindi, prefer the öğle/ikindi yellow tone
+        try {
+          final now = DateTime.now();
+          final times = prayerProvider.currentPrayerTimes?.prayerTimesList;
+          if (times != null && times.isNotEmpty) {
+            DateTime? ogleTime;
+            DateTime? ikindiTime;
+            for (var t in times) {
+              final n = t.name.toLowerCase();
+              if (n.contains('dhuhr') || n.contains('ogle') || n.contains('öğle') || n.contains('zuhr')) ogleTime = t.time;
+              if (n.contains('asr') || n.contains('ikindi') || n.contains('asir')) ikindiTime = t.time;
+            }
+            if (ogleTime != null && ikindiTime != null) {
+              DateTime s = ogleTime;
+              DateTime e = ikindiTime;
+              if (e.isBefore(s)) e = e.add(const Duration(days: 1));
+              if (now.isAfter(s) && now.isBefore(e)) {
+                // apply ikindi tone (or blended); prefer palette if available
+                if (paletteMap != null) {
+                  final v = paletteMap['ikindi'] ?? paletteMap['ogle'];
+                  if (v != null) paletteColor = Color(v);
+                }
+                paletteColor ??= AppColors.getPrayerTimeBackground('ikindi', Theme.of(context).brightness == Brightness.dark);
+              }
+            }
+          }
+        } catch (_) {}
+        if (paletteMap != null && currentPrayerName != null) {
+          // map prayer name to palette key
+          String key = currentPrayerName.toLowerCase();
+          if (key.contains('fajr') || key.contains('imsak') || key.contains('sabah')) key = 'imsak';
+          else if (key.contains('sunrise') || key.contains('gunes') || key.contains('güneş')) key = 'gunes';
+          else if (key.contains('dhuhr') || key.contains('ogle') || key.contains('öğle') || key.contains('zuhr')) key = 'ogle';
+          else if (key.contains('asr') || key.contains('ikindi') || key.contains('asir')) key = 'ikindi';
+          else if (key.contains('maghrib') || key.contains('aksam') || key.contains('akşam') || key.contains('magrib')) key = 'aksam';
+          else if (key.contains('isha') || key.contains('yatsı') || key.contains('yatsi') || key.contains('esha')) key = 'yatsi';
+          else key = 'sayim';
+
+          final val = paletteMap[key];
+          if (val != null) paletteColor = Color(val);
+        }
+
+        final homeBackground = paletteColor ?? computedBg;
+
+        // Apply dynamic base color globally so AppColors getters reflect current vakit
+        AppColors.setDynamicBase(homeBackground);
+        // Foreground accent: ensure good contrast in dark mode; otherwise base on background luminance
+        final foregroundAccent = isDark
+          ? AppColors.darkTextPrimary
+          : (homeBackground.computeLuminance() > 0.5 ? AppColors.accentPrimary : AppColors.textPrimary);
+
+        // Compute whether now is between öğle and ikindi
+        bool isBetweenOgleAndIkindi = false;
+        Color? ogleIkindiBaseColor;
+        try {
+          final now = DateTime.now();
+          final times = prayerProvider.currentPrayerTimes?.prayerTimesList;
+          if (times != null && times.isNotEmpty) {
+            DateTime? ogleTime;
+            DateTime? ikindiTime;
+            for (var t in times) {
+              final n = t.name.toLowerCase();
+              if (n.contains('dhuhr') || n.contains('ogle') || n.contains('öğle') || n.contains('zuhr')) ogleTime = t.time;
+              if (n.contains('asr') || n.contains('ikindi') || n.contains('asir')) ikindiTime = t.time;
+            }
+            if (ogleTime != null && ikindiTime != null) {
+              DateTime s = ogleTime;
+              DateTime e = ikindiTime;
+              if (e.isBefore(s)) e = e.add(const Duration(days: 1));
+              if (now.isAfter(s) && now.isBefore(e)) {
+                isBetweenOgleAndIkindi = true;
+                ogleIkindiBaseColor = AppColors.ogleBase; // Sabit ana renk
+              }
+            }
+          }
+        } catch (_) {}
+
+        // Compute whether now is between güneş and öğle
+        bool isBetweenGunesAndOgle = false;
+        try {
+          final now = DateTime.now();
+          final times = prayerProvider.currentPrayerTimes?.prayerTimesList;
+          if (times != null && times.isNotEmpty) {
+            DateTime? gunesTime;
+            DateTime? ogleTime2;
+            for (var t in times) {
+              final n = t.name.toLowerCase();
+              if (n.contains('sunrise') || n.contains('gunes') || n.contains('güneş')) gunesTime = t.time;
+              if (n.contains('dhuhr') || n.contains('ogle') || n.contains('öğle') || n.contains('zuhr')) ogleTime2 = t.time;
+            }
+            if (gunesTime != null && ogleTime2 != null) {
+              DateTime s = gunesTime;
+              DateTime e = ogleTime2;
+              if (e.isBefore(s)) e = e.add(const Duration(days: 1));
+              if (now.isAfter(s) && now.isBefore(e)) isBetweenGunesAndOgle = true;
+            }
+          }
+        } catch (_) {}
+
+        // Her aralıkta sadece ana rengin tonları kullanılacak
+        Color mainBaseColor = computedBg;
+        if (isBetweenOgleAndIkindi) mainBaseColor = AppColors.ogleBase;
+        // Diğer aralıklar için de benzer şekilde ana renk atanabilir
+        final bottomBarBackground = mainBaseColor;
+
+        // Seed provided default palettes if missing (names: 'kirmizi','buz','turuncu')
+            if (!settings.palettes.containsKey('buz')) {
+          Future.microtask(() {
+            settings.savePaletteIfNotExists('buz', {
+              'sayim': AppColors.gunesBase.value,
+                'imsak': AppColors.imsakBase.value,
+                'gunes': AppColors.gunesBase.value,
+                'ogle': AppColors.ogleBase.value,
+                'ikindi': AppColors.ikindiBase.value,
+                'aksam': AppColors.aksamBase.value,
+                'yatsi': AppColors.yatsiBase.value,
+            });
+          });
+        }
+
+        if (!settings.palettes.containsKey('kirmizi')) {
+          Future.microtask(() {
+            settings.savePaletteIfNotExists('kirmizi', {
+              'sayim': AppColors.sayimBase.value,
+              'imsak': AppColors.imsakBase.value,
+              'gunes': AppColors.gunesBase.value,
+              'ogle': AppColors.ogleBase.value,
+              'ikindi': AppColors.ikindiBase.value,
+              'aksam': AppColors.aksamBase.value,
+              'yatsi': AppColors.yatsiBase.value,
+            });
+          });
+        }
+
+        if (!settings.palettes.containsKey('turuncu')) {
+          Future.microtask(() {
+            settings.savePaletteIfNotExists('turuncu', {
+              'sayim': 0xFFFFF3E0,
+              'imsak': 0xFFFFE0B2,
+              'gunes': 0xFFFFCC80,
+              'ogle': 0xFFF57C00,
+              'ikindi': 0xFFE65100,
+              'aksam': 0xFFBF360C,
+              'yatsi': 0xFF5D4037,
+            });
+          });
+        }
 
         return Scaffold(
           backgroundColor: Colors.transparent,
@@ -48,7 +200,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 end: Alignment.bottomCenter,
                 colors: isDark
                     ? [AppColors.darkBg, AppColors.darkBgSecondary]
-                    : [AppColors.getBackground(false), Color(0xFF90CAF9)],
+                    : [homeBackground.withOpacity(0.95), homeBackground.withOpacity(0.65)],
               ),
             ),
             child: Directionality(
@@ -151,6 +303,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 settings,
                                 isDark,
                                 locale,
+                                homeBackground,
                               ),
 
                             SizedBox(height: AppSpacing.xxxl),
@@ -164,6 +317,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 prayerProvider,
                                 isDark,
                                 locale,
+                                baseColor: mainBaseColor,
+                                useSameHue: true,
                               ),
                           ],
                         ),
@@ -171,25 +326,115 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
-                  // Footer - Nearby Mosques (transparent so background matches)
-                  Container(
-                    padding: EdgeInsets.all(AppSpacing.lg),
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                    ),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: SoftButton(
-                        label: AppLocalizations.translate('nearby_mosques', locale),
-                        onPressed: () {
-                          _showComingSoon(context, locale);
-                        },
-                        locale: locale,
+                  // (footer moved to BottomNavigationBar)
+                ],
+              ),
+            ),
+          ),
+          // Custom bottom navigation with bordered buttons matching home background
+          bottomNavigationBar: Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkBgSecondary.withOpacity(0.92) : bottomBarBackground.withOpacity(0.12),
+              border: Border(top: BorderSide(color: isDark ? AppColors.darkDivider.withOpacity(0.12) : AppColors.divider.withOpacity(0.08))),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.28 : 0.06),
+                  blurRadius: isDark ? 12 : 10,
+                  offset: Offset(0, -3),
+                ),
+              ],
+            ),
+            padding: EdgeInsets.all(AppSpacing.sm),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() => _selectedBottomIndex = 0);
+                      _showComingSoon(context, locale);
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: _selectedBottomIndex == 0
+                            ? (homeBackground.computeLuminance() > 0.5 ? Colors.white.withOpacity(0.98) : AppColors.accentPrimary.withOpacity(0.14))
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        boxShadow: _selectedBottomIndex == 0
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.03),
+                                  blurRadius: 6,
+                                  offset: Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                        border: Border.all(
+                          color: _selectedBottomIndex == 0
+                              ? AppColors.accentPrimary
+                              : (isDark ? AppColors.darkDivider.withOpacity(0.12) : AppColors.divider.withOpacity(0.12)),
+                          width: 1.6,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.location_on_outlined, color: _selectedBottomIndex == 0 ? AppColors.accentPrimary : foregroundAccent.withOpacity(0.85)),
+                          SizedBox(height: AppSpacing.xs),
+                          Text(
+                            AppLocalizations.translate('nearby_mosques', locale),
+                            style: AppTypography.bodySmall.copyWith(color: _selectedBottomIndex == 0 ? AppColors.accentPrimary : foregroundAccent.withOpacity(0.85)),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+                SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() => _selectedBottomIndex = 1);
+                      _showSettingsSheet(context, settings);
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: _selectedBottomIndex == 1
+                            ? (homeBackground.computeLuminance() > 0.5 ? Colors.white.withOpacity(0.98) : AppColors.accentPrimary.withOpacity(0.14))
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                        boxShadow: _selectedBottomIndex == 1
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.03),
+                                  blurRadius: 6,
+                                  offset: Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                        border: Border.all(
+                          color: _selectedBottomIndex == 1
+                              ? AppColors.accentPrimary
+                              : (isDark ? AppColors.darkDivider.withOpacity(0.12) : AppColors.divider.withOpacity(0.12)),
+                          width: 1.6,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.settings_outlined, color: _selectedBottomIndex == 1 ? AppColors.accentPrimary : foregroundAccent.withOpacity(0.85)),
+                          SizedBox(height: AppSpacing.xs),
+                          Text(
+                            AppLocalizations.translate('settings', locale),
+                            style: AppTypography.bodySmall.copyWith(color: _selectedBottomIndex == 1 ? AppColors.accentPrimary : foregroundAccent.withOpacity(0.85)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -318,6 +563,7 @@ class _HomeScreenState extends State<HomeScreen> {
     AppSettings settings,
     bool isDark,
     String locale,
+    Color homeBackground,
   ) {
     final nextPrayer = prayerProvider.nextPrayer;
     if (nextPrayer == null) return SizedBox.shrink();
@@ -348,6 +594,7 @@ class _HomeScreenState extends State<HomeScreen> {
               CountdownDisplay(
                 countdown: prayerProvider.countdownDuration,
                 locale: locale,
+                accentColor: homeBackground.computeLuminance() > 0.5 ? AppColors.accentPrimary : AppColors.textPrimary,
               ),
             ],
           ),
@@ -360,16 +607,35 @@ class _HomeScreenState extends State<HomeScreen> {
     BuildContext context,
     PrayerProvider prayerProvider,
     bool isDark,
-    String locale,
-  ) {
+    String locale, {
+    required Color baseColor,
+    required bool useSameHue,
+  }) {
     final prayers = prayerProvider.currentPrayerTimes?.prayerTimesList ?? [];
     Color mapPrayerToColor(String name) {
       final n = name.toLowerCase();
-      if (n.contains('fajr') || n.contains('sabah') || n.contains('imsak')) return const Color(0xFFBBDEFB);
-      if (n.contains('dhuhr') || n.contains('öğle')) return const Color(0xFF90CAF9);
-      if (n.contains('asr') || n.contains('ikindi')) return const Color(0xFF64B5F6);
-      if (n.contains('maghrib') || n.contains('akşam')) return const Color(0xFF42A5F5);
-      if (n.contains('isha') || n.contains('yatsı')) return const Color(0xFF1E88E5);
+      if (useSameHue) {
+        // generate tonal variants of baseColor from lightest (sayim) to darker (ogle)
+        double t = 0.5; // default
+        if (n.contains('sayim')) t = 0.85;
+        else if (n.contains('fajr') || n.contains('sabah') || n.contains('imsak')) t = 0.7;
+        else if (n.contains('sunrise') || n.contains('gunes') || n.contains('güneş')) t = 0.45;
+        else if (n.contains('dhuhr') || n.contains('ogle') || n.contains('öğle') || n.contains('zuhr')) t = 0.2;
+        else if (n.contains('asr') || n.contains('ikindi')) t = 0.0;
+        else if (n.contains('maghrib') || n.contains('akşam')) t = 0.0;
+        else if (n.contains('isha') || n.contains('yatsı')) t = 0.0;
+
+        // lerp towards white for lighter tones; clamp between 0..1
+        t = t.clamp(0.0, 1.0);
+        return Color.lerp(baseColor, Colors.white, t) ?? baseColor;
+      }
+
+      // Fallback: original palette mapping
+        if (n.contains('fajr') || n.contains('sabah') || n.contains('imsak')) return isDark ? AppColors.darkAccentPrimary : AppColors.accentSecondary;
+      if (n.contains('dhuhr') || n.contains('öğle')) return isDark ? AppColors.darkAccentPrimary : AppColors.accentPrimary;
+      if (n.contains('asr') || n.contains('ikindi')) return isDark ? AppColors.darkAccentSecondary : AppColors.accentSecondary;
+      if (n.contains('maghrib') || n.contains('akşam')) return isDark ? AppColors.darkAccentPrimary : AppColors.accentPrimary;
+      if (n.contains('isha') || n.contains('yatsı')) return isDark ? AppColors.darkAccentPrimary : AppColors.accentPrimary;
       return isDark ? AppColors.darkAccentPrimary : AppColors.accentPrimary;
     }
 
@@ -394,6 +660,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     prayerTime: timeStr,
                     isActive: prayer.isActive,
                     locale: locale,
+                    overrideBaseColor: baseColor,
+                    useSameHue: useSameHue,
                   ),
                   if (next != null)
                     Container(
@@ -545,6 +813,29 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
 
                     SizedBox(height: AppSpacing.xxxl),
+
+                    // Save current home colors as preset 'buz'
+                    SoftButton(
+                      label: "Save current colors as 'buz'",
+                      onPressed: () async {
+                        final map = <String, int>{
+                          'sayim': AppColors.getBackground(false).value,
+                          'imsak': AppColors.getPrayerTimeBackground('imsak', isDark).value,
+                          'gunes': AppColors.getPrayerTimeBackground('gunes', isDark).value,
+                          'ogle': AppColors.getPrayerTimeBackground('ogle', isDark).value,
+                          'ikindi': AppColors.getPrayerTimeBackground('ikindi', isDark).value,
+                          'aksam': AppColors.getPrayerTimeBackground('aksam', isDark).value,
+                          'yatsi': AppColors.getPrayerTimeBackground('yatsi', isDark).value,
+                        };
+
+                        await settings.savePalette('buz', map);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Palette 'buz' saved.")),
+                        );
+                      },
+                      locale: locale,
+                    ),
+
                   ],
                 ),
               ),

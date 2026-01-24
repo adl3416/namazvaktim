@@ -41,9 +41,7 @@ class SoftButton extends StatelessWidget {
                   : AppColors.lightBgSecondary.withOpacity(0.6)),
           borderRadius: BorderRadius.circular(AppRadius.lg),
           border: Border.all(
-            color: (isDark
-                    ? AppColors.darkTextLight
-                    : AppColors.textLight)
+            color: (isDark ? AppColors.darkTextLight : AppColors.textLight)
                 .withOpacity(AppOpacity.veryLow),
           ),
         ),
@@ -54,10 +52,7 @@ class SoftButton extends StatelessWidget {
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    textColor ??
-                        (isDark
-                            ? AppColors.darkTextPrimary
-                            : AppColors.textPrimary),
+                    textColor ?? (isDark ? AppColors.darkTextPrimary : AppColors.textPrimary),
                   ),
                 ),
               )
@@ -65,10 +60,7 @@ class SoftButton extends StatelessWidget {
                 label,
                 textAlign: TextAlign.center,
                 style: AppTypography.bodyMedium.copyWith(
-                  color: textColor ??
-                      (isDark
-                          ? AppColors.darkTextPrimary
-                          : AppColors.textPrimary),
+                  color: textColor ?? (isDark ? AppColors.darkTextPrimary : AppColors.textPrimary),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -100,19 +92,13 @@ class SoftIconButton extends StatelessWidget {
     if (showBackground) {
       return Container(
         decoration: BoxDecoration(
-          color: (isDark
-                  ? AppColors.darkBgSecondary
-                  : AppColors.lightBgSecondary)
-              .withOpacity(0.5),
+          color: (isDark ? AppColors.darkBgSecondary : AppColors.lightBgSecondary).withOpacity(0.5),
           borderRadius: BorderRadius.circular(AppRadius.lg),
         ),
         child: IconButton(
           icon: Icon(icon),
           onPressed: onPressed,
-          color: color ??
-              (isDark
-                  ? AppColors.darkTextPrimary
-                  : AppColors.textPrimary),
+          color: color ?? (isDark ? AppColors.darkTextPrimary : AppColors.textPrimary),
           iconSize: size,
         ),
       );
@@ -121,8 +107,7 @@ class SoftIconButton extends StatelessWidget {
     return IconButton(
       icon: Icon(icon),
       onPressed: onPressed,
-      color: color ??
-          (isDark ? AppColors.darkTextPrimary : AppColors.textPrimary),
+      color: color ?? (isDark ? AppColors.darkTextPrimary : AppColors.textPrimary),
       iconSize: size,
       highlightColor: Colors.transparent,
       splashColor: Colors.transparent,
@@ -135,6 +120,8 @@ class PrayerTimeRow extends StatelessWidget {
   final String prayerTime;
   final bool isActive;
   final String locale;
+  final Color? overrideBaseColor;
+  final bool useSameHue;
 
   const PrayerTimeRow({
     Key? key,
@@ -142,42 +129,42 @@ class PrayerTimeRow extends StatelessWidget {
     required this.prayerTime,
     required this.isActive,
     required this.locale,
+    this.overrideBaseColor,
+    this.useSameHue = false,
   }) : super(key: key);
 
-  // Get color intensity based on prayer type
   Color _getPrayerTimeColor(String prayerName, bool isDark) {
-    // All prayers use the same text color for professional appearance
     return isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
   }
-  
-  // Get background color for prayer container
-  Color _getPrayerBackgroundColor(String prayerName, bool isDark) {
+
+  Color _getPrayerBackgroundColor(String prayerName, bool isDark, {Color? baseOverride}) {
     final name = prayerName.toLowerCase();
+    final base = baseOverride ?? (isDark ? AppColors.darkBaseBg : AppColors.lightBaseBg);
+    double t = 0.85;
+    if (name.contains('fajr') || name.contains('imsak') || name.contains('sabah')) t = 0.9;
+    else if (name.contains('sunrise') || name.contains('gunes') || name.contains('güneş')) t = 0.92;
+    else if (name.contains('dhuhr') || name.contains('ogle') || name.contains('öğle')) t = 0.75;
+    else if (name.contains('asr') || name.contains('ikindi')) t = 0.7;
+    else if (name.contains('maghrib') || name.contains('aksam') || name.contains('akşam')) t = 0.6;
+    else if (name.contains('isha') || name.contains('yatsi') || name.contains('yatsı')) t = 0.55;
 
-    // Light colors for background - prayer specific backgrounds
-    const fajrBg = Color(0xFFD6EAF8); // İmsak
-    const sunriseBg = Color(0xFFAED6F1); // Güneş
-    const dhuhrBg = Color(0xFF5DADE2); // Öğle
-    const asrBg = Color(0xFF3498DB); // İkindi
-    const maghribBg = Color(0xFF2E86C1); // Akşam
-    const ishaBg = Color(0xFF1B4F72); // Yatsı
-
-    if (name.contains('fajr') || name.contains('sabah') || name.contains('imsak')) return fajrBg;
-    if (name.contains('sunrise') || name.contains('gunes') || name.contains('güneş')) return sunriseBg;
-    if (name.contains('dhuhr') || name.contains('öğle')) return dhuhrBg;
-    if (name.contains('asr') || name.contains('ikindi')) return asrBg;
-    if (name.contains('maghrib') || name.contains('akşam')) return maghribBg;
-    if (name.contains('isha') || name.contains('yatsı')) return ishaBg;
-
-    return isDark ? AppColors.darkBg : AppColors.lightBg;
+    t = t.clamp(0.0, 1.0);
+    return Color.lerp(base, Colors.white, t) ?? base;
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = overrideBaseColor ?? (isDark ? AppColors.darkBaseBg : AppColors.lightBaseBg);
+    final rowColor = Color.lerp(baseColor, Colors.white, isDark ? 0.15 : 0.85)!;
+    // stronger contrast for time and label: lerp more toward black on light backgrounds
+    final timeColor = isDark
+      ? AppColors.darkTextPrimary
+      : (Color.lerp(baseColor, Colors.black, 0.45) ?? AppColors.textPrimary);
+    final labelColor = isDark ? AppColors.darkTextPrimary : (Color.lerp(baseColor, Colors.black, 0.38) ?? AppColors.textPrimary);
+    final borderColor = Color.lerp(baseColor, Colors.black, 0.12)!;
 
-    final timeColor = _getPrayerTimeColor(prayerName, isDark);
-    final bgColor = _getPrayerBackgroundColor(prayerName, isDark);
+    final bgColor = _getPrayerBackgroundColor(prayerName, isDark, baseOverride: baseColor);
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -186,30 +173,28 @@ class PrayerTimeRow extends StatelessWidget {
       ),
       margin: EdgeInsets.only(bottom: AppSpacing.sm),
       decoration: BoxDecoration(
-        // Transparent so the card blends with the parent background
         color: Colors.transparent,
+        border: isActive
+            ? Border.all(
+                color: isDark ? AppColors.darkDivider.withOpacity(0.18) : AppColors.divider.withOpacity(0.18),
+                width: 1.0,
+              )
+            : null,
         borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       child: Stack(
         children: [
-          // (pattern overlay removed per user request)
-          // Content
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Prayer name
-              Text(
-                AppLocalizations.translate(
-                  prayerName.toLowerCase(),
-                  locale,
-                ),
+                Text(
+                AppLocalizations.translate(prayerName.toLowerCase(), locale),
                 style: AppTypography.bodyLarge.copyWith(
-                  color: timeColor,
-                  fontWeight: FontWeight.w600,
+                  color: labelColor,
+                  fontWeight: FontWeight.w700,
                   letterSpacing: 0.3,
                 ),
               ),
-              // Prayer time - background with prayer color
               Container(
                 padding: EdgeInsets.symmetric(
                   horizontal: AppSpacing.lg,
@@ -222,8 +207,9 @@ class PrayerTimeRow extends StatelessWidget {
                 child: Text(
                   prayerTime,
                   style: AppTypography.bodyLarge.copyWith(
+                    fontSize: 18,
                     color: timeColor,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -236,7 +222,6 @@ class PrayerTimeRow extends StatelessWidget {
   }
 }
 
-/// Custom painter for dotted pattern background
 class DottedPatternPainter extends CustomPainter {
   final Color color;
 
@@ -244,13 +229,9 @@ class DottedPatternPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1;
-
+    final paint = Paint()..color = color..strokeWidth = 1;
     const spacing = 12.0;
     const dotRadius = 0.8;
-
     for (double i = 0; i < size.width; i += spacing) {
       for (double j = 0; j < size.height; j += spacing) {
         canvas.drawCircle(Offset(i, j), dotRadius, paint);
@@ -265,49 +246,33 @@ class DottedPatternPainter extends CustomPainter {
 class CountdownDisplay extends StatelessWidget {
   final Duration? countdown;
   final String locale;
+  final Color? accentColor;
 
   const CountdownDisplay({
     Key? key,
     required this.countdown,
     required this.locale,
+    this.accentColor,
   }) : super(key: key);
-
-  String _formatCountdown() {
-    if (countdown == null) return '0 ${AppLocalizations.translate('hour', locale)}';
-
-    final hours = countdown!.inHours;
-    final minutes = countdown!.inMinutes.remainder(60);
-    final seconds = countdown!.inSeconds.remainder(60);
-
-    final hourLabel = AppLocalizations.translate('hour', locale);
-    final minuteLabel = AppLocalizations.translate('minute', locale);
-    final secondLabel = AppLocalizations.translate('second', locale);
-
-    if (hours > 0) {
-      return '$hours $hourLabel ${minutes.toString().padLeft(2, '0')} $minuteLabel';
-    }
-
-    return '$minutes $minuteLabel ${seconds.toString().padLeft(2, '0')} $secondLabel';
-  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Build a RichText so numeric parts are large and labels are smaller/lighter
     final hours = countdown?.inHours ?? 0;
     final minutes = countdown?.inMinutes.remainder(60) ?? 0;
     final seconds = countdown?.inSeconds.remainder(60) ?? 0;
 
-    final textColor = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+    final defaultTextColor = isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
+    final numberColor = accentColor ?? AppColors.accentPrimary;
     TextStyle numberStyle = AppTypography.countdownLarge.copyWith(
-      fontSize: 62,
-      color: textColor,
-      fontWeight: FontWeight.w700,
+      fontSize: 64,
+      color: numberColor,
+      fontWeight: FontWeight.w800,
     );
     TextStyle labelStyle = AppTypography.bodySmall.copyWith(
       fontSize: 22,
-      color: textColor,
-      fontWeight: FontWeight.w600,
+      color: numberColor.withOpacity(0.95),
+      fontWeight: FontWeight.w700,
     );
 
     List<InlineSpan> spans = [];
@@ -338,6 +303,69 @@ class CountdownDisplay extends StatelessWidget {
           text: TextSpan(children: spans),
         ),
       ],
+    );
+  }
+}
+
+class PermissionPrompt extends StatelessWidget {
+  final String title;
+  final String message;
+  final VoidCallback onRequest;
+  final VoidCallback onOpenSettings;
+  final Color? accentColor;
+
+  const PermissionPrompt({
+    Key? key,
+    required this.title,
+    required this.message,
+    required this.onRequest,
+    required this.onOpenSettings,
+    this.accentColor,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primary = accentColor ?? AppColors.accentPrimary;
+
+    return Container(
+      padding: EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkBg : AppColors.lightBg,
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(title, style: AppTypography.h2.copyWith(color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary)),
+          SizedBox(height: AppSpacing.md),
+          Text(message, style: AppTypography.bodyMedium.copyWith(color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
+          SizedBox(height: AppSpacing.xl),
+          Row(
+            children: [
+              Expanded(
+                child: SoftButton(
+                  label: 'Allow',
+                  onPressed: onRequest,
+                  locale: AppLocalizations.getLocale(null),
+                  backgroundColor: primary,
+                  textColor: Colors.white,
+                ),
+              ),
+              SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: SoftButton(
+                  label: 'Open Settings',
+                  onPressed: onOpenSettings,
+                  locale: AppLocalizations.getLocale(null),
+                  backgroundColor: isDark ? AppColors.darkBgSecondary : AppColors.lightBgSecondary,
+                  textColor: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

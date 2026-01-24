@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../config/localization.dart';
 
 class AppSettings extends ChangeNotifier {
@@ -16,6 +17,14 @@ class AppSettings extends ChangeNotifier {
   bool get enableAdhanSound => _enableAdhanSound;
   bool get enablePrayerNotifications => _enablePrayerNotifications;
 
+  // Theme palettes stored as name -> (section -> ARGB int)
+  Map<String, Map<String, int>> _palettes = {};
+  String? _activePaletteName;
+
+  Map<String, Map<String, int>> get palettes => Map.unmodifiable(_palettes);
+  String? get activePaletteName => _activePaletteName;
+  Map<String, int>? get activePaletteMapping => _activePaletteName != null ? _palettes[_activePaletteName!] : null;
+
   Future<void> initialize() async {
     _prefs = await SharedPreferences.getInstance();
     
@@ -27,8 +36,49 @@ class AppSettings extends ChangeNotifier {
     
     _enableAdhanSound = _prefs.getBool('enableAdhanSound') ?? true;
     _enablePrayerNotifications = _prefs.getBool('enablePrayerNotifications') ?? true;
+
+    // Load palettes (stored as JSON)
+    final raw = _prefs.getString('theme_palettes_json') ?? '';
+    if (raw.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(raw) as Map<String, dynamic>;
+        decoded.forEach((name, map) {
+          if (map is Map) {
+            final inner = <String, int>{};
+            (map as Map).forEach((k, v) {
+              final val = v is int ? v : int.tryParse(v.toString());
+              if (val != null) inner[k.toString()] = val;
+            });
+            _palettes[name] = inner;
+          }
+        });
+      } catch (_) {}
+    }
+    _activePaletteName = _prefs.getString('active_theme_palette');
     
     notifyListeners();
+  }
+
+  // remove JSON helper
+
+  Future<void> savePalette(String name, Map<String, int> mapping) async {
+    _palettes[name] = Map<String, int>.from(mapping);
+    await _prefs.setString('theme_palettes_json', jsonEncode(_palettes));
+    notifyListeners();
+  }
+
+  Future<void> applyPalette(String name) async {
+    if (_palettes.containsKey(name)) {
+      _activePaletteName = name;
+      await _prefs.setString('active_theme_palette', name);
+      notifyListeners();
+    }
+  }
+
+  Future<void> savePaletteIfNotExists(String name, Map<String, int> mapping) async {
+    if (!_palettes.containsKey(name)) {
+      await savePalette(name, mapping);
+    }
   }
 
   Future<void> setLanguage(String language) async {

@@ -31,6 +31,8 @@ class AppLocalizations {
       'cancel': 'İptal',
       'search': 'Ara',
       'loading': 'Yükleniyor...',
+      'allow': 'İzin Ver',
+      'open_settings': 'Ayarları Aç',
     },
     'en': {
       'app_title': 'Prayer Times',
@@ -61,6 +63,8 @@ class AppLocalizations {
       'cancel': 'Cancel',
       'search': 'Search',
       'loading': 'Loading...',
+      'allow': 'Allow',
+      'open_settings': 'Open Settings',
     },
     'ar': {
       'app_title': 'مواقيت الصلاة',
@@ -91,6 +95,8 @@ class AppLocalizations {
       'cancel': 'إلغاء',
       'search': 'بحث',
       'loading': 'جاري التحميل...',
+      'allow': 'السماح',
+      'open_settings': 'افتح الإعدادات',
     },
   };
 

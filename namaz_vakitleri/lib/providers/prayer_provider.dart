@@ -176,6 +176,11 @@ class PrayerProvider extends ChangeNotifier {
         _nextPrayer = prayerTimes.nextPrayer;
         _activePrayer = prayerTimes.activePrayer;
 
+        // Debug: print active prayer for quick visibility
+        try {
+          debugPrint('🔔 Active prayer: ${_activePrayer?.name} at ${_activePrayer?.time}');
+        } catch (_) {}
+
         // If the computed next prayer is in the past (some APIs return today's
         // first prayer when there are no more for today), treat it as next day's prayer
         // to avoid immediate repeated fetches.

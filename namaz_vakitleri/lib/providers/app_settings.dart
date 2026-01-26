@@ -5,6 +5,7 @@ import '../config/localization.dart';
 
 class AppSettings extends ChangeNotifier {
   late SharedPreferences _prefs;
+  bool _initialized = false;
 
   // Settings
   String _language = 'en';
@@ -55,6 +56,7 @@ class AppSettings extends ChangeNotifier {
       } catch (_) {}
     }
     _activePaletteName = _prefs.getString('active_theme_palette');
+    _initialized = true;
     
     notifyListeners();
   }
@@ -63,14 +65,18 @@ class AppSettings extends ChangeNotifier {
 
   Future<void> savePalette(String name, Map<String, int> mapping) async {
     _palettes[name] = Map<String, int>.from(mapping);
-    await _prefs.setString('theme_palettes_json', jsonEncode(_palettes));
+    if (_initialized) {
+      await _prefs.setString('theme_palettes_json', jsonEncode(_palettes));
+    }
     notifyListeners();
   }
 
   Future<void> applyPalette(String name) async {
     if (_palettes.containsKey(name)) {
       _activePaletteName = name;
-      await _prefs.setString('active_theme_palette', name);
+      if (_initialized) {
+        await _prefs.setString('active_theme_palette', name);
+      }
       notifyListeners();
     }
   }
@@ -83,25 +89,33 @@ class AppSettings extends ChangeNotifier {
 
   Future<void> setLanguage(String language) async {
     _language = language;
-    await _prefs.setString('language', language);
+    if (_initialized) {
+      await _prefs.setString('language', language);
+    }
     notifyListeners();
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
     _themeMode = mode;
-    await _prefs.setString('themeMode', _themeModeToString(mode));
+    if (_initialized) {
+      await _prefs.setString('themeMode', _themeModeToString(mode));
+    }
     notifyListeners();
   }
 
   Future<void> setEnableAdhanSound(bool enable) async {
     _enableAdhanSound = enable;
-    await _prefs.setBool('enableAdhanSound', enable);
+    if (_initialized) {
+      await _prefs.setBool('enableAdhanSound', enable);
+    }
     notifyListeners();
   }
 
   Future<void> setEnablePrayerNotifications(bool enable) async {
     _enablePrayerNotifications = enable;
-    await _prefs.setBool('enablePrayerNotifications', enable);
+    if (_initialized) {
+      await _prefs.setBool('enablePrayerNotifications', enable);
+    }
     notifyListeners();
   }
 

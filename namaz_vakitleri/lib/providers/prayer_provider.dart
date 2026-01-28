@@ -5,9 +5,15 @@ import '../models/prayer_model.dart';
 import '../services/aladhan_service.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
+import '../providers/app_settings.dart';
 
 class PrayerProvider extends ChangeNotifier {
   late SharedPreferences _prefs;
+  late AppSettings _appSettings;
+
+  PrayerProvider({required AppSettings appSettings}) {
+    _appSettings = appSettings;
+  }
 
   PrayerTimes? _currentPrayerTimes;
   PrayerTime? _nextPrayer;
@@ -215,10 +221,11 @@ class PrayerProvider extends ChangeNotifier {
         );
 
         // Schedule notifications
-        await NotificationService.scheduleAllPrayerNotifications(
+        await NotificationService.scheduleAllPrayerNotificationsWithSettings(
           prayers: prayerTimes.prayerTimesList,
-          language: _prefs.getString('language') ?? 'en',
-          enableSound: _prefs.getBool('enableAdhanSound') ?? true,
+          language: _appSettings.language,
+          notificationSettings: _appSettings.prayerNotifications,
+          soundSettings: _appSettings.prayerSounds,
         );
 
         _errorMessage = '';

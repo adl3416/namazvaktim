@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:namaz_vakitleri/config/color_system.dart';
@@ -40,7 +41,7 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     _appSettings = AppSettings();
-    _prayerProvider = PrayerProvider();
+    _prayerProvider = PrayerProvider(appSettings: _appSettings);
     _initializeApp();
   }
 
@@ -96,6 +97,27 @@ class _MyAppState extends State<MyApp> {
           return MaterialApp(
             title: 'Namaz Vakitleri',
             debugShowCheckedModeBanner: false,
+            locale: Locale(appSettings.language),
+            supportedLocales: const [
+              Locale('en'),
+              Locale('tr'),
+              Locale('ar'),
+            ],
+            localeResolutionCallback: (locale, supportedLocales) {
+              if (locale != null) {
+                for (final supportedLocale in supportedLocales) {
+                  if (supportedLocale.languageCode == locale.languageCode) {
+                    return supportedLocale;
+                  }
+                }
+              }
+              return supportedLocales.first;
+            },
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
             theme: _buildLightTheme(),
             darkTheme: _buildDarkTheme(),
             themeMode: appSettings.isDarkMode

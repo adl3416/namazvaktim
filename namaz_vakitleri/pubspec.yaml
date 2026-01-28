@@ -1,5 +1,5 @@
 name: namaz_vakitleri
-description: "A new Flutter project."
+description: "Namaz vakitlerini gösteren, bildirim gönderen ve qibla yönünü gösteren pratik bir uygulama."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -53,10 +53,13 @@ dependencies:
   flutter_compass: ^0.8.0
   
   # Localization
-  intl: ^0.19.0
+  intl: ^0.20.2
+  flutter_localizations:
+    sdk: flutter
   
   # Icons
   cupertino_icons: ^1.0.8
+  flutter_launcher_icons: ^0.13.1
   
   # UI Utilities
   flutter_svg: ^2.0.10
@@ -116,3 +119,26 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+  assets:
+    - assets/images/
+    - assets/sounds/
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/app_icon.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true
+  remove_alpha_android: true
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/images/app_icon.png"
+  web:
+    generate: true
+    image_path: "assets/images/app_icon.png"
+    background_color: "#2196F3"
+    theme_color: "#2196F3"
+  windows:
+    generate: true
+    image_path: "assets/images/app_icon.png"
+    icon_size: 48

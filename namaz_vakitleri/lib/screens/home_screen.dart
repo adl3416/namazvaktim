@@ -6,6 +6,9 @@ import 'package:namaz_vakitleri/providers/app_settings.dart';
 import '../providers/prayer_provider.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/qibla_compass_widget.dart';
+import '../services/notification_service.dart';
+import 'settings_screen.dart';
+import 'country_selection_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -416,7 +419,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 SoftIconButton(
                   icon: Icons.settings_outlined,
                   onPressed: () {
-                    _showSettingsSheet(context, settings);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                    );
+                  },
+                ),
+                SizedBox(width: AppSpacing.sm),
+                SoftIconButton(
+                  icon: Icons.notifications_off,
+                  onPressed: () async {
+                    await NotificationService.cancelAllNotifications();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Tüm bildirimler durduruldu!'),
+                        backgroundColor: Colors.red,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
                   },
                 ),
                 SizedBox(width: AppSpacing.sm),
@@ -683,295 +703,12 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showSettingsSheet(BuildContext context, AppSettings settings) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final locale = settings.language;
-
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Directionality(
-          textDirection: AppLocalizations.isRTL(locale)
-              ? TextDirection.rtl
-              : TextDirection.ltr,
-          child: Container(
-            color: isDark ? AppColors.darkBg : AppColors.lightBg,
-            padding: EdgeInsets.all(AppSpacing.xl),
-            child: Consumer<AppSettings>(
-              builder: (context, settings, _) => SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header
-                    Text(
-                      AppLocalizations.translate('settings', locale),
-                      style: AppTypography.h2.copyWith(
-                        color: isDark
-                            ? AppColors.darkTextPrimary
-                            : AppColors.textPrimary,
-                      ),
-                    ),
-                    SizedBox(height: AppSpacing.xxl),
-
-                    // Theme
-                    _buildSettingSection(
-                      label: AppLocalizations.translate('theme', locale),
-                      isDark: isDark,
-                      locale: locale,
-                      child: Column(
-                        children: [
-                          _buildSettingOption(
-                            label: AppLocalizations.translate('system', locale),
-                            isSelected: settings.themeMode == ThemeMode.system,
-                            onTap: () =>
-                                settings.setThemeMode(ThemeMode.system),
-                            isDark: isDark,
-                            locale: locale,
-                          ),
-                          _buildSettingOption(
-                            label: AppLocalizations.translate('light', locale),
-                            isSelected: settings.themeMode == ThemeMode.light,
-                            onTap: () => settings.setThemeMode(ThemeMode.light),
-                            isDark: isDark,
-                            locale: locale,
-                          ),
-                          _buildSettingOption(
-                            label: AppLocalizations.translate('dark', locale),
-                            isSelected: settings.themeMode == ThemeMode.dark,
-                            onTap: () => settings.setThemeMode(ThemeMode.dark),
-                            isDark: isDark,
-                            locale: locale,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    SizedBox(height: AppSpacing.xxl),
-
-                    // Language
-                    _buildSettingSection(
-                      label: AppLocalizations.translate('language', locale),
-                      isDark: isDark,
-                      locale: locale,
-                      child: Column(
-                        children: [
-                          _buildSettingOption(
-                            label: 'Türkçe',
-                            isSelected: settings.language == 'tr',
-                            onTap: () => settings.setLanguage('tr'),
-                            isDark: isDark,
-                            locale: locale,
-                          ),
-                          _buildSettingOption(
-                            label: 'English',
-                            isSelected: settings.language == 'en',
-                            onTap: () => settings.setLanguage('en'),
-                            isDark: isDark,
-                            locale: locale,
-                          ),
-                          _buildSettingOption(
-                            label: 'العربية',
-                            isSelected: settings.language == 'ar',
-                            onTap: () => settings.setLanguage('ar'),
-                            isDark: isDark,
-                            locale: locale,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    SizedBox(height: AppSpacing.xxl),
-
-                    // Notifications
-                    _buildSettingToggle(
-                      label: AppLocalizations.translate('enable_adhan', locale),
-                      value: settings.enableAdhanSound,
-                      onChanged: (value) => settings.setEnableAdhanSound(value),
-                      isDark: isDark,
-                    ),
-
-                    SizedBox(height: AppSpacing.lg),
-
-                    _buildSettingToggle(
-                      label: AppLocalizations.translate(
-                        'prayer_notifications',
-                        locale,
-                      ),
-                      value: settings.enablePrayerNotifications,
-                      onChanged: (value) =>
-                          settings.setEnablePrayerNotifications(value),
-                      isDark: isDark,
-                    ),
-
-                    SizedBox(height: AppSpacing.xxxl),
-
-                    // Save current home colors as preset 'buz'
-                    SoftButton(
-                      label: "Save current colors as 'buz'",
-                      onPressed: () async {
-                        final map = <String, int>{
-                          'sayim': AppColors.getBackground(false).value,
-                          'imsak': AppColors.getPrayerTimeBackground(
-                            'imsak',
-                            isDark,
-                          ).value,
-                          'gunes': AppColors.getPrayerTimeBackground(
-                            'gunes',
-                            isDark,
-                          ).value,
-                          'ogle': AppColors.getPrayerTimeBackground(
-                            'ogle',
-                            isDark,
-                          ).value,
-                          'ikindi': AppColors.getPrayerTimeBackground(
-                            'ikindi',
-                            isDark,
-                          ).value,
-                          'aksam': AppColors.getPrayerTimeBackground(
-                            'aksam',
-                            isDark,
-                          ).value,
-                          'yatsi': AppColors.getPrayerTimeBackground(
-                            'yatsi',
-                            isDark,
-                          ).value,
-                        };
-
-                        await settings.savePalette('buz', map);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("Palette 'buz' saved.")),
-                        );
-                      },
-                      locale: locale,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSettingSection({
-    required String label,
-    required bool isDark,
-    required String locale,
-    required Widget child,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: AppTypography.bodyMedium.copyWith(
-            color: isDark
-                ? AppColors.darkTextSecondary
-                : AppColors.textSecondary,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: AppSpacing.md),
-        child,
-      ],
-    );
-  }
-
-  Widget _buildSettingOption({
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required bool isDark,
-    required String locale,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-        child: Row(
-          children: [
-            Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSelected
-                      ? (isDark
-                            ? AppColors.darkAccentPrimary
-                            : AppColors.accentPrimary)
-                      : (isDark
-                            ? AppColors.darkTextLight
-                            : AppColors.textLight),
-                  width: 2,
-                ),
-              ),
-              child: isSelected
-                  ? Center(
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isDark
-                              ? AppColors.darkAccentPrimary
-                              : AppColors.accentPrimary,
-                        ),
-                      ),
-                    )
-                  : null,
-            ),
-            SizedBox(width: AppSpacing.md),
-            Text(
-              label,
-              style: AppTypography.bodyMedium.copyWith(
-                color: isDark
-                    ? AppColors.darkTextPrimary
-                    : AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSettingToggle({
-    required String label,
-    required bool value,
-    required Function(bool) onChanged,
-    required bool isDark,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: AppTypography.bodyMedium.copyWith(
-            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-          ),
-        ),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeColor: isDark
-              ? AppColors.darkAccentPrimary
-              : AppColors.accentPrimary,
-          inactiveTrackColor: isDark
-              ? AppColors.darkTextLight.withOpacity(0.3)
-              : AppColors.textLight.withOpacity(0.3),
-        ),
-      ],
-    );
-  }
-
   void _showCitySearch(BuildContext context, PrayerProvider prayerProvider) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return CitySearchDialog(prayerProvider: prayerProvider);
-      },
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CountrySelectionScreen(),
+      ),
     );
   }
 

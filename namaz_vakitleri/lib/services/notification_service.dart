@@ -24,7 +24,8 @@ class NotificationService {
       iOS: iosInitializationSettings,
     );
 
-    await _flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    final bool? initialized = await _flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    print('🔔 Notification plugin initialized: $initialized');
 
     // Request iOS permissions
     await _flutterLocalNotificationsPlugin
@@ -35,6 +36,14 @@ class NotificationService {
           badge: true,
           sound: true,
         );
+
+    // Request Android permissions
+    await _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
+
+    print('🔔 Notification permissions requested');
   }
 
   /// Schedule a notification for prayer time
@@ -44,6 +53,7 @@ class NotificationService {
     required DateTime prayerTime,
     required String language,
     required bool enableSound,
+    String? soundFile,
   }) async {
     try {
       final labels = {
@@ -75,6 +85,28 @@ class NotificationService {
 
       final label = labels[language]?[prayerName] ?? 'Prayer time';
 
+      // Add emoji to prayer name based on prayer time
+      String getPrayerEmoji(String prayer) {
+        switch (prayer) {
+          case 'Fajr':
+            return '🌅'; // Güneş doğmak üzere
+          case 'Sunrise':
+            return '☀️'; // Güneş doğdu
+          case 'Dhuhr':
+            return '🌞'; // Öğle güneşi
+          case 'Asr':
+            return '🌇'; // İkindi/akşam yaklaşımı
+          case 'Maghrib':
+            return '🌆'; // Güneş batışı
+          case 'Isha':
+            return '🌙'; // Hilal/gece
+          default:
+            return '🕌';
+        }
+      }
+
+      final displayName = '${getPrayerEmoji(prayerName)} $prayerName';
+
       // Convert to TZDateTime in local zone and ensure it's in the future
       tz.TZDateTime scheduled = tz.TZDateTime.from(prayerTime, tz.local);
       final now = tz.TZDateTime.now(tz.local);
@@ -85,7 +117,7 @@ class NotificationService {
 
       await _flutterLocalNotificationsPlugin.zonedSchedule(
         id,
-        prayerName,
+        displayName,
         label,
         scheduled,
         NotificationDetails(
@@ -96,6 +128,9 @@ class NotificationService {
             importance: Importance.high,
             priority: Priority.high,
             playSound: enableSound,
+            sound: enableSound && soundFile != null
+                ? RawResourceAndroidNotificationSound(soundFile.replaceAll('.mp3', ''))
+                : null,
           ),
           iOS: DarwinNotificationDetails(
             presentSound: enableSound,
@@ -108,29 +143,47 @@ class NotificationService {
             UILocalNotificationDateInterpretation.absoluteTime,
       );
 
-      print('Scheduled notification for $prayerName at $prayerTime');
+      print('✅ Scheduled notification for $prayerName at $scheduled');
     } catch (e) {
       print('Error scheduling notification: $e');
     }
   }
 
-  /// Schedule notifications for all prayers in a day
-  static Future<void> scheduleAllPrayerNotifications({
+  /// Schedule notifications for all prayers in a day with individual settings
+  static Future<void> scheduleAllPrayerNotificationsWithSettings({
     required List<PrayerTime> prayers,
     required String language,
-    required bool enableSound,
+    required Map<String, bool> notificationSettings,
+    required Map<String, bool> soundSettings,
   }) async {
     // Cancel all previous notifications
     await _flutterLocalNotificationsPlugin.cancelAll();
 
+    // Map prayer names to sound files
+    final soundFiles = {
+      'Fajr': 'sabah_ezan.mp3',
+      'Dhuhr': 'ogle_ezan.mp3',
+      'Asr': 'ikindi_ezan.mp3',
+      'Maghrib': 'aksam_ezan.mp3',
+      'Isha': 'yatsi_ezan.mp3',
+    };
+
     for (int i = 0; i < prayers.length; i++) {
-      await schedulePrayerNotification(
-        id: i,
-        prayerName: prayers[i].name,
-        prayerTime: prayers[i].time,
-        language: language,
-        enableSound: enableSound,
-      );
+      final prayer = prayers[i];
+      final enableNotification = notificationSettings[prayer.name] ?? true;
+      final enableSound = soundSettings[prayer.name] ?? true;
+      final soundFile = soundFiles[prayer.name];
+
+      if (enableNotification) {
+        await schedulePrayerNotification(
+          id: i,
+          prayerName: prayer.name,
+          prayerTime: prayer.time,
+          language: language,
+          enableSound: enableSound,
+          soundFile: soundFile,
+        );
+      }
     }
   }
 

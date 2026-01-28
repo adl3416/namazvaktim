@@ -13,10 +13,31 @@ class AppSettings extends ChangeNotifier {
   bool _enableAdhanSound = true;
   bool _enablePrayerNotifications = true;
 
+  // Prayer-specific notification settings
+  Map<String, bool> _prayerNotifications = {
+    'İmsak': true,
+    'Güneş': false,
+    'Öğle': true,
+    'İkindi': true,
+    'Akşam': true,
+    'Yatsı': true,
+  };
+
+  Map<String, bool> _prayerSounds = {
+    'İmsak': true,
+    'Güneş': false,
+    'Öğle': true,
+    'İkindi': true,
+    'Akşam': true,
+    'Yatsı': true,
+  };
+
   String get language => _language;
   ThemeMode get themeMode => _themeMode;
   bool get enableAdhanSound => _enableAdhanSound;
   bool get enablePrayerNotifications => _enablePrayerNotifications;
+  Map<String, bool> get prayerNotifications => Map.unmodifiable(_prayerNotifications);
+  Map<String, bool> get prayerSounds => Map.unmodifiable(_prayerSounds);
 
   // Theme palettes stored as name -> (section -> ARGB int)
   Map<String, Map<String, int>> _palettes = {};
@@ -37,6 +58,31 @@ class AppSettings extends ChangeNotifier {
     
     _enableAdhanSound = _prefs.getBool('enableAdhanSound') ?? true;
     _enablePrayerNotifications = _prefs.getBool('enablePrayerNotifications') ?? true;
+
+    // Load prayer-specific settings
+    final prayerNotificationsRaw = _prefs.getString('prayer_notifications');
+    if (prayerNotificationsRaw != null) {
+      try {
+        final decoded = jsonDecode(prayerNotificationsRaw) as Map<String, dynamic>;
+        decoded.forEach((key, value) {
+          if (_prayerNotifications.containsKey(key)) {
+            _prayerNotifications[key] = value as bool;
+          }
+        });
+      } catch (_) {}
+    }
+
+    final prayerSoundsRaw = _prefs.getString('prayer_sounds');
+    if (prayerSoundsRaw != null) {
+      try {
+        final decoded = jsonDecode(prayerSoundsRaw) as Map<String, dynamic>;
+        decoded.forEach((key, value) {
+          if (_prayerSounds.containsKey(key)) {
+            _prayerSounds[key] = value as bool;
+          }
+        });
+      } catch (_) {}
+    }
 
     // Load palettes (stored as JSON)
     final raw = _prefs.getString('theme_palettes_json') ?? '';
@@ -147,5 +193,25 @@ class AppSettings extends ChangeNotifier {
       return false;
     }
     return _themeMode == ThemeMode.dark;
+  }
+
+  Future<void> setPrayerNotification(String prayerName, bool enabled) async {
+    if (_prayerNotifications.containsKey(prayerName)) {
+      _prayerNotifications[prayerName] = enabled;
+      if (_initialized) {
+        await _prefs.setString('prayer_notifications', jsonEncode(_prayerNotifications));
+      }
+      notifyListeners();
+    }
+  }
+
+  Future<void> setPrayerSound(String prayerName, bool enabled) async {
+    if (_prayerSounds.containsKey(prayerName)) {
+      _prayerSounds[prayerName] = enabled;
+      if (_initialized) {
+        await _prefs.setString('prayer_sounds', jsonEncode(_prayerSounds));
+      }
+      notifyListeners();
+    }
   }
 }

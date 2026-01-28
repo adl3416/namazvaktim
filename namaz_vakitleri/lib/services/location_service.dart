@@ -62,14 +62,31 @@ class LocationService {
       // If last-known is stale or missing, ask for a fresh position but allow a longer timeout
       Position? position;
       try {
+        print('📍 Requesting fresh GPS location...');
         position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
-          timeLimit: const Duration(seconds: 20),
+          timeLimit: const Duration(seconds: 30), // Increased timeout
+        );
+        print(
+          '✅ Got fresh GPS location: ${position.latitude}, ${position.longitude}',
         );
       } on TimeoutException catch (e) {
         // fallback to last known if available
-        print('Location request timed out, falling back to last known: $e');
+        print('⏰ Location request timed out, falling back to last known: $e');
         position = await Geolocator.getLastKnownPosition();
+        if (position != null) {
+          print(
+            '📍 Using last known position: ${position.latitude}, ${position.longitude}',
+          );
+        }
+      } catch (e) {
+        print('❌ Error getting current position: $e');
+        position = await Geolocator.getLastKnownPosition();
+        if (position != null) {
+          print(
+            '📍 Fallback to last known position: ${position.latitude}, ${position.longitude}',
+          );
+        }
       }
 
       if (position == null) return null;
@@ -117,13 +134,15 @@ class LocationService {
 
         final place = placemarks.isNotEmpty ? placemarks.first : null;
 
-        result.add(GeoLocation(
-          latitude: location.latitude,
-          longitude: location.longitude,
-          city: place?.locality ?? 'Unknown',
-          state: place?.administrativeArea ?? 'Unknown',
-          country: place?.country ?? 'Unknown',
-        ));
+        result.add(
+          GeoLocation(
+            latitude: location.latitude,
+            longitude: location.longitude,
+            city: place?.locality ?? 'Unknown',
+            state: place?.administrativeArea ?? 'Unknown',
+            country: place?.country ?? 'Unknown',
+          ),
+        );
       }
 
       return result;
@@ -158,7 +177,8 @@ class LocationService {
     final dLat = _toRad(lat2 - lat1);
     final dLon = _toRad(lon2 - lon1);
 
-    final a = (1 - Math.cos(dLat)) / 2 +
+    final a =
+        (1 - Math.cos(dLat)) / 2 +
         Math.cos(_toRad(lat1)) *
             Math.cos(_toRad(lat2)) *
             (1 - Math.cos(dLon)) /
@@ -175,11 +195,14 @@ class LocationService {
 class Math {
   static const double pi = 3.14159265359;
 
-  static double cos(double angle) => (1 - (angle * angle) / 2 +
+  static double cos(double angle) =>
+      (1 -
+      (angle * angle) / 2 +
       (angle * angle * angle * angle) / 24 -
       (angle * angle * angle * angle * angle * angle) / 720);
 
-  static double sin(double angle) => (angle -
+  static double sin(double angle) =>
+      (angle -
       (angle * angle * angle) / 6 +
       (angle * angle * angle * angle * angle) / 120);
 

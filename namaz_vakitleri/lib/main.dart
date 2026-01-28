@@ -7,16 +7,20 @@ import 'package:namaz_vakitleri/providers/app_settings.dart';
 import 'package:namaz_vakitleri/providers/prayer_provider.dart';
 import 'package:namaz_vakitleri/screens/home_screen.dart';
 import 'package:namaz_vakitleri/services/notification_service.dart';
+import 'package:namaz_vakitleri/services/location_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize timezone
   tz.initializeTimeZones();
-  
+
   // Initialize notifications
   await NotificationService.initialize();
-  
+
+  // Request location permission early
+  await LocationService.requestLocationPermission();
+
   runApp(const MyApp());
 }
 
@@ -30,6 +34,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   late AppSettings _appSettings;
   late PrayerProvider _prayerProvider;
+  bool _isInitialized = false;
 
   @override
   void initState() {
@@ -40,32 +45,63 @@ class _MyAppState extends State<MyApp> {
   }
 
   Future<void> _initializeApp() async {
-    await _appSettings.initialize();
-    await _prayerProvider.initialize();
+    try {
+      await _appSettings.initialize();
+      await _prayerProvider.initialize();
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+    } catch (e) {
+      print('Error initializing app: $e');
+      if (mounted) {
+        setState(() {
+          _isInitialized = true; // Continue even with errors
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_isInitialized) {
+      return MaterialApp(
+        home: Scaffold(
+          backgroundColor: Colors.teal,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(color: Colors.white),
+                SizedBox(height: 16),
+                Text(
+                  'Namaz Vakitleri Yükleniyor...',
+                  style: TextStyle(color: Colors.white, fontSize: 18),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<AppSettings>.value(value: _appSettings),
-        ChangeNotifierProvider<PrayerProvider>.value(value: _prayerProvider),
+        ChangeNotifierProvider.value(value: _appSettings),
+        ChangeNotifierProvider.value(value: _prayerProvider),
       ],
       child: Consumer<AppSettings>(
-        builder: (context, settings, _) {
-          final isDark = settings.isDarkMode ||
-              (settings.themeMode == ThemeMode.system &&
-                  MediaQuery.of(context).platformBrightness ==
-                      Brightness.dark);
-
+        builder: (context, appSettings, child) {
           return MaterialApp(
-            title: AppLocalizations.translate('app_title', settings.language),
+            title: 'Namaz Vakitleri',
+            debugShowCheckedModeBanner: false,
             theme: _buildLightTheme(),
             darkTheme: _buildDarkTheme(),
-            themeMode: settings.themeMode,
-            locale: Locale(settings.language),
+            themeMode: appSettings.isDarkMode
+                ? ThemeMode.dark
+                : ThemeMode.light,
             home: const HomeScreen(),
-            debugShowCheckedModeBanner: false,
           );
         },
       ),
@@ -82,20 +118,12 @@ class _MyAppState extends State<MyApp> {
         elevation: 0,
         centerTitle: true,
         iconTheme: const IconThemeData(color: AppColors.textPrimary),
-        titleTextStyle: AppTypography.h3.copyWith(
-          color: AppColors.textPrimary,
-        ),
+        titleTextStyle: AppTypography.h3.copyWith(color: AppColors.textPrimary),
       ),
       textTheme: TextTheme(
-        displayLarge: AppTypography.h1.copyWith(
-          color: AppColors.textPrimary,
-        ),
-        displayMedium: AppTypography.h2.copyWith(
-          color: AppColors.textPrimary,
-        ),
-        displaySmall: AppTypography.h3.copyWith(
-          color: AppColors.textPrimary,
-        ),
+        displayLarge: AppTypography.h1.copyWith(color: AppColors.textPrimary),
+        displayMedium: AppTypography.h2.copyWith(color: AppColors.textPrimary),
+        displaySmall: AppTypography.h3.copyWith(color: AppColors.textPrimary),
         bodyLarge: AppTypography.bodyLarge.copyWith(
           color: AppColors.textPrimary,
         ),
@@ -105,9 +133,7 @@ class _MyAppState extends State<MyApp> {
         bodySmall: AppTypography.bodySmall.copyWith(
           color: AppColors.textSecondary,
         ),
-        labelMedium: AppTypography.caption.copyWith(
-          color: AppColors.textLight,
-        ),
+        labelMedium: AppTypography.caption.copyWith(color: AppColors.textLight),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

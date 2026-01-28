@@ -47,15 +47,15 @@ class PrayerProvider extends ChangeNotifier {
 
       print('📱 PrayerProvider initializing...');
 
-      // Try to load current location
+      // Always try to get current location first
       await _loadCurrentLocation();
 
-      // If still no location, try to load from cache
+      // If current location failed, load from cache as backup
       if (_currentLocation == null) {
         _loadLocationFromCache();
       }
 
-      // If still no location, use default (Istanbul)
+      // If still no location, use default (Istanbul) as last resort
       if (_currentLocation == null) {
         print('📍 Using default location: Istanbul');
         _currentLocation = GeoLocation(
@@ -73,7 +73,9 @@ class PrayerProvider extends ChangeNotifier {
         await _prefs.setDouble('longitude', 28.9784);
       }
 
-      print('📍 Final Location: ${_currentLocation?.city} (${_currentLocation?.latitude}, ${_currentLocation?.longitude})');
+      print(
+        '📍 Final Location: ${_currentLocation?.city} (${_currentLocation?.latitude}, ${_currentLocation?.longitude})',
+      );
 
       await fetchPrayerTimes();
 
@@ -105,7 +107,9 @@ class PrayerProvider extends ChangeNotifier {
         _savedCountry = country;
         print('✅ Loaded location from cache: $city, $country');
       } else {
-        print('⚠️ Incomplete cached location data: lat=$lat, lon=$lon, city=$city, country=$country');
+        print(
+          '⚠️ Incomplete cached location data: lat=$lat, lon=$lon, city=$city, country=$country',
+        );
       }
     } catch (e, stacktrace) {
       print('❌ Error loading location from cache: $e');
@@ -139,7 +143,8 @@ class PrayerProvider extends ChangeNotifier {
   Future<void> fetchPrayerTimes() async {
     if (_isFetching) return;
     final now = DateTime.now();
-    if (_lastFetchTime != null && now.difference(_lastFetchTime!) < _minFetchInterval) {
+    if (_lastFetchTime != null &&
+        now.difference(_lastFetchTime!) < _minFetchInterval) {
       // Skip fetch; recently fetched
       print('⏱️ Skipping fetch: within min fetch interval');
       return;
@@ -160,7 +165,9 @@ class PrayerProvider extends ChangeNotifier {
         return;
       }
 
-      print('🔄 Fetching prayer times for: ${_currentLocation!.city} (${_currentLocation!.latitude}, ${_currentLocation!.longitude})');
+      print(
+        '🔄 Fetching prayer times for: ${_currentLocation!.city} (${_currentLocation!.latitude}, ${_currentLocation!.longitude})',
+      );
 
       final prayerTimes = await AlAdhanService.getPrayerTimes(
         latitude: _currentLocation!.latitude,
@@ -169,7 +176,9 @@ class PrayerProvider extends ChangeNotifier {
         country: _currentLocation!.country,
       );
 
-      print('📦 Prayer Times Result: ${prayerTimes != null ? "Received" : "Null"}');
+      print(
+        '📦 Prayer Times Result: ${prayerTimes != null ? "Received" : "Null"}',
+      );
 
       if (prayerTimes != null && prayerTimes.prayerTimesList.isNotEmpty) {
         _currentPrayerTimes = prayerTimes;
@@ -178,7 +187,9 @@ class PrayerProvider extends ChangeNotifier {
 
         // Debug: print active prayer for quick visibility
         try {
-          debugPrint('🔔 Active prayer: ${_activePrayer?.name} at ${_activePrayer?.time}');
+          debugPrint(
+            '🔔 Active prayer: ${_activePrayer?.name} at ${_activePrayer?.time}',
+          );
         } catch (_) {}
 
         // If the computed next prayer is in the past (some APIs return today's
@@ -196,8 +207,12 @@ class PrayerProvider extends ChangeNotifier {
 
         _lastFetchTime = DateTime.now();
 
-        print('✅ Prayer Times Loaded: ${prayerTimes.prayerTimesList.length} prayers');
-        print('⏭️ Next Prayer: ${_nextPrayer?.name} at ${_nextPrayer?.time.hour}:${_nextPrayer?.time.minute.toString().padLeft(2, '0')}');
+        print(
+          '✅ Prayer Times Loaded: ${prayerTimes.prayerTimesList.length} prayers',
+        );
+        print(
+          '⏭️ Next Prayer: ${_nextPrayer?.name} at ${_nextPrayer?.time.hour}:${_nextPrayer?.time.minute.toString().padLeft(2, '0')}',
+        );
 
         // Schedule notifications
         await NotificationService.scheduleAllPrayerNotifications(
@@ -209,9 +224,13 @@ class PrayerProvider extends ChangeNotifier {
         _errorMessage = '';
       } else {
         _errorMessage = 'Namaz vakitleri yüklenemedi';
-        print('❌ Failed: prayerTimes is ${prayerTimes == null ? "null" : "empty"}');
+        print(
+          '❌ Failed: prayerTimes is ${prayerTimes == null ? "null" : "empty"}',
+        );
         if (prayerTimes != null) {
-          print('   prayerTimesList length: ${prayerTimes.prayerTimesList.length}');
+          print(
+            '   prayerTimesList length: ${prayerTimes.prayerTimesList.length}',
+          );
           print('   times map: ${prayerTimes.times}');
         }
       }
@@ -275,7 +294,9 @@ class PrayerProvider extends ChangeNotifier {
       } else {
         // Use the existing _nextPrayer but move it to next day to keep a stable countdown
         if (_nextPrayer != null) {
-          _countdownDuration = _nextPrayer!.time.add(const Duration(days: 1)).difference(now);
+          _countdownDuration = _nextPrayer!.time
+              .add(const Duration(days: 1))
+              .difference(now);
           _lastCountdownUpdate = now;
           notifyListeners();
         }
@@ -286,5 +307,39 @@ class PrayerProvider extends ChangeNotifier {
   @override
   void dispose() {
     super.dispose();
+  }
+
+  /// Force refresh current location and prayer times
+  Future<void> refreshLocation() async {
+    try {
+      print('🔄 Force refreshing location...');
+
+      // Force get current location
+      final location = await LocationService.getCurrentLocation();
+      if (location != null) {
+        print('✅ New location: ${location.city}, ${location.country}');
+        _currentLocation = location;
+        await _prefs.setString('city', location.city);
+        await _prefs.setString('country', location.country);
+        await _prefs.setDouble('latitude', location.latitude);
+        await _prefs.setDouble('longitude', location.longitude);
+
+        _savedCity = location.city;
+        _savedCountry = location.country;
+
+        // Reset last fetch time to force prayer times refresh
+        _lastFetchTime = null;
+
+        // Fetch new prayer times for the new location
+        await fetchPrayerTimes();
+
+        notifyListeners();
+      } else {
+        throw Exception('Konum alınamadı');
+      }
+    } catch (e) {
+      print('❌ Error refreshing location: $e');
+      throw e;
+    }
   }
 }

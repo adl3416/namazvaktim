@@ -4,16 +4,20 @@ class AppColors {
   // Light mode backgrounds
   static const Color lightBg = Color(0xFFEBF5FB);
   static const Color lightBgSecondary = Color(0xFFFAFAFA);
-  
+
   // Prayer time backgrounds (light mode) - Sadece ana renk ve tonları kullanılacak
-  static const Color lightBaseBg = Color(0xFFFFE7BF); // Ana renk (ör: öğle-ikindi arası)
-  
+  static const Color lightBaseBg = Color(
+    0xFFFFE7BF,
+  ); // Ana renk (ör: öğle-ikindi arası)
+
   // Dark mode backgrounds
   static const Color darkBg = Color(0xFF2A2633);
   static const Color darkBgSecondary = Color(0xFF3D3645);
-  
+
   // Prayer time backgrounds (dark mode) - Sadece ana rengin koyu tonu
-  static const Color darkBaseBg = Color(0xFFBFA770); // Ana rengin koyu tonu (ör: #FFE7BF'in koyusu)
+  static const Color darkBaseBg = Color(
+    0xFFBFA770,
+  ); // Ana rengin koyu tonu (ör: #FFE7BF'in koyusu)
 
   // getPrayerTimeBackground fonksiyonu sadeleştirildi, sadece ana renk döner
   // Map vakit names to specific base colors (light mode). Dark mode color
@@ -25,15 +29,28 @@ class AppColors {
 
     if (n.contains('fajr') || n.contains('imsak') || n.contains('sabah')) {
       lightBase = imsakBase; // İmsak – Güneş arası (açık buz mavisi)
-    } else if (n.contains('sunrise') || n.contains('gunes') || n.contains('güneş')) {
+    } else if (n.contains('sunrise') ||
+        n.contains('gunes') ||
+        n.contains('güneş')) {
       lightBase = gunesBase; // Güneş – Öğle arası (çok açık mavi/beyaz)
-    } else if (n.contains('dhuhr') || n.contains('ogle') || n.contains('öğle') || n.contains('zuhr')) {
+    } else if (n.contains('dhuhr') ||
+        n.contains('ogle') ||
+        n.contains('öğle') ||
+        n.contains('zuhr')) {
       lightBase = ogleBase; // Öğle – İkindi arası (sarımsı)
-    } else if (n.contains('asr') || n.contains('ikindi') || n.contains('asir')) {
+    } else if (n.contains('asr') ||
+        n.contains('ikindi') ||
+        n.contains('asir')) {
       lightBase = ikindiBase; // İkindi – Akşam arası (daha koyu sarı/turuncu)
-    } else if (n.contains('maghrib') || n.contains('aksam') || n.contains('akşam') || n.contains('magrib')) {
+    } else if (n.contains('maghrib') ||
+        n.contains('aksam') ||
+        n.contains('akşam') ||
+        n.contains('magrib')) {
       lightBase = aksamBase; // Akşam – Yatsı arası (turuncu/gün batımı)
-    } else if (n.contains('isha') || n.contains('yatsı') || n.contains('yatsi') || n.contains('esha')) {
+    } else if (n.contains('isha') ||
+        n.contains('yatsı') ||
+        n.contains('yatsi') ||
+        n.contains('esha')) {
       lightBase = yatsiBase; // Yatsı – İmsak arası (koyu buz mavisi/gece)
     }
 
@@ -50,10 +67,8 @@ class AppColors {
     dynamicBase = base;
     // Derive a subtle accent from the base by darkening slightly.
     dynamicAccent = Color.lerp(base, Colors.black, 0.16);
-    // Debug: print current dynamic base & accent so we can verify runtime changes
-    debugPrint('AppColors.setDynamicBase -> base: ${base.value.toRadixString(16)}, accent: ${dynamicAccent?.value.toRadixString(16)}');
   }
-  
+
   // Text colors (all black per user requirement)
   static const Color textPrimary = Color(0xFF000000);
   static const Color textSecondary = Color(0xFF000000);
@@ -61,7 +76,7 @@ class AppColors {
   static const Color darkTextPrimary = Color(0xFF000000);
   static const Color darkTextSecondary = Color(0xFF000000);
   static const Color darkTextLight = Color(0xFF000000);
-  
+
   // UI elements
   static const Color accentMint = Color(0xFFBEECD5);
   static const Color darkAccentMint = Color(0xFF8B9FA3);
@@ -76,38 +91,124 @@ class AppColors {
   static Color? dynamicAccent;
 
   static Color get accentPrimary => dynamicAccent ?? _accentPrimaryDefault;
-  static Color get darkAccentPrimary => dynamicAccent ?? _darkAccentPrimaryDefault;
+  static Color get darkAccentPrimary =>
+      dynamicAccent ?? _darkAccentPrimaryDefault;
   static Color get accentSecondary => dynamicAccent ?? _accentSecondaryDefault;
-  static Color get darkAccentSecondary => dynamicAccent ?? _darkAccentSecondaryDefault;
-  
+  static Color get darkAccentSecondary =>
+      dynamicAccent ?? _darkAccentSecondaryDefault;
+
   // Dividers
   static const Color divider = Color(0xFFE0E0E0);
   static const Color darkDivider = Color(0xFF4A4359);
   static const Color lightDivider = Color(0xFFE0E0E0);
-  
+
   // Status colors
   static const Color success = Color(0xFFB5D4A8);
   static const Color error = Color(0xFFD4A8A8);
   static const Color warning = Color(0xFFD4C4A8);
-  
+
   // Theme-aware getters
-  static Color getTextPrimary(bool isDark) => isDark ? darkTextPrimary : textPrimary;
-  static Color getTextSecondary(bool isDark) => isDark ? darkTextSecondary : textSecondary;
+  static Color getTextPrimary(bool isDark) =>
+      isDark ? darkTextPrimary : textPrimary;
+  static Color getTextSecondary(bool isDark) =>
+      isDark ? darkTextSecondary : textSecondary;
   static Color getTextLight(bool isDark) => isDark ? darkTextLight : textLight;
   static Color getBackground(bool isDark) => isDark ? darkBg : lightBg;
   static Color getDivider(bool isDark) => isDark ? darkDivider : lightDivider;
-  
+
   // NOTE: getPrayerTimeBackground simplified above to return base tones.
 
-  // Named base colors per vakit (light-mode). Use these constants when a specific
-  // vakit base is needed in code; prefer `getPrayerTimeBackground` for name-based lookup.
-  static const Color sayimBase = Color(0xFFFFEBEE); // very light pink
-  static const Color imsakBase = Color(0xFFFFCDD2);
-  static const Color gunesBase = Color(0xFFEF9A9A);
-  static const Color ogleBase = Color(0xFFE57373);
-  static const Color ikindiBase = Color(0xFFEF5350);
-  static const Color aksamBase = Color(0xFFE53935);
-  static const Color yatsiBase = Color(0xFFC62828);
+  // Named base colors per vakit (light-mode). Her vakit için farklı renk tonu
+  // Use these constants when a specific vakit base is needed in code; prefer `getPrayerTimeBackground` for name-based lookup.
+  static const Color sayimBase = Color(0xFFE8F5E8); // açık yeşil
+  static const Color imsakBase = Color(0xFF87CEEB); // sky blue - açık mavi
+  static const Color gunesBase = Color(0xFFFFA500); // turuncu - güneş rengi
+  static const Color ogleBase = Color(0xFFFFD700); // altın sarısı - öğle güneşi
+  static const Color ikindiBase = Color(
+    0xFFFF8C00,
+  ); // koyu turuncu - öğleden sonra
+  static const Color aksamBase = Color(
+    0xFFFF4500,
+  ); // kırmızı-turuncu - gün batımı
+  static const Color yatsiBase = Color(0xFF4169E1); // royal blue - gece
+
+  // 🎨 GÜNÜN ZAMANINA GÖRE PASTEL RENK SİSTEMİ
+  // Zaman dilimleri ve pastel renk paleti
+
+  // 🌅 SABAH (05:00 - 11:00) - Pembe/somon pastel tonları
+  static const List<Color> sabahPastelColors = [
+    Color(0xFFFFE5E5), // En açık pembe
+    Color(0xFFFFCCCC),
+    Color(0xFFFFB6C1), // Light pink
+    Color(0xFFFFA0A0),
+    Color(0xFFFFA07A), // Light salmon
+  ];
+
+  // ☀️ ÖĞLEN (11:00 - 15:00) - Sarı/turuncu pastel tonları
+  static const List<Color> oglenPastelColors = [
+    Color(0xFFFFFACD), // Lemon chiffon - en açık
+    Color(0xFFFFEFB7),
+    Color(0xFFFFE4B5), // Moccasin
+    Color(0xFFFFDAAD),
+    Color(0xFFFFD700), // Gold
+  ];
+
+  // 🌆 AKŞAM (15:00 - 19:00) - Turuncu/kırmızı pastel tonları
+  static const List<Color> aksamPastelColors = [
+    Color(0xFFFFE4B5), // Moccasin - en açık
+    Color(0xFFFFDAB9), // Peach puff
+    Color(0xFFFFB347), // Pastel orange
+    Color(0xFFFF8C69), // Salmon
+    Color(0xFFFF7F50), // Coral
+  ];
+
+  // 🌙 GECE (19:00 - 05:00) - Mavi/mor pastel tonları
+  static const List<Color> gecePastelColors = [
+    Color(0xFFE6E6FA), // Lavender - en açık
+    Color(0xFFDDD0FF),
+    Color(0xFFD1C7FF), // Light periwinkle
+    Color(0xFFC8B9FF),
+    Color(0xFFB19CD9), // Light purple
+  ];
+
+  // 📍 Günün zamanına göre pastel renk grubu seçimi
+  static List<Color> getTimeBasedPastelColors([DateTime? time]) {
+    final now = time ?? DateTime.now();
+    final hour = now.hour;
+
+    if (hour >= 5 && hour < 11) {
+      return sabahPastelColors; // 🌅 SABAH
+    } else if (hour >= 11 && hour < 15) {
+      return oglenPastelColors; // ☀️ ÖĞLEN
+    } else if (hour >= 15 && hour < 19) {
+      return aksamPastelColors; // 🌆 AKŞAM
+    } else {
+      return gecePastelColors; // 🌙 GECE
+    }
+  }
+
+  // 🎨 İndekse göre pastel renk alma (0=en açık, 4=en koyu)
+  static Color getPastelColorByIndex(int index, [DateTime? time]) {
+    final colors = getTimeBasedPastelColors(time);
+    final clampedIndex = index.clamp(0, colors.length - 1);
+    return colors[clampedIndex];
+  }
+
+  // 📊 Zaman dilimi bilgisi alma
+  static String getCurrentTimePhase([DateTime? time]) {
+    final now = time ?? DateTime.now();
+    final hour = now.hour;
+
+    if (hour >= 5 && hour < 11) {
+      return 'sabah';
+    } else if (hour >= 11 && hour < 15) {
+      return 'ogle';
+    } else if (hour >= 15 && hour < 19) {
+      return 'aksam';
+    } else {
+      return 'gece';
+    }
+  }
 }
 
 class AppSpacing {
@@ -127,49 +228,49 @@ class AppTypography {
     fontWeight: FontWeight.bold,
     color: Color(0xFF000000),
   );
-  
+
   static const TextStyle h2 = TextStyle(
     fontSize: 24.0,
     fontWeight: FontWeight.bold,
     color: Color(0xFF000000),
   );
-  
+
   static const TextStyle h3 = TextStyle(
     fontSize: 20.0,
     fontWeight: FontWeight.bold,
     color: Color(0xFF000000),
   );
-  
+
   static const TextStyle bodyLarge = TextStyle(
     fontSize: 16.0,
     fontWeight: FontWeight.normal,
     color: Color(0xFF000000),
   );
-  
+
   static const TextStyle bodyMedium = TextStyle(
     fontSize: 14.0,
     fontWeight: FontWeight.normal,
     color: Color(0xFF000000),
   );
-  
+
   static const TextStyle bodySmall = TextStyle(
     fontSize: 12.0,
     fontWeight: FontWeight.normal,
     color: Color(0xFF000000),
   );
-  
+
   static const TextStyle caption = TextStyle(
     fontSize: 10.0,
     fontWeight: FontWeight.normal,
     color: Color(0xFF000000),
   );
-  
+
   static const TextStyle countdownLarge = TextStyle(
     fontSize: 48.0,
     fontWeight: FontWeight.bold,
     color: Color(0xFF000000),
   );
-  
+
   static const TextStyle countdownLabel = TextStyle(
     fontSize: 12.0,
     fontWeight: FontWeight.normal,
@@ -201,12 +302,12 @@ class AppShadows {
     blurRadius: 2.0,
     offset: Offset(0, 1),
   );
-  
+
   static const BoxShadow soft = BoxShadow(
     color: Color(0x24000000),
     blurRadius: 8.0,
     offset: Offset(0, 2),
   );
-  
+
   static const BoxShadow none = BoxShadow(color: Colors.transparent);
 }

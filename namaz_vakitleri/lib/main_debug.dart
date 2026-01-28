@@ -1,25 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:namaz_vakitleri/providers/app_settings.dart';
+import 'package:namaz_vakitleri/providers/prayer_provider.dart';
+import 'package:namaz_vakitleri/services/notification_service.dart';
 import 'package:provider/provider.dart';
-import 'lib/providers/app_settings.dart';
-import 'lib/providers/prayer_provider.dart';
-import 'lib/screens/home_screen.dart';
-import 'lib/config/color_system.dart';
-import 'lib/services/notification_service.dart';
+import 'config/color_system.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   print('🚀 App starting...');
-  
+
   // Initialize timezone
   tz.initializeTimeZones();
   print('✅ Timezone initialized');
-  
+
   // Initialize notifications
   await NotificationService.initialize();
   print('✅ Notifications initialized');
-  
+
   runApp(const DebugApp());
 }
 
@@ -50,7 +49,7 @@ class _DebugAppState extends State<DebugApp> {
       await _appSettings.initialize();
       print('✅ AppSettings initialized');
       _updateDebug('AppSettings initialized');
-      
+
       print('📱 Initializing PrayerProvider...');
       _updateDebug('Initializing PrayerProvider...');
       await _prayerProvider.initialize();
@@ -98,17 +97,12 @@ class _DebugAppState extends State<DebugApp> {
 class DebugHomeScreen extends StatelessWidget {
   final String debugInfo;
 
-  const DebugHomeScreen({
-    Key? key,
-    required this.debugInfo,
-  }) : super(key: key);
+  const DebugHomeScreen({Key? key, required this.debugInfo}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Debug Info'),
-      ),
+      appBar: AppBar(title: const Text('Debug Info')),
       body: Consumer<PrayerProvider>(
         builder: (context, prayerProvider, _) {
           return SingleChildScrollView(
@@ -127,7 +121,9 @@ class DebugHomeScreen extends StatelessWidget {
                     border: Border.all(color: Colors.grey),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Text(debugInfo.isEmpty ? 'Initializing...' : debugInfo),
+                  child: Text(
+                    debugInfo.isEmpty ? 'Initializing...' : debugInfo,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Text(
@@ -137,13 +133,19 @@ class DebugHomeScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text('Is Loading: ${prayerProvider.isLoading}'),
                 Text('Error Message: ${prayerProvider.errorMessage}'),
-                Text('Current Location: ${prayerProvider.currentLocation?.city ?? "None"}'),
+                Text(
+                  'Current Location: ${prayerProvider.currentLocation?.city ?? "None"}',
+                ),
                 Text('Saved City: ${prayerProvider.savedCity}'),
-                Text('Prayer Times: ${prayerProvider.currentPrayerTimes != null ? "Loaded" : "Null"}'),
+                Text(
+                  'Prayer Times: ${prayerProvider.currentPrayerTimes != null ? "Loaded" : "Null"}',
+                ),
                 Text(
                   'Prayer Count: ${prayerProvider.currentPrayerTimes?.prayerTimesList.length ?? 0}',
                 ),
-                Text('Next Prayer: ${prayerProvider.nextPrayer?.name ?? "None"}'),
+                Text(
+                  'Next Prayer: ${prayerProvider.nextPrayer?.name ?? "None"}',
+                ),
                 const SizedBox(height: 24),
                 ElevatedButton(
                   onPressed: () {

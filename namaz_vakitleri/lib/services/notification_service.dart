@@ -27,6 +27,22 @@ class NotificationService {
     final bool? initialized = await _flutterLocalNotificationsPlugin.initialize(initializationSettings);
     print('🔔 Notification plugin initialized: $initialized');
 
+    // Create Android notification channel
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'prayer_channel',
+      'Prayer Notifications',
+      description: 'Notifications for prayer times',
+      importance: Importance.high,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound('sabah_ezan'),
+    );
+
+    await _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
+
+    print('🔔 Notification channel created');
+
     // Request iOS permissions
     await _flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
@@ -44,6 +60,37 @@ class NotificationService {
         ?.requestNotificationsPermission();
 
     print('🔔 Notification permissions requested');
+  }
+
+  /// Test notification to verify notifications are working
+  static Future<void> showTestNotification() async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'prayer_channel',
+      'Prayer Notifications',
+      channelDescription: 'Notifications for prayer times',
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound('sabah_ezan'),
+    );
+
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentSound: true,
+        presentBadge: true,
+        presentAlert: true,
+      ),
+    );
+
+    await _flutterLocalNotificationsPlugin.show(
+      999, // Test ID
+      '🔔 Test Notification',
+      'Namaz vakti uygulaması çalışıyor!',
+      notificationDetails,
+    );
+
+    print('🔔 Test notification sent');
   }
 
   /// Schedule a notification for prayer time
@@ -110,9 +157,12 @@ class NotificationService {
       // Convert to TZDateTime in local zone and ensure it's in the future
       tz.TZDateTime scheduled = tz.TZDateTime.from(prayerTime, tz.local);
       final now = tz.TZDateTime.now(tz.local);
+      
+      // Only schedule notifications for prayer times that haven't passed yet today
+      // If the prayer time has already passed, don't schedule a notification
       if (scheduled.isBefore(now)) {
-        // If the scheduled time is already past for today, schedule for next day
-        scheduled = scheduled.add(const Duration(days: 1));
+        print('⏰ Prayer time for $prayerName has already passed today ($scheduled), skipping notification');
+        return;
       }
 
       await _flutterLocalNotificationsPlugin.zonedSchedule(

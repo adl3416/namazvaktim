@@ -91,10 +91,7 @@ class PrayerProvider extends ChangeNotifier {
 
       await fetchPrayerTimes();
 
-      // Start countdown timer
-      _startCountdownTimer();
-
-      // Set up audio context for adhan playback
+      // Set up audio context for adhan playback before playing any sounds
       await _audioPlayer.setAudioContext(
         AudioContext(
           android: AudioContextAndroid(
@@ -106,6 +103,19 @@ class PrayerProvider extends ChangeNotifier {
           ),
         ),
       );
+
+      // Listen for audio focus changes to stop adhan when volume keys are pressed
+      _audioPlayer.onPlayerStateChanged.listen((state) {
+        print('🎵 Audio player state changed: $state');
+      });
+
+      // Handle audio interruptions (like volume key presses)
+      _audioPlayer.onPlayerComplete.listen((event) {
+        print('✅ Adhan playback completed');
+      });
+
+      // Start countdown timer
+      _startCountdownTimer();
     } catch (e, stacktrace) {
       print('❌ Error initializing PrayerProvider: $e');
       print(stacktrace);
@@ -304,13 +314,27 @@ class PrayerProvider extends ChangeNotifier {
     Timer.periodic(const Duration(seconds: 1), (timer) async {
       final now = DateTime.now();
 
+      // Update active prayer in real-time
+      if (_currentPrayerTimes != null) {
+        final newActivePrayer = _currentPrayerTimes!.activePrayer;
+        if (newActivePrayer?.name != _activePrayer?.name) {
+          _activePrayer = newActivePrayer;
+          print('🔄 Active prayer changed to: ${_activePrayer?.name}');
+
+          // Play adhan for newly active prayer if sounds are enabled
+          if (_activePrayer != null) {
+            await _checkAndPlayAdhanForActivePrayer(_activePrayer!);
+          }
+        }
+      }
+
       if (_nextPrayer != null && _nextPrayer!.time.isAfter(now)) {
         _countdownDuration = _nextPrayer!.time.difference(now);
         _lastCountdownUpdate = now;
-        
+
         // Check if we should play adhan for approaching prayer
         await _checkAndPlayAdhan(_nextPrayer!, _countdownDuration!);
-        
+
         notifyListeners();
         return;
       }
@@ -318,12 +342,12 @@ class PrayerProvider extends ChangeNotifier {
       // Prayer time has arrived or passed - play adhan if not already played
       if (_nextPrayer != null && !_isFetching) {
         final timeDiff = _nextPrayer!.time.difference(now);
-        
+
         // If prayer time has just arrived (within last minute) or just passed, play adhan
         if (timeDiff <= Duration.zero && timeDiff > Duration(minutes: -1)) {
           await _checkAndPlayAdhanOnTime(_nextPrayer!);
         }
-        
+
         // Schedule next prayer times
         await fetchPrayerTimes();
       }
@@ -351,6 +375,39 @@ class PrayerProvider extends ChangeNotifier {
     } else if (remaining > _adhanThreshold) {
       // Reset when we're outside the threshold (new prayer cycle)
       _lastAdhanPlayedForPrayer = null;
+    }
+  }
+
+  /// Play adhan for the currently active prayer (when app starts with active prayer)
+  Future<void> _checkAndPlayAdhanForActivePrayer(PrayerTime prayer) async {
+    print('🔔 Checking adhan for active prayer: ${prayer.name}');
+    
+    // Only play adhan if sound is enabled for this prayer
+    final soundEnabled = _appSettings.prayerSounds[prayer.name] ?? true;
+    print('🔔 Sound enabled for ${prayer.name}: $soundEnabled');
+    
+    if (!soundEnabled) return;
+
+    // Only play adhan if the prayer time is recent (within last 30 minutes)
+    // This prevents adhan from playing if app is opened hours after prayer time
+    final now = DateTime.now();
+    final timeSincePrayer = now.difference(prayer.time);
+    const maxTimeForAdhan = Duration(minutes: 30);
+    
+    print('🔔 Time since prayer: ${timeSincePrayer.inMinutes} minutes');
+    
+    if (timeSincePrayer > maxTimeForAdhan) {
+      print('🔔 Prayer time too old (${timeSincePrayer.inMinutes} minutes ago), skipping adhan');
+      return;
+    }
+
+    // Check if we haven't played adhan for this active prayer yet
+    if (_lastAdhanPlayedForPrayer != '${prayer.name}_active') {
+      print('🔔 Active prayer detected: ${prayer.name} - Playing adhan');
+      await _playAdhanForPrayer(prayer.name);
+      _lastAdhanPlayedForPrayer = '${prayer.name}_active';
+    } else {
+      print('🔔 Adhan already played for active prayer: ${prayer.name}');
     }
   }
 

@@ -4,6 +4,7 @@ import 'package:namaz_vakitleri/config/color_system.dart';
 import 'package:namaz_vakitleri/config/localization.dart';
 import 'package:namaz_vakitleri/providers/app_settings.dart';
 import 'package:namaz_vakitleri/providers/prayer_provider.dart';
+import 'package:namaz_vakitleri/services/notification_service.dart';
 import '../widgets/common_widgets.dart';
 import '../widgets/city_search_dialog.dart';
 import 'country_selection_screen.dart';
@@ -294,6 +295,84 @@ class SettingsScreen extends StatelessWidget {
                                           color: isDark
                                               ? AppColors.darkTextLight
                                               : AppColors.textLight,
+                                          size: 20,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              SizedBox(height: AppSpacing.md),
+
+                              // Test Notification Button
+                              _buildSettingCard(
+                                label: 'Test Bildirimi',
+                                icon: Icons.notifications_active,
+                                isDark: isDark,
+                                locale: locale,
+                                showLabel: false,
+                                child: GestureDetector(
+                                  onTap: () async {
+                                    await NotificationService.initialize();
+                                    await NotificationService.showTestNotification();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          locale == 'tr'
+                                              ? 'Test bildirimi gönderildi!'
+                                              : 'Test notification sent!',
+                                        ),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: AppSpacing.lg,
+                                      vertical: AppSpacing.lg,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: (isDark
+                                          ? AppColors.darkBgSecondary
+                                          : AppColors.lightBgSecondary).withOpacity(0.7),
+                                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                                      border: Border.all(
+                                        color: (isDark ? AppColors.darkTextLight : AppColors.textLight).withOpacity(0.2),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: EdgeInsets.all(AppSpacing.sm),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF2196F3).withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(AppRadius.md),
+                                          ),
+                                          child: Icon(
+                                            Icons.notifications_active,
+                                            color: const Color(0xFF2196F3),
+                                            size: 24,
+                                          ),
+                                        ),
+                                        SizedBox(width: AppSpacing.md),
+                                        Expanded(
+                                          child: Text(
+                                            locale == 'tr'
+                                                ? 'Test Bildirimi Gönder'
+                                                : 'Send Test Notification',
+                                            style: AppTypography.bodyLarge.copyWith(
+                                              color: isDark
+                                                  ? AppColors.darkTextPrimary
+                                                  : AppColors.textPrimary,
+                                              fontWeight: FontWeight.w400,
+                                            ),
+                                          ),
+                                        ),
+                                        Icon(
+                                          Icons.send,
+                                          color: const Color(0xFF2196F3),
                                           size: 20,
                                         ),
                                       ],

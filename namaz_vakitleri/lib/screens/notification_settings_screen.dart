@@ -195,17 +195,17 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                   _buildPrayerTimeSetting('Yatsı', 'yatsi'),
                   // Logo at the bottom
                   Padding(
-                    padding: EdgeInsets.only(top: AppSpacing.xl),
+                    padding: EdgeInsets.only(top: AppSpacing.md),
                     child: Center(
                       child: Column(
                         children: [
                           Image.asset(
                             'assets/images/app_icon.png',
-                            width: 60,
-                            height: 60,
+                            width: 40,
+                            height: 40,
                             fit: BoxFit.contain,
                           ),
-                          SizedBox(height: AppSpacing.sm),
+                          SizedBox(height: AppSpacing.xs),
                           Text(
                             'v1.0.0',
                             style: AppTypography.caption.copyWith(

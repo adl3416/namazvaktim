@@ -118,6 +118,26 @@ class _HomeScreenState extends State<HomeScreen> {
 
         final homeBackground = paletteColor ?? computedBg;
 
+        // Debug: Print current background color
+        print('🖌️ === ANA SAYFA RENK DEBUG ===');
+        print('🖌️ Current Prayer Name (raw): $currentPrayerName');
+        print('🖌️ Active Prayer: ${prayerProvider.activePrayer?.name}');
+        print('🖌️ Next Prayer: ${prayerProvider.nextPrayer?.name}');
+        print('🖌️ Active Prayer Time: ${prayerProvider.activePrayer?.time}');
+        print('🖌️ Next Prayer Time: ${prayerProvider.nextPrayer?.time}');
+        print('🖌️ Current Time: ${DateTime.now()}');
+        print('🖌️ Is Dark Mode: $isDark');
+        print('🖌️ Home Background Color: ${homeBackground.toString()}');
+        print('🖌️ RGB: (${homeBackground.red}, ${homeBackground.green}, ${homeBackground.blue})');
+        print('🖌️ Hex: #${homeBackground.value.toRadixString(16).padLeft(8, '0').toUpperCase()}');
+        print('🖌️ Active Palette: ${settings.activePaletteName}');
+        print('🖌️ Palette Override: ${paletteColor != null ? 'EVET' : 'HAYIR'}');
+        if (paletteColor != null) {
+          print('🖌️ Palette Color: ${paletteColor.toString()}');
+        }
+        print('🖌️ Computed BG: ${computedBg.toString()}');
+        print('🖌️ === DEBUG SON ===');
+
         // Apply dynamic base color globally so AppColors getters reflect current vakit
         AppColors.setDynamicBase(homeBackground);
         // Foreground accent: ensure good contrast in dark mode; otherwise base on background luminance
@@ -200,13 +220,13 @@ class _HomeScreenState extends State<HomeScreen> {
         if (!settings.palettes.containsKey('buz')) {
           Future.microtask(() {
             settings.savePaletteIfNotExists('buz', {
-              'sayim': AppColors.gunesBase.value,
-              'imsak': AppColors.imsakBase.value,
-              'gunes': AppColors.gunesBase.value,
-              'ogle': AppColors.ogleBase.value,
-              'ikindi': AppColors.ikindiBase.value,
-              'aksam': AppColors.aksamBase.value,
-              'yatsi': AppColors.yatsiBase.value,
+              'sayim': AppColors.gunesBase.value, // Turuncu - güneş rengi
+              'imsak': AppColors.imsakBase.value, // Açık mavi
+              'gunes': AppColors.gunesBase.value, // Turuncu - güneş rengi
+              'ogle': AppColors.ogleBase.value,   // Altın sarısı
+              'ikindi': AppColors.ikindiBase.value, // Koyu turuncu
+              'aksam': AppColors.aksamBase.value,   // Kırmızı-turuncu
+              'yatsi': AppColors.yatsiBase.value,   // Royal blue
             });
           });
         }
@@ -240,7 +260,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         // 🎨 Günün zamanına göre ana scaffold rengi belirleme
-        final timeBasedBackground = _getTimeBasedScaffoldColor(isDark);
+        final gradientColors = _getGradientColors(isDark);
 
         return Scaffold(
           backgroundColor: Colors.transparent,
@@ -249,12 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: isDark
-                    ? [AppColors.darkBg, AppColors.darkBgSecondary]
-                    : [
-                        timeBasedBackground.withOpacity(0.95),
-                        timeBasedBackground.withOpacity(0.65),
-                      ],
+                colors: gradientColors,
               ),
             ),
             child: Directionality(
@@ -374,7 +389,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 prayerProvider,
                                 isDark,
                                 locale,
-                                baseColor: timeBasedBackground,
+                                baseColor: gradientColors[0],
                                 useSameHue: true,
                               ),
                           ],
@@ -669,6 +684,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   PrayerTimeRow(
                     prayerName: AppLocalizations.translate(prayer.name, locale),
                     prayerTime: timeStr,
+                    prayerDateTime: prayer.time,
                     isActive: prayer.isActive,
                     locale: locale,
                     overrideBaseColor: baseColor,
@@ -713,6 +729,57 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showComingSoon(BuildContext context, String locale) {
+    // Calculate homeBackground like in build method
+    final prayerProvider = Provider.of<PrayerProvider>(context, listen: false);
+    final settings = Provider.of<AppSettings>(context, listen: false);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Calculate current prayer name for background
+    String currentPrayerName = '';
+    try {
+      final now = DateTime.now();
+      final times = prayerProvider.currentPrayerTimes?.prayerTimesList;
+      if (times != null && times.isNotEmpty) {
+        for (var t in times) {
+          if (t.isActive) {
+            currentPrayerName = t.name;
+            break;
+          }
+        }
+      }
+    } catch (_) {}
+
+    // Get computed background
+    final computedBg = _getTimeBasedScaffoldColor(isDark);
+
+    // Check for palette override
+    Color? paletteColor;
+    if (settings.activePaletteName != null) {
+      final paletteMap = settings.activePaletteMapping;
+      if (paletteMap != null) {
+        String key = currentPrayerName.toLowerCase();
+        if (key.contains('fajr') || key.contains('imsak'))
+          key = 'imsak';
+        else if (key.contains('sunrise') || key.contains('gunes'))
+          key = 'gunes';
+        else if (key.contains('dhuhr') || key.contains('ogle'))
+          key = 'ogle';
+        else if (key.contains('asr') || key.contains('ikindi'))
+          key = 'ikindi';
+        else if (key.contains('maghrib') || key.contains('aksam'))
+          key = 'aksam';
+        else if (key.contains('isha') || key.contains('yatsi'))
+          key = 'yatsi';
+        else
+          key = 'sayim';
+
+        final val = paletteMap[key];
+        if (val != null) paletteColor = Color(val);
+      }
+    }
+
+    final homeBackground = paletteColor ?? computedBg;
+
     // For Qibla button - show compass
     print('🧭 Qibla button tapped!');
     showDialog(
@@ -763,7 +830,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   SizedBox(height: AppSpacing.lg),
                   // Import qibla compass widget
-                  _buildQiblaCompass(context, locale),
+                  _buildQiblaCompass(context, locale, homeBackground),
                   SizedBox(height: AppSpacing.xl),
                 ],
               ),
@@ -774,21 +841,21 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildQiblaCompass(BuildContext context, String locale) {
+  Widget _buildQiblaCompass(BuildContext context, String locale, Color homeBackground) {
     return Center(
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // Compass
-            _buildCompassUI(context, locale),
+            _buildCompassUI(context, locale, homeBackground),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCompassUI(BuildContext context, String locale) {
+  Widget _buildCompassUI(BuildContext context, String locale, Color homeBackground) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isRTL = AppLocalizations.isRTL(locale);
 
@@ -809,12 +876,12 @@ class _HomeScreenState extends State<HomeScreen> {
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  AppColors.accentPrimary.withOpacity(0.2),
-                  AppColors.accentPrimary.withOpacity(0.05),
+                  homeBackground.withOpacity(0.2),
+                  homeBackground.withOpacity(0.05),
                 ],
               ),
               border: Border.all(
-                color: AppColors.accentPrimary.withOpacity(0.4),
+                color: homeBackground.withOpacity(0.4),
                 width: 2,
               ),
               boxShadow: [
@@ -834,7 +901,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Text(
                     '${isRTL ? 'ش' : 'N'}',
                     style: AppTypography.h1.copyWith(
-                      color: AppColors.accentPrimary,
+                      color: homeBackground,
                       fontWeight: FontWeight.w900,
                       fontSize: 32,
                     ),
@@ -886,14 +953,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 70,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.accentPrimary.withOpacity(0.15),
+                    color: homeBackground.withOpacity(0.15),
                     border: Border.all(
-                      color: AppColors.accentPrimary,
+                      color: homeBackground,
                       width: 2,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.accentPrimary.withOpacity(0.4),
+                        color: homeBackground.withOpacity(0.4),
                         blurRadius: 12,
                         spreadRadius: 3,
                       ),
@@ -905,10 +972,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       height: 45,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppColors.accentPrimary,
+                        color: homeBackground,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.accentPrimary.withOpacity(0.6),
+                            color: homeBackground.withOpacity(0.6),
                             blurRadius: 12,
                             spreadRadius: 2,
                           ),
@@ -928,11 +995,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: 5,
                     height: 35,
                     decoration: BoxDecoration(
-                      color: AppColors.accentPrimary,
+                      color: homeBackground,
                       borderRadius: BorderRadius.circular(3),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.accentPrimary.withOpacity(0.7),
+                          color: homeBackground.withOpacity(0.7),
                           blurRadius: 8,
                           spreadRadius: 1,
                         ),
@@ -952,9 +1019,9 @@ class _HomeScreenState extends State<HomeScreen> {
             vertical: AppSpacing.lg,
           ),
           decoration: BoxDecoration(
-            color: AppColors.accentPrimary.withOpacity(0.08),
+            color: homeBackground.withOpacity(0.08),
             border: Border.all(
-              color: AppColors.accentPrimary.withOpacity(0.2),
+              color: homeBackground.withOpacity(0.2),
               width: 1,
             ),
             borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -964,7 +1031,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 AppLocalizations.translate('qibla', locale),
                 style: AppTypography.h3.copyWith(
-                  color: AppColors.accentPrimary,
+                  color: homeBackground,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
                 ),
@@ -1019,32 +1086,196 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // 🎨 Günün zamanına göre scaffold arka plan rengini belirle
+  // 🎨 Namaz vakitlerine göre scaffold arka plan rengini belirle
   Color _getTimeBasedScaffoldColor(bool isDark) {
     final now = DateTime.now();
-    final hour = now.hour;
+    final prayerTimes = Provider.of<PrayerProvider>(context, listen: false).currentPrayerTimes?.prayerTimesList;
 
-    if (isDark) {
-      // Dark mode için daha koyu tonlar
-      if (hour >= 5 && hour < 11) {
-        return const Color(0xFF4A3A4A); // Koyu pembe
-      } else if (hour >= 11 && hour < 15) {
-        return const Color(0xFF4A4A2A); // Koyu sarı
-      } else if (hour >= 15 && hour < 19) {
-        return const Color(0xFF4A2A2A); // Koyu turuncu
+    if (prayerTimes == null || prayerTimes.isEmpty) {
+      // Fallback to fixed hours if prayer times not available
+      final hour = now.hour;
+      if (isDark) {
+        if (hour >= 5 && hour < 11) return const Color(0xFF366483);
+        else if (hour >= 11 && hour < 15) return const Color(0xFF3A2A1A);
+        else if (hour >= 15 && hour < 19) return const Color(0xFF4A1A1A);
+        else return const Color(0xFF1A1A2A);
       } else {
-        return const Color(0xFF2A2A4A); // Koyu mavi
+        if (hour >= 5 && hour < 11) return const Color(0xFF5DADE2);
+        else if (hour >= 11 && hour < 15) return const Color(0xFFFFF9E6);
+        else if (hour >= 15 && hour < 19) return const Color(0xFFFFE8D6);
+        else return const Color(0xFFE8E8F8);
+      }
+    }
+
+    // Find prayer times
+    DateTime? fajr, sunrise, dhuhr, asr, maghrib, isha;
+
+    for (var prayer in prayerTimes) {
+      final name = prayer.name.toLowerCase();
+      if (name.contains('fajr') || name.contains('imsak')) {
+        fajr = prayer.time;
+      } else if (name.contains('sunrise') || name.contains('gunes')) {
+        sunrise = prayer.time;
+      } else if (name.contains('dhuhr') || name.contains('ogle')) {
+        dhuhr = prayer.time;
+      } else if (name.contains('asr') || name.contains('ikindi')) {
+        asr = prayer.time;
+      } else if (name.contains('maghrib') || name.contains('aksam')) {
+        maghrib = prayer.time;
+      } else if (name.contains('isha') || name.contains('yatsi')) {
+        isha = prayer.time;
+      }
+    }
+
+    // Determine which interval we're in
+    String interval = 'night'; // default
+
+    if (fajr != null && sunrise != null && now.isAfter(fajr) && now.isBefore(sunrise)) {
+      interval = 'fajr_to_sunrise'; // Sabah vakti
+    } else if (sunrise != null && dhuhr != null && now.isAfter(sunrise) && now.isBefore(dhuhr)) {
+      interval = 'sunrise_to_dhuhr'; // Güneş - öğle arası
+    } else if (dhuhr != null && asr != null && now.isAfter(dhuhr) && now.isBefore(asr)) {
+      interval = 'dhuhr_to_asr'; // Öğle - ikindi arası
+    } else if (asr != null && maghrib != null && now.isAfter(asr) && now.isBefore(maghrib)) {
+      interval = 'asr_to_maghrib'; // İkindi - akşam arası
+    } else if (maghrib != null && isha != null && now.isAfter(maghrib) && now.isBefore(isha)) {
+      interval = 'maghrib_to_isha'; // Akşam - yatsı arası
+    } else if (isha != null && fajr != null) {
+      // Handle overnight: from isha to fajr next day
+      DateTime ishaTime = isha;
+      DateTime fajrTime = fajr.isBefore(isha) ? fajr.add(const Duration(days: 1)) : fajr;
+      if (now.isAfter(ishaTime) && now.isBefore(fajrTime)) {
+        interval = 'isha_to_fajr'; // Yatsı - imsak arası
+      }
+    }
+
+    // Return color based on interval
+    if (isDark) {
+      switch (interval) {
+        case 'fajr_to_sunrise':
+          return const Color(0xFF366483); // Koyu mavi (sabah)
+        case 'sunrise_to_dhuhr':
+          return const Color(0xFF3B7BBF); // Koyu mavi (#64B5F6'nın koyu tonu)
+        case 'dhuhr_to_asr':
+          return const Color(0xFF4A2A1A); // Koyu bakır (öğleden sonra)
+        case 'asr_to_maghrib':
+          return const Color(0xFF5A1A1A); // Koyu kırmızımsı (akşam)
+        case 'maghrib_to_isha':
+          return const Color(0xFF2A1A2A); // Koyu morumsu (gece)
+        case 'isha_to_fajr':
+          return const Color(0xFF1A1A2A); // Koyu lacivert (gece yarısı)
+        default:
+          return const Color(0xFF1A1A2A);
       }
     } else {
-      // Light mode için pastel tonlar
-      if (hour >= 5 && hour < 11) {
-        return const Color(0xFFF8E8E8); // Açık pembe - sabah
-      } else if (hour >= 11 && hour < 15) {
-        return const Color(0xFFFFF8E1); // Açık sarı - öğlen
-      } else if (hour >= 15 && hour < 19) {
-        return const Color(0xFFFFE8E1); // Açık turuncu - akşam
-      } else {
-        return const Color(0xFFE8E8F8); // Açık mavi - gece
+      switch (interval) {
+        case 'fajr_to_sunrise':
+          return const Color(0xFF5DADE2); // Mavi tonlu sabah rengi (#5DADE2)
+        case 'sunrise_to_dhuhr':
+          return const Color(0xFF64B5F6); // Mavi ton (#64B5F6)
+        case 'dhuhr_to_asr':
+          return const Color(0xFFFFE4B5); // Açık bakır (öğleden sonra)
+        case 'asr_to_maghrib':
+          return const Color(0xFFFFDAB9); // Açık turuncu (akşam)
+        case 'maghrib_to_isha':
+          return const Color(0xFFE6E6FA); // Açık lavanta (gece)
+        case 'isha_to_fajr':
+          return const Color(0xFFE8E8F8); // Açık lacivert (gece yarısı)
+        default:
+          return const Color(0xFFE8E8F8);
+      }
+    }
+  }
+
+  // 🎨 Namaz vakitlerine göre gradient renklerini belirle
+  List<Color> _getGradientColors(bool isDark) {
+    final now = DateTime.now();
+    final prayerTimes = Provider.of<PrayerProvider>(context, listen: false).currentPrayerTimes?.prayerTimesList;
+
+    if (prayerTimes == null || prayerTimes.isEmpty) {
+      // Fallback
+      final fallbackColor = isDark ? const Color(0xFF1A1A2A) : const Color(0xFFE8E8F8);
+      return [
+        fallbackColor.withOpacity(0.95),
+        fallbackColor.withOpacity(0.65),
+      ];
+    }
+
+    // Find prayer times
+    DateTime? fajr, sunrise, dhuhr, asr, maghrib, isha;
+
+    for (var prayer in prayerTimes) {
+      final name = prayer.name.toLowerCase();
+      if (name.contains('fajr') || name.contains('imsak')) {
+        fajr = prayer.time;
+      } else if (name.contains('sunrise') || name.contains('gunes')) {
+        sunrise = prayer.time;
+      } else if (name.contains('dhuhr') || name.contains('ogle')) {
+        dhuhr = prayer.time;
+      } else if (name.contains('asr') || name.contains('ikindi')) {
+        asr = prayer.time;
+      } else if (name.contains('maghrib') || name.contains('aksam')) {
+        maghrib = prayer.time;
+      } else if (name.contains('isha') || name.contains('yatsi')) {
+        isha = prayer.time;
+      }
+    }
+
+    // Determine which interval we're in
+    String interval = 'night';
+
+    if (fajr != null && sunrise != null && now.isAfter(fajr) && now.isBefore(sunrise)) {
+      interval = 'fajr_to_sunrise';
+    } else if (sunrise != null && dhuhr != null && now.isAfter(sunrise) && now.isBefore(dhuhr)) {
+      interval = 'sunrise_to_dhuhr';
+    } else if (dhuhr != null && asr != null && now.isAfter(dhuhr) && now.isBefore(asr)) {
+      interval = 'dhuhr_to_asr';
+    } else if (asr != null && maghrib != null && now.isAfter(asr) && now.isBefore(maghrib)) {
+      interval = 'asr_to_maghrib';
+    } else if (maghrib != null && isha != null && now.isAfter(maghrib) && now.isBefore(isha)) {
+      interval = 'maghrib_to_isha';
+    } else if (isha != null && fajr != null) {
+      DateTime ishaTime = isha;
+      DateTime fajrTime = fajr.isBefore(isha) ? fajr.add(const Duration(days: 1)) : fajr;
+      if (now.isAfter(ishaTime) && now.isBefore(fajrTime)) {
+        interval = 'isha_to_fajr';
+      }
+    }
+
+    // Return gradient colors based on interval - canlı ve canlı renkler
+    if (isDark) {
+      switch (interval) {
+        case 'fajr_to_sunrise':
+          return [const Color(0xFF1E3A8A), const Color(0xFF2563EB)]; // Koyu mavi -> orta mavi
+        case 'sunrise_to_dhuhr':
+          return [const Color(0xFF3B82F6), const Color(0xFF60A5FA)]; // Canlı mavi -> biraz daha açık mavi
+        case 'dhuhr_to_asr':
+          return [const Color(0xFF3B82F6), const Color(0xFF60A5FA)]; // Canlı mavi -> açık mavi
+        case 'asr_to_maghrib':
+          return [const Color(0xFF60A5FA), const Color(0xFF93C5FD)]; // Açık mavi -> çok açık mavi
+        case 'maghrib_to_isha':
+          return [const Color(0xFF93C5FD), const Color(0xFFBFDBFE)]; // Çok açık mavi -> açık mavi
+        case 'isha_to_fajr':
+          return [const Color(0xFFBFDBFE), const Color(0xFF1E3A8A)]; // Açık mavi -> koyu mavi
+        default:
+          return [const Color(0xFF1E3A8A), const Color(0xFF3B82F6)];
+      }
+    } else {
+      switch (interval) {
+        case 'fajr_to_sunrise':
+          return [const Color(0xFF60A5FA), const Color(0xFF93C5FD)]; // Açık mavi -> çok açık mavi
+        case 'sunrise_to_dhuhr':
+          return [const Color(0xFF93C5FD), const Color(0xFF60A5FA)]; // Çok açık mavi -> açık mavi
+        case 'dhuhr_to_asr':
+          return [const Color(0xFF60A5FA), const Color(0xFF93C5FD)]; // Açık mavi -> çok açık mavi
+        case 'asr_to_maghrib':
+          return [const Color(0xFF93C5FD), const Color(0xFFDBEAFE)]; // Çok açık mavi -> en açık mavi
+        case 'maghrib_to_isha':
+          return [const Color(0xFFDBEAFE), const Color(0xFFE0F2FE)]; // En açık mavi -> gökyüzü mavisi
+        case 'isha_to_fajr':
+          return [const Color(0xFFE0F2FE), const Color(0xFF3B82F6)]; // Gökyüzü mavisi -> canlı mavi
+        default:
+          return [const Color(0xFF3B82F6), const Color(0xFF60A5FA)];
       }
     }
   }

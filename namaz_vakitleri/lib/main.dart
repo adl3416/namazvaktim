@@ -17,10 +17,14 @@ void main() async {
   tz.initializeTimeZones();
 
   // Initialize notifications
+  print('🚀 Initializing notifications...');
   await NotificationService.initialize();
+  print('✅ Notifications initialized');
 
   // Request location permission early
+  print('📍 Requesting location permission...');
   await LocationService.requestLocationPermission();
+  print('✅ Location permission requested');
 
   runApp(const MyApp());
 }
@@ -47,15 +51,22 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _initializeApp() async {
     try {
+      print('⚙️ Initializing app settings...');
       await _appSettings.initialize();
+      print('✅ App settings initialized');
+
+      print('📱 Initializing prayer provider...');
       await _prayerProvider.initialize();
+      print('✅ Prayer provider initialized');
+
       if (mounted) {
         setState(() {
           _isInitialized = true;
         });
       }
+      print('🎉 App initialization complete');
     } catch (e) {
-      print('Error initializing app: $e');
+      print('❌ Error initializing app: $e');
       if (mounted) {
         setState(() {
           _isInitialized = true; // Continue even with errors

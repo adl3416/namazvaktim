@@ -131,6 +131,7 @@ class SoftIconButton extends StatelessWidget {
 class PrayerTimeRow extends StatelessWidget {
   final String prayerName;
   final String prayerTime;
+  final DateTime prayerDateTime;
   final bool isActive;
   final String locale;
   final Color? overrideBaseColor;
@@ -140,6 +141,7 @@ class PrayerTimeRow extends StatelessWidget {
     Key? key,
     required this.prayerName,
     required this.prayerTime,
+    required this.prayerDateTime,
     required this.isActive,
     required this.locale,
     this.overrideBaseColor,
@@ -156,22 +158,20 @@ class PrayerTimeRow extends StatelessWidget {
     Color? baseOverride,
   }) {
     final name = prayerName.toLowerCase();
-    final base =
-        baseOverride ?? (isDark ? AppColors.darkBaseBg : AppColors.lightBaseBg);
+
+    // Güneş-Öğle aralığında özel mavi tonları
+    if (name.contains('fajr') || name.contains('imsak')) {
+      return isDark ? const Color(0xFF93C5FD) : const Color(0xFFDBEAFE); // En açık mavi ton
+    } else if (name.contains('sunrise') || name.contains('gunes') || name.contains('güneş')) {
+      return isDark ? const Color(0xFF60A5FA) : const Color(0xFFBFDBFE); // Orta mavi ton
+    } else if (name.contains('dhuhr') || name.contains('ogle') || name.contains('öğle')) {
+      return isDark ? const Color(0xFF3B82F6) : const Color(0xFF93C5FD); // Koyu mavi ton
+    }
+
+    // Diğer vakitler için mevcut logic
+    final base = baseOverride ?? (isDark ? AppColors.darkBaseBg : AppColors.lightBaseBg);
     double t = 0.85;
-    if (name.contains('fajr') ||
-        name.contains('imsak') ||
-        name.contains('sabah'))
-      t = 0.9;
-    else if (name.contains('sunrise') ||
-        name.contains('gunes') ||
-        name.contains('güneş'))
-      t = 0.92;
-    else if (name.contains('dhuhr') ||
-        name.contains('ogle') ||
-        name.contains('öğle'))
-      t = 0.75;
-    else if (name.contains('asr') || name.contains('ikindi'))
+    if (name.contains('asr') || name.contains('ikindi'))
       t = 0.7;
     else if (name.contains('maghrib') ||
         name.contains('aksam') ||
@@ -241,13 +241,20 @@ class PrayerTimeRow extends StatelessWidget {
         overrideBaseColor ??
         (isDark ? AppColors.darkBaseBg : AppColors.lightBaseBg);
     final rowColor = Color.lerp(baseColor, Colors.white, isDark ? 0.15 : 0.85)!;
+    // Check if prayer is upcoming (in the future)
+    final isUpcoming = prayerDateTime.isAfter(DateTime.now());
+    
     // stronger contrast for time and label: lerp more toward black on light backgrounds
     final timeColor = isDark
-        ? AppColors.darkTextPrimary
-        : (Color.lerp(baseColor, Colors.black, 0.45) ?? AppColors.textPrimary);
+        ? (isUpcoming ? Colors.white : AppColors.darkTextPrimary)
+        : (isUpcoming 
+            ? Colors.white 
+            : (Color.lerp(baseColor, Colors.black, 0.45) ?? AppColors.textPrimary));
     final labelColor = isDark
-        ? AppColors.darkTextPrimary
-        : (Color.lerp(baseColor, Colors.black, 0.38) ?? AppColors.textPrimary);
+        ? (isUpcoming ? Colors.white : AppColors.darkTextPrimary)
+        : (isUpcoming 
+            ? Colors.white 
+            : (Color.lerp(baseColor, Colors.black, 0.38) ?? AppColors.textPrimary));
     final borderColor = Color.lerp(baseColor, Colors.black, 0.12)!;
 
     final bgColor = _getPrayerBackgroundColor(
@@ -270,12 +277,12 @@ class PrayerTimeRow extends StatelessWidget {
       ),
       margin: EdgeInsets.only(bottom: AppSpacing.sm),
       decoration: BoxDecoration(
-        color: isActive ? prayerTonalColor.withOpacity(0.95) : prayerTonalColor,
+        color: isActive ? prayerTonalColor.withOpacity(0.3) : prayerTonalColor.withOpacity(0.1),
         border: isActive
             ? Border.all(
                 color: isDark
-                    ? AppColors.darkAccentPrimary.withOpacity(0.7)
-                    : AppColors.accentPrimary.withOpacity(0.8),
+                    ? const Color(0xFF3B82F6).withOpacity(0.7)
+                    : const Color(0xFF60A5FA).withOpacity(0.8),
                 width: 2.5,
               )
             : Border.all(
@@ -290,8 +297,8 @@ class PrayerTimeRow extends StatelessWidget {
                 BoxShadow(
                   color:
                       (isDark
-                              ? AppColors.darkAccentPrimary
-                              : AppColors.accentPrimary)
+                              ? const Color(0xFF3B82F6)
+                              : const Color(0xFF60A5FA))
                           .withOpacity(0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 3),
@@ -337,8 +344,8 @@ class PrayerTimeRow extends StatelessWidget {
                   style: AppTypography.bodyLarge.copyWith(
                     color: isActive
                         ? (isDark
-                              ? AppColors.darkAccentPrimary
-                              : AppColors.accentPrimary)
+                              ? const Color(0xFF3B82F6)
+                              : const Color(0xFF2563EB))
                         : labelColor,
                     fontWeight: isActive ? FontWeight.w800 : FontWeight.w700,
                     fontSize: isActive ? 17 : 16,
@@ -354,8 +361,8 @@ class PrayerTimeRow extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isActive
                       ? (isDark
-                            ? AppColors.darkAccentPrimary.withOpacity(0.2)
-                            : AppColors.accentPrimary.withOpacity(0.15))
+                            ? const Color(0xFF3B82F6).withOpacity(0.2)
+                            : const Color(0xFF60A5FA).withOpacity(0.15))
                       : prayerTonalColor.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(AppRadius.md),
                   boxShadow: isActive
@@ -363,8 +370,8 @@ class PrayerTimeRow extends StatelessWidget {
                           BoxShadow(
                             color:
                                 (isDark
-                                        ? AppColors.darkAccentPrimary
-                                        : AppColors.accentPrimary)
+                                        ? const Color(0xFF3B82F6)
+                                        : const Color(0xFF60A5FA))
                                     .withOpacity(0.2),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
@@ -384,8 +391,8 @@ class PrayerTimeRow extends StatelessWidget {
                     fontSize: isActive ? 19 : 18,
                     color: isActive
                         ? (isDark
-                              ? AppColors.darkAccentPrimary
-                              : AppColors.accentPrimary)
+                              ? const Color(0xFF3B82F6)
+                              : const Color(0xFF2563EB))
                         : timeColor,
                     fontWeight: isActive ? FontWeight.w900 : FontWeight.w800,
                     letterSpacing: 0.5,

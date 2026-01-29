@@ -159,7 +159,7 @@ class PrayerTimes {
       } else {
         // Last prayer, next is tomorrow's Fajr
         final tomorrow = DateTime.now().add(Duration(days: 1));
-        final fajrTime = times['fajr'];
+        final fajrTime = times['fajr'] ?? times['imsak'];
         if (fajrTime != null) {
           nextTime = DateTime(tomorrow.year, tomorrow.month, tomorrow.day,
               fajrTime.hour, fajrTime.minute);
@@ -191,9 +191,29 @@ class PrayerTimes {
         return future.first;
       }
       
-      // If no future prayer today, return first prayer (tomorrow)
-      // No future prayers today; return first (tomorrow's first)
-      return list.first;
+      // No future prayers today; return tomorrow's first prayer
+      print('ℹ️ No future prayers today, returning tomorrow\'s Fajr');
+      final tomorrow = now.add(const Duration(days: 1));
+      final fajrTime = list.first.time;
+      final tomorrowFajr = DateTime(
+        tomorrow.year, 
+        tomorrow.month, 
+        tomorrow.day,
+        fajrTime.hour,
+        fajrTime.minute,
+      );
+      
+      return PrayerTime(
+        name: list.first.name,
+        time: tomorrowFajr,
+        nextTime: list.length > 1 ? DateTime(
+          tomorrow.year, 
+          tomorrow.month, 
+          tomorrow.day,
+          list[1].time.hour,
+          list[1].time.minute,
+        ) : null,
+      );
     } catch (e, stacktrace) {
       print('❌ Error getting nextPrayer: $e');
       print(stacktrace);

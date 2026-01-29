@@ -38,7 +38,7 @@ class _DebugAppState extends State<DebugApp> {
   void initState() {
     super.initState();
     _appSettings = AppSettings();
-    _prayerProvider = PrayerProvider();
+    _prayerProvider = PrayerProvider(appSettings: _appSettings);
     _initializeApp();
   }
 

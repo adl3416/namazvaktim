@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../models/prayer_model.dart';
 import '../services/aladhan_service.dart';
 import '../services/location_service.dart';
@@ -33,6 +34,11 @@ class PrayerProvider extends ChangeNotifier {
   // Countdown
   DateTime? _lastCountdownUpdate;
   Duration? _countdownDuration;
+  
+  // Adhan playing
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  String? _lastAdhanPlayedForPrayer;
+  final Duration _adhanThreshold = const Duration(minutes: 15);
 
   PrayerTimes? get currentPrayerTimes => _currentPrayerTimes;
   PrayerTime? get nextPrayer => _nextPrayer;
@@ -87,6 +93,19 @@ class PrayerProvider extends ChangeNotifier {
 
       // Start countdown timer
       _startCountdownTimer();
+
+      // Set up audio context for adhan playback
+      await _audioPlayer.setAudioContext(
+        AudioContext(
+          android: AudioContextAndroid(
+            isSpeakerphoneOn: true,
+            stayAwake: false,
+            contentType: AndroidContentType.music,
+            usageType: AndroidUsageType.media,
+            audioFocus: AndroidAudioFocus.gain,
+          ),
+        ),
+      );
     } catch (e, stacktrace) {
       print('❌ Error initializing PrayerProvider: $e');
       print(stacktrace);
@@ -213,6 +232,9 @@ class PrayerProvider extends ChangeNotifier {
 
         _lastFetchTime = DateTime.now();
 
+        // Reset adhan tracking for new prayer cycle
+        _lastAdhanPlayedForPrayer = null;
+
         print(
           '✅ Prayer Times Loaded: ${prayerTimes.prayerTimesList.length} prayers',
         );
@@ -285,28 +307,25 @@ class PrayerProvider extends ChangeNotifier {
       if (_nextPrayer != null && _nextPrayer!.time.isAfter(now)) {
         _countdownDuration = _nextPrayer!.time.difference(now);
         _lastCountdownUpdate = now;
+        
+        // Check if we should play adhan for approaching prayer
+        await _checkAndPlayAdhan(_nextPrayer!, _countdownDuration!);
+        
         notifyListeners();
         return;
       }
 
-      // If next prayer is missing or in the past, avoid hammering the API.
-      // If we fetched recently, assume the next prayer is the same prayer next day
-      // and show countdown towards that.
-      final last = _lastFetchTime;
-      if (last == null || now.difference(last) >= _minFetchInterval) {
-        if (!_isFetching) {
-          // attempt a fetch to refresh times
-          await fetchPrayerTimes();
+      // Prayer time has arrived or passed - play adhan if not already played
+      if (_nextPrayer != null && !_isFetching) {
+        final timeDiff = _nextPrayer!.time.difference(now);
+        
+        // If prayer time has just arrived (within last minute) or just passed, play adhan
+        if (timeDiff <= Duration.zero && timeDiff > Duration(minutes: -1)) {
+          await _checkAndPlayAdhanOnTime(_nextPrayer!);
         }
-      } else {
-        // Use the existing _nextPrayer but move it to next day to keep a stable countdown
-        if (_nextPrayer != null) {
-          _countdownDuration = _nextPrayer!.time
-              .add(const Duration(days: 1))
-              .difference(now);
-          _lastCountdownUpdate = now;
-          notifyListeners();
-        }
+        
+        // Schedule next prayer times
+        await fetchPrayerTimes();
       }
     });
   }
@@ -314,6 +333,91 @@ class PrayerProvider extends ChangeNotifier {
   @override
   void dispose() {
     super.dispose();
+    _audioPlayer.dispose();
+  }
+
+  /// Check if adhan should be played when approaching prayer time
+  Future<void> _checkAndPlayAdhan(PrayerTime prayer, Duration remaining) async {
+    // Only play adhan if sound is enabled for this prayer
+    final soundEnabled = _appSettings.prayerSounds[prayer.name] ?? true;
+    if (!soundEnabled) return;
+
+    // Check if we're within the threshold and haven't played for this prayer yet
+    if (remaining <= _adhanThreshold && remaining > Duration.zero) {
+      if (_lastAdhanPlayedForPrayer != prayer.name) {
+        await _playAdhanForPrayer(prayer.name);
+        _lastAdhanPlayedForPrayer = prayer.name;
+      }
+    } else if (remaining > _adhanThreshold) {
+      // Reset when we're outside the threshold (new prayer cycle)
+      _lastAdhanPlayedForPrayer = null;
+    }
+  }
+
+  /// Play adhan when prayer time arrives
+  Future<void> _checkAndPlayAdhanOnTime(PrayerTime prayer) async {
+    // Only play adhan if sound is enabled for this prayer
+    final soundEnabled = _appSettings.prayerSounds[prayer.name] ?? true;
+    if (!soundEnabled) return;
+
+    // Check if we haven't played adhan for this prayer yet
+    if (_lastAdhanPlayedForPrayer != '${prayer.name}_ontime') {
+      print('🔔 Prayer time arrived: ${prayer.name} - Playing adhan');
+      await _playAdhanForPrayer(prayer.name);
+      _lastAdhanPlayedForPrayer = '${prayer.name}_ontime';
+    }
+  }
+
+  /// Play adhan sound for a specific prayer
+  Future<void> _playAdhanForPrayer(String prayerName) async {
+    try {
+      // Stop any currently playing audio first
+      await _audioPlayer.stop();
+      
+      // Map prayer names to sound files
+      final soundFiles = {
+        'Fajr': 'sabah_ezan.mp3',
+        'Dhuhr': 'ogle_ezan.mp3',
+        'Asr': 'ikindi_ezan.mp3',
+        'Maghrib': 'aksam_ezan.mp3',
+        'Isha': 'yatsi_ezan.mp3',
+      };
+
+      final soundFile = soundFiles[prayerName];
+      if (soundFile != null) {
+        print('🎵 Playing adhan for $prayerName: $soundFile');
+        
+        // Set audio source and play
+        await _audioPlayer.setSource(AssetSource('sounds/$soundFile'));
+        await _audioPlayer.resume();
+        
+        // Listen for completion to stop the player
+        _audioPlayer.onPlayerComplete.listen((event) {
+          print('✅ Adhan playback completed for $prayerName');
+          _audioPlayer.stop();
+        });
+        
+        // Also listen for errors
+        _audioPlayer.onPlayerStateChanged.listen((state) {
+          print('🎵 Audio player state: $state for $prayerName');
+        });
+        
+        // Safety timeout - stop after 2 minutes max
+        Future.delayed(const Duration(minutes: 2), () {
+          if (_audioPlayer.state == PlayerState.playing) {
+            print('⏰ Safety timeout: stopping adhan playback for $prayerName');
+            _audioPlayer.stop();
+          }
+        });
+        
+      } else {
+        print('❌ No sound file found for prayer: $prayerName');
+      }
+    } catch (e) {
+      print('❌ Error playing adhan for $prayerName: $e');
+      // Ensure player is stopped on error
+      await _audioPlayer.stop();
+    }
   }
 
   /// Force refresh current location and prayer times

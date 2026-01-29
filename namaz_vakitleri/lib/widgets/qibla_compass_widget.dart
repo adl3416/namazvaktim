@@ -7,6 +7,8 @@ import 'package:namaz_vakitleri/models/prayer_model.dart';
 import 'package:namaz_vakitleri/config/color_system.dart';
 import 'package:namaz_vakitleri/config/localization.dart';
 import 'dart:math' as math;
+import 'package:adhan/adhan.dart';
+import 'package:vibration/vibration.dart';
 
 class QiblaCompassWidget extends StatefulWidget {
   final String locale;
@@ -15,6 +17,7 @@ class QiblaCompassWidget extends StatefulWidget {
   final double sensitivity; // degrees margin for alignment
   final Color? alignmentColor;
   final GeoLocation? userLocation; // User's location for accurate qibla calculation
+  final Color? backgroundColor; // Main screen background color
 
   const QiblaCompassWidget({
     Key? key,
@@ -24,6 +27,7 @@ class QiblaCompassWidget extends StatefulWidget {
     this.sensitivity = 2.0, // 2 degrees sensitivity for alignment
     this.alignmentColor,
     this.userLocation,
+    this.backgroundColor,
   }) : super(key: key);
 
   @override
@@ -144,6 +148,35 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
     });
   }
 
+  // Provide haptic and audio feedback when Qibla is aligned
+  Future<void> _provideAlignmentFeedback() async {
+    try {
+      // Check if vibration is available
+      final hasVibrator = await Vibration.hasVibrator() ?? false;
+      final hasAmplitudeControl = await Vibration.hasAmplitudeControl() ?? false;
+      
+      if (hasVibrator) {
+        if (hasAmplitudeControl) {
+          // Strong vibration pattern for alignment
+          await Vibration.vibrate(
+            pattern: [0, 100, 50, 100, 50, 200],
+            intensities: [0, 128, 0, 255, 0, 128],
+          );
+        } else {
+          // Simple vibration for devices without amplitude control
+          await Vibration.vibrate(duration: 500);
+        }
+      }
+      
+      // Note: Audio feedback could be added here if desired
+      // For now, the visual lantern effect provides sufficient feedback
+      
+    } catch (e) {
+      // Silently fail if vibration is not available or fails
+      debugPrint('Haptic feedback not available: $e');
+    }
+  }
+
   @override
   void dispose() {
     _rotationController.dispose();
@@ -177,10 +210,23 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
         final labelHeightEstimate = 28.0; // spacing + text
         final showLabel = size >= 120 && (!constraints.maxHeight.isFinite || constraints.maxHeight >= size + labelHeightEstimate);
 
-        // Determine alignment state once: when needle is close to zero angle we consider it aligned
-        final sensitivityRad = widget.sensitivity * (math.pi / 180.0);
+        // Determine alignment state with higher precision: when needle is very close to zero angle
+        final sensitivityRad = 1.0 * (math.pi / 180.0); // 1 degree sensitivity for high accuracy
         final aligned = _hasHeading && (_normalizeAngle(_displayHeading).abs() < sensitivityRad);
         final alignColor = widget.alignmentColor ?? (isDark ? AppColors.darkAccentMint : AppColors.accentMint);
+        
+        // Check if alignment state changed for haptic feedback
+        if (aligned != _lastAligned && mounted) {
+          setState(() {
+            _lastAligned = aligned;
+          });
+          
+          // Provide haptic feedback when alignment is achieved
+          if (aligned) {
+            _provideAlignmentFeedback();
+            debugPrint('🎯 QIBLA ALIGNED! Perfect direction found.');
+          }
+        }
         
         // Debug: Print qibla accuracy info
         if (_qiblaBearingRad != null && _hasHeading) {
@@ -212,8 +258,8 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        AppColors.getBackground(isDark).withOpacity(0.02),
-                        AppColors.getBackground(isDark).withOpacity(0.06),
+                        (widget.backgroundColor ?? AppColors.getBackground(isDark)).withOpacity(0.02),
+                        (widget.backgroundColor ?? AppColors.getBackground(isDark)).withOpacity(0.06),
                       ],
                       center: Alignment(-0.2, -0.2),
                       radius: 0.8,
@@ -234,7 +280,7 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
                   painter: CompassPainter(isDark: isDark),
                 ),
 
-                // Rotating needle (custom painter for a refined look)
+                // Rotating needle with enhanced alignment effects
                 AnimatedBuilder(
                   animation: Listenable.merge([_rotationController, _needleController]),
                   builder: (context, child) {
@@ -245,15 +291,78 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
                       child: child,
                     );
                   },
-                  child: Align(
+                  child: Stack(
                     alignment: Alignment.topCenter,
-                    child: SizedBox(
-                      width: size * 0.16,
-                      height: size * 0.56,
-                      child: CustomPaint(
-                        painter: NeedlePainter(color: aligned ? alignColor : AppColors.accentPrimary),
+                    children: [
+                      // Glowing background effect when aligned (lantern effect)
+                      if (aligned)
+                        Container(
+                          width: size * 0.25,
+                          height: size * 0.65,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: RadialGradient(
+                              colors: [
+                                alignColor.withOpacity(0.4),
+                                alignColor.withOpacity(0.2),
+                                alignColor.withOpacity(0.0),
+                              ],
+                              center: Alignment.topCenter,
+                              radius: 0.8,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: alignColor.withOpacity(0.6),
+                                blurRadius: 20,
+                                spreadRadius: 5,
+                              ),
+                              BoxShadow(
+                                color: alignColor.withOpacity(0.3),
+                                blurRadius: 40,
+                                spreadRadius: 10,
+                              ),
+                            ],
+                          ),
+                        ),
+                      
+                      // Main needle
+                      SizedBox(
+                        width: size * 0.16,
+                        height: size * 0.56,
+                        child: CustomPaint(
+                          painter: NeedlePainter(
+                            color: aligned ? alignColor : AppColors.accentPrimary,
+                            isAligned: aligned,
+                          ),
+                        ),
                       ),
-                    ),
+                      
+                      // Pulsing light effect at needle tip when aligned
+                      if (aligned)
+                        Positioned(
+                          top: 0,
+                          child: AnimatedBuilder(
+                            animation: _scaleController,
+                            builder: (context, child) {
+                              return Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: alignColor,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: alignColor.withOpacity(0.8),
+                                      blurRadius: 15,
+                                      spreadRadius: 3,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                    ],
                   ),
                 ),
 
@@ -376,8 +485,29 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
     });
   }
 
-  // Compute initial bearing from (lat1, lon1) to Kaaba (lat2, lon2)
+  // Compute initial bearing from (lat1, lon1) to Kaaba using adhan library for high accuracy
   double _computeQiblaBearing(double lat1Deg, double lon1Deg) {
+    try {
+      final coordinates = Coordinates(lat1Deg, lon1Deg);
+      final qibla = Qibla(coordinates);
+      
+      // adhan returns direction in degrees (0-360), convert to radians
+      final bearingDeg = qibla.direction;
+      final bearingRad = bearingDeg * math.pi / 180.0;
+      
+      // Debug: print accurate qibla calculation
+      debugPrint('Adhan Qibla calculation: ${bearingDeg.toStringAsFixed(2)}° from (${lat1Deg.toStringAsFixed(4)}, ${lon1Deg.toStringAsFixed(4)})');
+      
+      return bearingRad;
+    } catch (e) {
+      // Fallback to manual calculation if adhan fails
+      debugPrint('Adhan Qibla calculation failed, using fallback: $e');
+      return _computeQiblaBearingFallback(lat1Deg, lon1Deg);
+    }
+  }
+
+  // Fallback manual calculation (original implementation)
+  double _computeQiblaBearingFallback(double lat1Deg, double lon1Deg) {
     // Kaaba coordinates (Mecca)
     const lat2Deg = 21.422487; // degrees
     const lon2Deg = 39.826206; // degrees
@@ -531,17 +661,27 @@ class CompassPainter extends CustomPainter {
 
 class NeedlePainter extends CustomPainter {
   final Color color;
+  final bool isAligned;
 
-  NeedlePainter({required this.color});
+  NeedlePainter({required this.color, this.isAligned = false});
 
   @override
   void paint(Canvas canvas, Size size) {
     final centerX = size.width / 2;
+    
+    // Enhanced gradient for aligned state
+    final colors = isAligned 
+      ? [color, color.withOpacity(0.95), color.withOpacity(0.85)]
+      : [color, color.withOpacity(0.85)];
+    
+    final stops = isAligned ? [0.0, 0.7, 1.0] : [0.0, 1.0];
+    
     final paint = Paint()
       ..shader = ui.Gradient.linear(
         Offset(centerX, 0),
         Offset(centerX, size.height),
-        [color, color.withOpacity(0.85)],
+        colors,
+        stops,
       )
       ..style = PaintingStyle.fill
       ..isAntiAlias = true;
@@ -553,8 +693,23 @@ class NeedlePainter extends CustomPainter {
     path.lineTo(size.width * 0.08, size.height * 0.88);
     path.close();
 
-    canvas.drawShadow(path, Colors.black.withOpacity(0.18), 6.0, true);
+    // Enhanced shadow for aligned state
+    final shadowOpacity = isAligned ? 0.25 : 0.18;
+    final shadowBlur = isAligned ? 8.0 : 6.0;
+    
+    canvas.drawShadow(path, Colors.black.withOpacity(shadowOpacity), shadowBlur, true);
     canvas.drawPath(path, paint);
+    
+    // Add inner glow effect when aligned
+    if (isAligned) {
+      final glowPaint = Paint()
+        ..color = color.withOpacity(0.3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0
+        ..maskFilter = MaskFilter.blur(BlurStyle.outer, 3.0);
+      
+      canvas.drawPath(path, glowPaint);
+    }
 
     // small highlight
     final highlight = Paint()

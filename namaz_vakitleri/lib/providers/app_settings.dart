@@ -15,21 +15,21 @@ class AppSettings extends ChangeNotifier {
 
   // Prayer-specific notification settings
   Map<String, bool> _prayerNotifications = {
-    'İmsak': true,
-    'Güneş': false,
-    'Öğle': true,
-    'İkindi': true,
-    'Akşam': true,
-    'Yatsı': true,
+    'Fajr': true,
+    'Sunrise': false,
+    'Dhuhr': true,
+    'Asr': true,
+    'Maghrib': true,
+    'Isha': true,
   };
 
   Map<String, bool> _prayerSounds = {
-    'İmsak': true,
-    'Güneş': false,
-    'Öğle': true,
-    'İkindi': true,
-    'Akşam': true,
-    'Yatsı': true,
+    'Fajr': true,
+    'Sunrise': false,
+    'Dhuhr': true,
+    'Asr': true,
+    'Maghrib': true,
+    'Isha': true,
   };
 
   String get language => _language;
@@ -161,6 +161,14 @@ class AppSettings extends ChangeNotifier {
     _enablePrayerNotifications = enable;
     if (_initialized) {
       await _prefs.setBool('enablePrayerNotifications', enable);
+    }
+    notifyListeners();
+  }
+
+  Future<void> resetPalette() async {
+    _activePaletteName = null;
+    if (_initialized) {
+      await _prefs.remove('active_theme_palette');
     }
     notifyListeners();
   }

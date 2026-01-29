@@ -143,7 +143,7 @@ class NotificationService {
             UILocalNotificationDateInterpretation.absoluteTime,
       );
 
-      print('✅ Scheduled notification for $prayerName at $scheduled');
+      print('✅ Scheduled notification for $prayerName at $scheduled (ID: $id)');
     } catch (e) {
       print('Error scheduling notification: $e');
     }
@@ -175,6 +175,7 @@ class NotificationService {
       final soundFile = soundFiles[prayer.name];
 
       if (enableNotification) {
+        print('🔔 Scheduling notification for ${prayer.name} at ${prayer.time} with sound: $enableSound ($soundFile)');
         await schedulePrayerNotification(
           id: i,
           prayerName: prayer.name,
@@ -183,6 +184,9 @@ class NotificationService {
           enableSound: enableSound,
           soundFile: soundFile,
         );
+        print('✅ Notification scheduled for ${prayer.name}');
+      } else {
+        print('🚫 Notification disabled for ${prayer.name}');
       }
     }
   }

@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../config/color_system.dart';
 import '../config/localization.dart';
 import '../providers/app_settings.dart';
-import '../services/notification_service.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -12,35 +11,14 @@ class NotificationSettingsScreen extends StatefulWidget {
   State<NotificationSettingsScreen> createState() => _NotificationSettingsScreenState();
 }
 
-class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
-    with TickerProviderStateMixin {
-  final Map<String, String> _prayerKeys = {
-    'Fajr': 'İmsak',
-    'Sunrise': 'Güneş',
-    'Dhuhr': 'Öğle',
-    'Asr': 'İkindi',
-    'Maghrib': 'Akşam',
-    'Isha': 'Yatsı',
-  };
-
+class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
   final Map<String, bool> _azanSoundEnabled = {};
   final Map<String, bool> _notificationEnabled = {};
-  late AnimationController _fabAnimationController;
 
   @override
   void initState() {
     super.initState();
-    _fabAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
     _loadSettings();
-  }
-
-  @override
-  void dispose() {
-    _fabAnimationController.dispose();
-    super.dispose();
   }
 
   void _loadSettings() {
@@ -201,7 +179,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                                 children: [
                                   Text(
                                     'Her namaz vakti için ayarlar',
-                                    style: AppTypography.h4.copyWith(
+                                    style: AppTypography.h3.copyWith(
                                       color: isDark ? Colors.white : Colors.black87,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -240,7 +218,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                 children: [
                   Text(
                     'Namaz Vakitleri',
-                    style: AppTypography.h4.copyWith(
+                    style: AppTypography.h3.copyWith(
                       color: isDark ? Colors.white : Colors.black87,
                       fontWeight: FontWeight.w600,
                     ),
@@ -261,7 +239,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                 children: [
                   Text(
                     'Genel Ayarlar',
-                    style: AppTypography.h4.copyWith(
+                    style: AppTypography.h3.copyWith(
                       color: isDark ? Colors.white : Colors.black87,
                       fontWeight: FontWeight.w600,
                     ),
@@ -334,7 +312,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                 children: [
                   Text(
                     prayerName,
-                    style: AppTypography.h5.copyWith(
+                    style: AppTypography.bodyMedium.copyWith(
                       color: isDark ? Colors.white : _getPrayerTextColor(prayerName),
                       fontWeight: FontWeight.w600,
                     ),
@@ -552,3 +530,4 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       ),
     );
   }
+}

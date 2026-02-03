@@ -189,3 +189,4 @@ class LocationService {
   }
 
   static double _toRad(double degree) => degree * math.pi / 180;
+}

@@ -3,7 +3,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:namaz_vakitleri/config/color_system.dart';
-import 'package:namaz_vakitleri/config/localization.dart';
 import 'package:namaz_vakitleri/providers/app_settings.dart';
 import 'package:namaz_vakitleri/providers/prayer_provider.dart';
 import 'package:namaz_vakitleri/screens/home_screen.dart';

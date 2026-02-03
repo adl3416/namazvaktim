@@ -123,11 +123,11 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
                 });
                 // only animate for meaningful jumps; otherwise apply light smoothing to reduce jitter
                 final diff = _normalizeAngle(normalized - _displayHeading);
-                final minMoveRad = 0.5 * (math.pi / 180.0); // 0.5 degrees
+                final minMoveRad = 0.3 * (math.pi / 180.0); // 0.3 degrees threshold
                 if (diff.abs() < minMoveRad) {
                   // small jitter — nudge display heading slightly towards target
                   setState(() {
-                    _displayHeading = _normalizeAngle(_displayHeading + diff * 0.22);
+                    _displayHeading = _normalizeAngle(_displayHeading + diff * 0.15);
                   });
                 } else {
                   _animateNeedleTo(normalized);
@@ -211,7 +211,7 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
         final showLabel = size >= 120 && (!constraints.maxHeight.isFinite || constraints.maxHeight >= size + labelHeightEstimate);
 
         // Determine alignment state with higher precision: when needle is very close to zero angle
-        final sensitivityRad = 1.0 * (math.pi / 180.0); // 1 degree sensitivity for high accuracy
+        final sensitivityRad = 1.5 * (math.pi / 180.0); // 1.5 degrees sensitivity for reliable accuracy
         final aligned = _hasHeading && (_normalizeAngle(_displayHeading).abs() < sensitivityRad);
         final alignColor = widget.alignmentColor ?? (isDark ? AppColors.darkAccentMint : AppColors.accentMint);
         
@@ -492,25 +492,35 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
       final qibla = Qibla(coordinates);
       
       // adhan returns direction in degrees (0-360), convert to radians
+      // Adhan's direction is clockwise from North (standard bearing)
       final bearingDeg = qibla.direction;
-      final bearingRad = bearingDeg * math.pi / 180.0;
       
-      // Debug: print accurate qibla calculation
-      debugPrint('Adhan Qibla calculation: ${bearingDeg.toStringAsFixed(2)}° from (${lat1Deg.toStringAsFixed(4)}, ${lon1Deg.toStringAsFixed(4)})');
+      // Ensure bearing is 0-360
+      final bearingNormalized = ((bearingDeg % 360) + 360) % 360;
+      final bearingRad = bearingNormalized * math.pi / 180.0;
+      
+      // Detailed debug logging
+      debugPrint('═════════════════════════════════════════');
+      debugPrint('✅ QIBLA CALCULATION (Adhan Library)');
+      debugPrint('Location: (${lat1Deg.toStringAsFixed(6)}, ${lon1Deg.toStringAsFixed(6)})');
+      debugPrint('Qibla Direction: ${bearingNormalized.toStringAsFixed(2)}°');
+      debugPrint('Qibla Radians: ${bearingRad.toStringAsFixed(4)} rad');
+      debugPrint('═════════════════════════════════════════');
       
       return bearingRad;
     } catch (e) {
       // Fallback to manual calculation if adhan fails
-      debugPrint('Adhan Qibla calculation failed, using fallback: $e');
+      debugPrint('❌ Adhan Qibla calculation failed: $e');
+      debugPrint('Using fallback haversine formula...');
       return _computeQiblaBearingFallback(lat1Deg, lon1Deg);
     }
   }
 
-  // Fallback manual calculation (original implementation)
+  // Fallback manual calculation using accurate haversine formula
   double _computeQiblaBearingFallback(double lat1Deg, double lon1Deg) {
-    // Kaaba coordinates (Mecca)
-    const lat2Deg = 21.422487; // degrees
-    const lon2Deg = 39.826206; // degrees
+    // Kaaba coordinates (Mecca) - verified coordinates
+    const lat2Deg = 21.422487;
+    const lon2Deg = 39.826206;
 
     final lat1 = lat1Deg * math.pi / 180.0;
     final lon1 = lon1Deg * math.pi / 180.0;
@@ -518,11 +528,28 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
     final lon2 = lon2Deg * math.pi / 180.0;
 
     final dLon = lon2 - lon1;
+    
+    // Calculate bearing using atan2
     final x = math.sin(dLon) * math.cos(lat2);
-    final y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
-    final bearing = math.atan2(x, y); // radians
-    // normalize to 0..2pi
+    final y = math.cos(lat1) * math.sin(lat2) - 
+              math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
+    
+    final bearing = math.atan2(x, y); // radians (-π to π)
+    
+    // Normalize to 0..2π
     final bearingNorm = (bearing + 2 * math.pi) % (2 * math.pi);
+    
+    // Also convert to degrees for logging
+    final bearingDeg = bearingNorm * 180 / math.pi;
+    
+    debugPrint('═════════════════════════════════════════');
+    debugPrint('✅ QIBLA CALCULATION (Fallback)');
+    debugPrint('Location: (${lat1Deg.toStringAsFixed(6)}, ${lon1Deg.toStringAsFixed(6)})');
+    debugPrint('Kaaba: (${lat2Deg.toStringAsFixed(6)}, ${lon2Deg.toStringAsFixed(6)})');
+    debugPrint('Qibla Direction: ${bearingDeg.toStringAsFixed(2)}°');
+    debugPrint('Qibla Radians: ${bearingNorm.toStringAsFixed(4)} rad');
+    debugPrint('═════════════════════════════════════════');
+    
     return bearingNorm;
   }
 }

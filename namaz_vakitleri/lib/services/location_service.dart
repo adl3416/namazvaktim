@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart' as geo;
 import '../models/prayer_model.dart';
@@ -62,10 +63,10 @@ class LocationService {
       // If last-known is stale or missing, ask for a fresh position but allow a longer timeout
       Position? position;
       try {
-        print('📍 Requesting fresh GPS location...');
+        print('📍 Requesting fresh GPS location (timeout: 45 seconds)...');
         position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
-          timeLimit: const Duration(seconds: 30), // Increased timeout
+          timeLimit: const Duration(seconds: 45), // Increased timeout for slower connections
         );
         print(
           '✅ Got fresh GPS location: ${position.latitude}, ${position.longitude}',
@@ -166,7 +167,7 @@ class LocationService {
     }
   }
 
-  /// Calculate distance between two coordinates
+  /// Calculate distance between two coordinates using Haversine formula
   static double calculateDistance(
     double lat1,
     double lon1,
@@ -177,51 +178,14 @@ class LocationService {
     final dLat = _toRad(lat2 - lat1);
     final dLon = _toRad(lon2 - lon1);
 
-    final a =
-        (1 - Math.cos(dLat)) / 2 +
-        Math.cos(_toRad(lat1)) *
-            Math.cos(_toRad(lat2)) *
-            (1 - Math.cos(dLon)) /
-            2;
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRad(lat1)) *
+            math.cos(_toRad(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
 
-    final c = 2 * Math.asin(Math.sqrt(a));
-
+    final c = 2 * math.asin(math.sqrt(a));
     return earthRadius * c;
   }
 
-  static double _toRad(double degree) => degree * Math.pi / 180;
-}
-
-class Math {
-  static const double pi = 3.14159265359;
-
-  static double cos(double angle) =>
-      (1 -
-      (angle * angle) / 2 +
-      (angle * angle * angle * angle) / 24 -
-      (angle * angle * angle * angle * angle * angle) / 720);
-
-  static double sin(double angle) =>
-      (angle -
-      (angle * angle * angle) / 6 +
-      (angle * angle * angle * angle * angle) / 120);
-
-  static double sqrt(double value) {
-    if (value < 0) return 0;
-    if (value == 0) return 0;
-
-    double x = value;
-    double y = (x + 1) / 2;
-
-    while (y < x) {
-      x = y;
-      y = (x + value / x) / 2;
-    }
-
-    return x;
-  }
-
-  static double asin(double value) {
-    return (value * 180 / pi);
-  }
-}
+  static double _toRad(double degree) => degree * math.pi / 180;

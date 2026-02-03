@@ -12,34 +12,42 @@ class NotificationSettingsScreen extends StatefulWidget {
   State<NotificationSettingsScreen> createState() => _NotificationSettingsScreenState();
 }
 
-class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
-  final Map<String, bool> _azanSoundEnabled = {
-    'İmsak': false,
-    'Güneş': false,
-    'Öğle': false,
-    'İkindi': false,
-    'Akşam': false,
-    'Yatsı': false,
+class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
+    with TickerProviderStateMixin {
+  final Map<String, String> _prayerKeys = {
+    'Fajr': 'İmsak',
+    'Sunrise': 'Güneş',
+    'Dhuhr': 'Öğle',
+    'Asr': 'İkindi',
+    'Maghrib': 'Akşam',
+    'Isha': 'Yatsı',
   };
 
-  final Map<String, bool> _notificationEnabled = {
-    'İmsak': false,
-    'Güneş': false,
-    'Öğle': false,
-    'İkindi': false,
-    'Akşam': false,
-    'Yatsı': false,
-  };
+  final Map<String, bool> _azanSoundEnabled = {};
+  final Map<String, bool> _notificationEnabled = {};
+  late AnimationController _fabAnimationController;
 
   @override
   void initState() {
     super.initState();
+    _fabAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
     _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    _fabAnimationController.dispose();
+    super.dispose();
   }
 
   void _loadSettings() {
     final settings = context.read<AppSettings>();
     setState(() {
+      _azanSoundEnabled.clear();
+      _notificationEnabled.clear();
       _azanSoundEnabled.addAll(settings.prayerSounds);
       _notificationEnabled.addAll(settings.prayerNotifications);
     });
@@ -47,56 +55,99 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
 
   void _saveSettings() {
     final settings = context.read<AppSettings>();
-    // Save prayer-specific settings
     _azanSoundEnabled.forEach((prayer, enabled) {
       settings.setPrayerSound(prayer, enabled);
     });
     _notificationEnabled.forEach((prayer, enabled) {
       settings.setPrayerNotification(prayer, enabled);
     });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Ayarlar kaydedildi',
+          style: AppTypography.bodyMedium.copyWith(
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: Colors.green.shade400,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
-  Color _getTimeBasedScaffoldColor(bool isDark) {
-    final now = DateTime.now();
-    final hour = now.hour;
+  // Prayer time color mapping matching home_screen.dart
+  Color _getPrayerPhaseColor(String prayerName) {
+    switch (prayerName) {
+      case 'İmsak':
+        return const Color(0xFFFFF3E0); // Early morning warm
+      case 'Güneş':
+        return const Color(0xFFFFE0B2); // Sunrise golden
+      case 'Öğle':
+        return const Color(0xFFC8E6C9); // Noon green
+      case 'İkindi':
+        return const Color(0xFFB3E5FC); // Afternoon blue
+      case 'Akşam':
+        return const Color(0xFFFFCDD2); // Evening pink-red
+      case 'Yatsı':
+        return const Color(0xFFEDE7F6); // Night purple
+      default:
+        return const Color(0xFFF5F5F5);
+    }
+  }
 
-    if (isDark) {
-      if (hour >= 5 && hour < 11) {
-        return const Color(0xFF4A3A4A);
-      } else if (hour >= 11 && hour < 15) {
-        return const Color(0xFF4A4A2A);
-      } else if (hour >= 15 && hour < 19) {
-        return const Color(0xFF4A2A2A);
-      } else {
-        return const Color(0xFF2A2A4A);
-      }
-    } else {
-      if (hour >= 5 && hour < 11) {
-        return const Color(0xFFF8E8E8);
-      } else if (hour >= 11 && hour < 15) {
-        return const Color(0xFFFFF8E1);
-      } else if (hour >= 15 && hour < 19) {
-        return const Color(0xFFFFE8E1);
-      } else {
-        return const Color(0xFFE8E8F8);
-      }
+  Color _getPrayerTextColor(String prayerName) {
+    switch (prayerName) {
+      case 'İmsak':
+        return const Color(0xFFE65100); // Dark orange
+      case 'Güneş':
+        return const Color(0xFFF57F17); // Dark golden
+      case 'Öğle':
+        return const Color(0xFF1B5E20); // Dark green
+      case 'İkindi':
+        return const Color(0xFF01579B); // Dark blue
+      case 'Akşam':
+        return const Color(0xFFC62828); // Dark red
+      case 'Yatsı':
+        return const Color(0xFF4A148C); // Dark purple
+      default:
+        return const Color(0xFF212121);
+    }
+  }
+
+  IconData _getPrayerIcon(String prayer) {
+    switch (prayer) {
+      case 'İmsak':
+        return Icons.wb_sunny_outlined;
+      case 'Güneş':
+        return Icons.wb_sunny;
+      case 'Öğle':
+        return Icons.brightness_high;
+      case 'İkindi':
+        return Icons.brightness_medium;
+      case 'Akşam':
+        return Icons.brightness_low;
+      case 'Yatsı':
+        return Icons.nightlight_round;
+      default:
+        return Icons.access_time;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final locale = context.read<AppSettings>().language;
+    final settings = context.read<AppSettings>();
 
     return Scaffold(
-      backgroundColor: _getTimeBasedScaffoldColor(isDark),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFFAFAFA),
       appBar: AppBar(
-        backgroundColor: _getTimeBasedScaffoldColor(isDark),
-        elevation: 0,
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        elevation: 0.5,
         leading: IconButton(
           icon: Icon(
-            Icons.arrow_back,
-            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+            Icons.arrow_back_ios_rounded,
+            color: isDark ? Colors.white : Colors.black87,
+            size: 20,
           ),
           onPressed: () {
             _saveSettings();
@@ -104,122 +155,262 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           },
         ),
         title: Text(
-          'Bildirim Ayarları',
+          AppLocalizations.translate('notification_settings', settings.language),
           style: AppTypography.h3.copyWith(
-            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+            color: isDark ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.w600,
           ),
         ),
+        centerTitle: true,
       ),
-      body: Padding(
-        padding: EdgeInsets.all(AppSpacing.sm),
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(height: AppSpacing.xl),
-
-            Expanded(
-              child: ListView(
+            // Header section with description
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
                 children: [
-                  // Header card with column titles
                   Container(
-                    margin: EdgeInsets.only(bottom: AppSpacing.sm),
-                    padding: EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.sm),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 16,
+                    ),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? AppColors.darkBgSecondary
-                          : AppColors.lightBgSecondary,
-                      borderRadius: BorderRadius.circular(AppRadius.md),
+                          ? const Color(0xFF1E1E1E)
+                          : const Color(0xFFF5F5F5),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: isDark ? AppColors.darkDivider : AppColors.divider,
-                        width: 0.5,
+                        color: isDark
+                            ? Colors.grey[700]!
+                            : Colors.grey[300]!,
+                        width: 1,
                       ),
                     ),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Prayer name space
-                        SizedBox(
-                          width: 80,
-                          child: Text(
-                            'Namaz Vakti',
-                            style: AppTypography.bodyMedium.copyWith(
-                              color: isDark
-                                  ? AppColors.darkTextPrimary
-                                  : AppColors.textPrimary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        // Spacer
-                        Expanded(child: SizedBox()),
-                        // Column headers
                         Row(
-                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            SizedBox(
-                              width: 70,
-                              child: Text(
-                                'Ezan',
-                                style: AppTypography.bodyMedium.copyWith(
-                                  color: isDark
-                                      ? AppColors.darkTextPrimary
-                                      : AppColors.textPrimary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.center,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Her namaz vakti için ayarlar',
+                                    style: AppTypography.h4.copyWith(
+                                      color: isDark ? Colors.white : Colors.black87,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Ezan sesini ve bildirimleri kontrol edin',
+                                    style: AppTypography.bodySmall.copyWith(
+                                      color: isDark
+                                          ? Colors.grey[400]
+                                          : Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            SizedBox(width: AppSpacing.sm),
-                            SizedBox(
-                              width: 70,
-                              child: Text(
-                                'Bildirim',
-                                style: AppTypography.bodyMedium.copyWith(
-                                  color: isDark
-                                      ? AppColors.darkTextPrimary
-                                      : AppColors.textPrimary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
+                            Icon(
+                              Icons.notifications_active_rounded,
+                              color: const Color(0xFF2196F3),
+                              size: 32,
                             ),
                           ],
                         ),
                       ],
                     ),
                   ),
-                  _buildPrayerTimeSetting('İmsak', 'imsak'),
-                  _buildPrayerTimeSetting('Güneş', 'gunes'),
-                  _buildPrayerTimeSetting('Öğle', 'ogle'),
-                  _buildPrayerTimeSetting('İkindi', 'ikindi'),
-                  _buildPrayerTimeSetting('Akşam', 'aksam'),
-                  _buildPrayerTimeSetting('Yatsı', 'yatsi'),
-                  // Logo at the bottom
-                  Padding(
-                    padding: EdgeInsets.only(top: AppSpacing.md),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Image.asset(
-                            'assets/images/app_icon.png',
-                            width: 40,
-                            height: 40,
-                            fit: BoxFit.contain,
-                          ),
-                          SizedBox(height: AppSpacing.xs),
-                          Text(
-                            'v1.0.0',
-                            style: AppTypography.caption.copyWith(
-                              color: isDark
-                                  ? AppColors.darkTextSecondary
-                                  : AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
+                ],
+              ),
+            ),
+
+            // Prayer times settings
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Namaz Vakitleri',
+                    style: AppTypography.h4.copyWith(
+                      color: isDark ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ..._buildPrayerList(isDark, settings.language),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // Global settings section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Genel Ayarlar',
+                    style: AppTypography.h4.copyWith(
+                      color: isDark ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildGlobalSettings(isDark, settings),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 40),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildPrayerList(bool isDark, String language) {
+    final prayers = ['İmsak', 'Güneş', 'Öğle', 'İkindi', 'Akşam', 'Yatsı'];
+    return List.generate(
+      prayers.length,
+      (index) => Padding(
+        padding: const EdgeInsets.only(bottom: 12.0),
+        child: _buildPrayerCard(prayers[index], isDark),
+      ),
+    );
+  }
+
+  Widget _buildPrayerCard(String prayerName, bool isDark) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? const Color(0xFF1E1E1E)
+            : _getPrayerPhaseColor(prayerName).withOpacity(0.6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark
+              ? Colors.grey[700]!
+              : _getPrayerTextColor(prayerName).withOpacity(0.2),
+          width: 1.5,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 16,
+        ),
+        child: Row(
+          children: [
+            // Prayer icon and name
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: _getPrayerPhaseColor(prayerName),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                _getPrayerIcon(prayerName),
+                color: _getPrayerTextColor(prayerName),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+
+            // Prayer name
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    prayerName,
+                    style: AppTypography.h5.copyWith(
+                      color: isDark ? Colors.white : _getPrayerTextColor(prayerName),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Ezan ve bildirim seçenekleri',
+                    style: AppTypography.caption.copyWith(
+                      color: isDark
+                          ? Colors.grey[400]
+                          : Colors.grey[600],
                     ),
                   ),
                 ],
               ),
+            ),
+
+            const SizedBox(width: 8),
+
+            // Toggle switches with icons
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Azan sound toggle
+                Tooltip(
+                  message: 'Ezan Sesi',
+                  child: Transform.scale(
+                    scale: 0.8,
+                    child: Switch(
+                      value: _azanSoundEnabled[prayerName] ?? false,
+                      onChanged: (value) {
+                        setState(() {
+                          _azanSoundEnabled[prayerName] = value;
+                        });
+                      },
+                      activeColor: const Color(0xFF2196F3),
+                      inactiveThumbColor: Colors.grey[400],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '🔊',
+                  style: AppTypography.caption,
+                ),
+              ],
+            ),
+
+            const SizedBox(width: 4),
+
+            // Notification toggle
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Tooltip(
+                  message: 'Bildirim',
+                  child: Transform.scale(
+                    scale: 0.8,
+                    child: Switch(
+                      value: _notificationEnabled[prayerName] ?? false,
+                      onChanged: (value) {
+                        setState(() {
+                          _notificationEnabled[prayerName] = value;
+                        });
+                      },
+                      activeColor: const Color(0xFF2196F3),
+                      inactiveThumbColor: Colors.grey[400],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '🔔',
+                  style: AppTypography.caption,
+                ),
+              ],
             ),
           ],
         ),
@@ -227,128 +418,137 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     );
   }
 
-  Widget _buildPrayerTimeSetting(String prayerName, String prayerKey) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // Get icon and color for each prayer time
-    IconData getPrayerIcon(String prayer) {
-      switch (prayer) {
-        case 'İmsak':
-          return Icons.wb_sunny_outlined; // Güneş doğmak üzere
-        case 'Güneş':
-          return Icons.wb_sunny; // Güneş doğdu
-        case 'Öğle':
-          return Icons.brightness_high; // Güneş parlak
-        case 'İkindi':
-          return Icons.brightness_medium; // Güneş az parlak
-        case 'Akşam':
-          return Icons.brightness_low; // Güneş batıyor
-        case 'Yatsı':
-          return Icons.nightlight_round; // Hilal
-        default:
-          return Icons.access_time;
-      }
-    }
-
-    Color getPrayerIconColor(String prayer) {
-      switch (prayer) {
-        case 'İmsak':
-          return const Color(0xFFFFA726); // Turuncu - güneş doğmak üzere
-        case 'Güneş':
-          return const Color(0xFFFFD54F); // Sarı - güneş doğdu
-        case 'Öğle':
-          return const Color(0xFFFFEB3B); // Parlak sarı - öğle güneşi
-        case 'İkindi':
-          return const Color(0xFFFFC107); // Altın sarısı - ikindi güneşi
-        case 'Akşam':
-          return const Color(0xFFFF5722); // Kırmızı-turuncu - güneş batıyor
-        case 'Yatsı':
-          return const Color(0xFF3F51B5); // Mavi - gece/hilal
-        default:
-          return isDark ? AppColors.darkTextPrimary : AppColors.textPrimary;
-      }
-    }
-
-    return Container(
-      margin: EdgeInsets.only(bottom: AppSpacing.md),
-      padding: EdgeInsets.symmetric(vertical: AppSpacing.sm, horizontal: AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.darkBgSecondary
-            : AppColors.lightBgSecondary,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: isDark ? AppColors.darkDivider : AppColors.divider,
-          width: 0.5,
-        ),
-      ),
-      child: Row(
-        children: [
-          // Prayer name and icon on the left
-          SizedBox(
-            width: 80,
-            child: Row(
-              children: [
-                Icon(
-                  getPrayerIcon(prayerName),
-                  color: getPrayerIconColor(prayerName),
-                  size: 20,
-                ),
-                SizedBox(width: AppSpacing.xs),
-                Expanded(
-                  child: Text(
-                    prayerName,
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: isDark
-                          ? AppColors.darkTextPrimary
-                          : AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-              ],
+  Widget _buildGlobalSettings(bool isDark, AppSettings settings) {
+    return Column(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+              width: 1,
             ),
           ),
-          // Spacer to push switches to the right
-          Expanded(child: SizedBox()),
-          // Switches on the right
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          child: Column(
             children: [
-              // Azan Sound Toggle
-              SizedBox(
-                width: 70,
-                child: Switch(
-                  value: _azanSoundEnabled[prayerName] ?? false,
-                  onChanged: (value) {
-                    setState(() {
-                      _azanSoundEnabled[prayerName] = value;
-                    });
-                  },
-                  activeColor: isDark
-                      ? AppColors.darkAccentPrimary
-                      : AppColors.accentPrimary,
-                ),
+              _buildGlobalSettingRow(
+                isDark,
+                'Tüm Ezanları Aç',
+                'Tüm namaz vaitleri için ezan sesini etkinleştir',
+                Icons.volume_up_rounded,
+                () {
+                  setState(() {
+                    _azanSoundEnabled.updateAll((key, value) => true);
+                  });
+                },
               ),
-              SizedBox(width: AppSpacing.sm),
-              // Notification Toggle
-              SizedBox(
-                width: 70,
-                child: Switch(
-                  value: _notificationEnabled[prayerName] ?? false,
-                  onChanged: (value) {
-                    setState(() {
-                      _notificationEnabled[prayerName] = value;
-                    });
-                  },
-                  activeColor: isDark
-                      ? AppColors.darkAccentPrimary
-                      : AppColors.accentPrimary,
-                ),
+              Divider(
+                height: 1,
+                color: isDark ? Colors.grey[700] : Colors.grey[300],
+              ),
+              _buildGlobalSettingRow(
+                isDark,
+                'Tüm Bildirimler Aç',
+                'Tüm namaz vaitleri için bildirimleri etkinleştir',
+                Icons.notifications_rounded,
+                () {
+                  setState(() {
+                    _notificationEnabled.updateAll((key, value) => true);
+                  });
+                },
+              ),
+              Divider(
+                height: 1,
+                color: isDark ? Colors.grey[700] : Colors.grey[300],
+              ),
+              _buildGlobalSettingRow(
+                isDark,
+                'Tüm Ezanları Kapat',
+                'Tüm namaz vaitleri için ezan sesini devre dışı bırak',
+                Icons.volume_off_rounded,
+                () {
+                  setState(() {
+                    _azanSoundEnabled.updateAll((key, value) => false);
+                  });
+                },
+              ),
+              Divider(
+                height: 1,
+                color: isDark ? Colors.grey[700] : Colors.grey[300],
+              ),
+              _buildGlobalSettingRow(
+                isDark,
+                'Tüm Bildirimler Kapat',
+                'Tüm namaz vaitleri için bildirimleri devre dışı bırak',
+                Icons.notifications_off_rounded,
+                () {
+                  setState(() {
+                    _notificationEnabled.updateAll((key, value) => false);
+                  });
+                },
               ),
             ],
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGlobalSettingRow(
+    bool isDark,
+    String title,
+    String subtitle,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            vertical: 12,
+            horizontal: 16,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                color: isDark ? Colors.white70 : Colors.black54,
+                size: 24,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: isDark ? Colors.white : Colors.black87,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: AppTypography.caption.copyWith(
+                        color: isDark
+                            ? Colors.grey[400]
+                            : Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: isDark ? Colors.grey[600] : Colors.grey[400],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
-}

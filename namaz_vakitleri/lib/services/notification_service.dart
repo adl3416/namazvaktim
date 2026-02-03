@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import '../models/prayer_model.dart';
+import '../config/localization.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
@@ -103,50 +104,38 @@ class NotificationService {
     String? soundFile,
   }) async {
     try {
-      final labels = {
-        'tr': {
-          'Fajr': 'İmsak namaz vakti',
-          'Sunrise': 'Güneş vakti',
-          'Dhuhr': 'Öğle namaz vakti',
-          'Asr': 'İkindi namaz vakti',
-          'Maghrib': 'Akşam namaz vakti',
-          'Isha': 'Yatsı namaz vakti',
-        },
-        'en': {
-          'Fajr': 'Time for Fajr prayer',
-          'Sunrise': 'Sunrise',
-          'Dhuhr': 'Time for Dhuhr prayer',
-          'Asr': 'Time for Asr prayer',
-          'Maghrib': 'Time for Maghrib prayer',
-          'Isha': 'Time for Isha prayer',
-        },
-        'ar': {
-          'Fajr': 'حان وقت الإِمساك',
-          'Sunrise': 'شروق الشمس',
-          'Dhuhr': 'حان وقت صلاة الظهر',
-          'Asr': 'حان وقت صلاة العصر',
-          'Maghrib': 'حان وقت صلاة المغرب',
-          'Isha': 'حان وقت صلاة العشاء',
-        },
-      };
+      // Kullanıcının seçtiği dildeki bildirim mesajlarını al
+      String getNotificationLabel(String prayer, String lang) {
+        final prayerKeyMap = {
+          'Fajr': 'notification_imsak',
+          'Sunrise': 'notification_sunrise',
+          'Dhuhr': 'notification_noon',
+          'Asr': 'notification_afternoon',
+          'Maghrib': 'notification_sunset',
+          'Isha': 'notification_night',
+        };
+        
+        final key = prayerKeyMap[prayer] ?? 'notification_imsak';
+        return AppLocalizations.translate(key, language);
+      }
 
-      final label = labels[language]?[prayerName] ?? 'Prayer time';
+      final label = getNotificationLabel(prayerName, language);
 
       // Add emoji to prayer name based on prayer time
       String getPrayerEmoji(String prayer) {
         switch (prayer) {
           case 'Fajr':
-            return '🌅'; // Güneş doğmak üzere
+            return '🌅';
           case 'Sunrise':
-            return '☀️'; // Güneş doğdu
+            return '☀️';
           case 'Dhuhr':
-            return '🌞'; // Öğle güneşi
+            return '🌞';
           case 'Asr':
-            return '🌇'; // İkindi/akşam yaklaşımı
+            return '🌇';
           case 'Maghrib':
-            return '🌆'; // Güneş batışı
+            return '🌆';
           case 'Isha':
-            return '🌙'; // Hilal/gece
+            return '🌙';
           default:
             return '🕌';
         }
@@ -251,50 +240,38 @@ class NotificationService {
     required String prayerName,
     required String language,
   }) async {
-    final labels = {
-      'tr': {
-        'Fajr': 'İmsak namaz vakti',
-        'Sunrise': 'Güneş vakti',
-        'Dhuhr': 'Öğle namaz vakti',
-        'Asr': 'İkindi namaz vakti',
-        'Maghrib': 'Akşam namaz vakti',
-        'Isha': 'Yatsı namaz vakti',
-      },
-      'en': {
-        'Fajr': 'Time for Fajr prayer',
-        'Sunrise': 'Sunrise',
-        'Dhuhr': 'Time for Dhuhr prayer',
-        'Asr': 'Time for Asr prayer',
-        'Maghrib': 'Time for Maghrib prayer',
-        'Isha': 'Time for Isha prayer',
-      },
-      'ar': {
-        'Fajr': 'حان وقت الإِمساك',
-        'Sunrise': 'شروق الشمس',
-        'Dhuhr': 'حان وقت صلاة الظهر',
-        'Asr': 'حان وقت صلاة العصر',
-        'Maghrib': 'حان وقت صلاة المغرب',
-        'Isha': 'حان وقت صلاة العشاء',
-      },
-    };
+    // Kullanıcının seçtiği dildeki bildirim mesajlarını al
+    String getNotificationLabel(String prayer, String lang) {
+      final prayerKeyMap = {
+        'Fajr': 'notification_imsak',
+        'Sunrise': 'notification_sunrise',
+        'Dhuhr': 'notification_noon',
+        'Asr': 'notification_afternoon',
+        'Maghrib': 'notification_sunset',
+        'Isha': 'notification_night',
+      };
+      
+      final key = prayerKeyMap[prayer] ?? 'notification_imsak';
+      return AppLocalizations.translate(key, language);
+    }
 
-    final label = labels[language]?[prayerName] ?? 'Prayer time';
+    final label = getNotificationLabel(prayerName, language);
 
     // Add emoji to prayer name based on prayer time
     String getPrayerEmoji(String prayer) {
       switch (prayer) {
         case 'Fajr':
-          return '🌅'; // Güneş doğmak üzere
+          return '🌅';
         case 'Sunrise':
-          return '☀️'; // Güneş doğdu
+          return '☀️';
         case 'Dhuhr':
-          return '🌞'; // Öğle güneşi
+          return '🌞';
         case 'Asr':
-          return '🌇'; // İkindi/akşam yaklaşımı
+          return '🌇';
         case 'Maghrib':
-          return '🌆'; // Güneş batışı
+          return '🌆';
         case 'Isha':
-          return '🌙'; // Hilal/gece
+          return '🌙';
         default:
           return '🕌';
       }

@@ -417,8 +417,13 @@ class PrayerProvider extends ChangeNotifier {
     final soundEnabled = _appSettings.prayerSounds[prayer.name] ?? true;
     final notificationEnabled = _appSettings.prayerNotifications[prayer.name] ?? true;
 
+    print('🔔 Prayer Time Check: ${prayer.name} | Sound: $soundEnabled | Notification: $notificationEnabled');
+
     // If neither sound nor notification is enabled, return
-    if (!soundEnabled && !notificationEnabled) return;
+    if (!soundEnabled && !notificationEnabled) {
+      print('⚠️ Both sound and notification disabled for ${prayer.name}');
+      return;
+    }
 
     // Check if we haven't played adhan for this prayer yet
     if (_lastAdhanPlayedForPrayer != '${prayer.name}_ontime') {
@@ -426,6 +431,7 @@ class PrayerProvider extends ChangeNotifier {
 
       // Show notification if enabled
       if (notificationEnabled) {
+        print('📢 Showing notification for ${prayer.name} in ${_appSettings.language}');
         await NotificationService.showPrayerTimeNotification(
           prayerName: prayer.name,
           language: _appSettings.language,
@@ -434,6 +440,7 @@ class PrayerProvider extends ChangeNotifier {
 
       // Play adhan if sound is enabled
       if (soundEnabled) {
+        print('🎵 Playing adhan sound for ${prayer.name}');
         await _playAdhanForPrayer(prayer.name);
       }
 

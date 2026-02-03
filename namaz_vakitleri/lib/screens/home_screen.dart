@@ -15,10 +15,12 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _colorAnimationController;
   late Animation<Color?> _backgroundColorAnimation;
-  Color? _currentBackgroundColor;
-
-  bool _isQiblaExpanded = false;
   late AnimationController _qiblaExpansionController;
+  late Animation<double> _qiblaScaleAnimation;
+  late Animation<double> _qiblaRotationAnimation;
+  
+  Color? _currentBackgroundColor;
+  bool _isQiblaExpanded = false;
   late GlobalKey _qiblaIconKey;
 
   @override
@@ -27,24 +29,28 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     _qiblaIconKey = GlobalKey();
     
     _colorAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
 
     _backgroundColorAnimation = ColorTween().animate(
-      CurvedAnimation(
-        parent: _colorAnimationController,
-        curve: Curves.easeInOut,
-      ),
+      CurvedAnimation(parent: _colorAnimationController, curve: Curves.easeInOut),
     );
 
-    _backgroundColorAnimation.addListener(() {
-      setState(() {});
-    });
+    _backgroundColorAnimation.addListener(() => setState(() {}));
 
+    // Çiçek gibi açılma animasyonu
     _qiblaExpansionController = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
+    );
+
+    _qiblaScaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _qiblaExpansionController, curve: Curves.elasticOut),
+    );
+
+    _qiblaRotationAnimation = Tween<double>(begin: 0.0, end: 2 * 3.14159).animate(
+      CurvedAnimation(parent: _qiblaExpansionController, curve: Curves.easeInOut),
     );
   }
 
@@ -55,36 +61,56 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  Color _getBackgroundColor(String prayerPhase) {
-    const colorMap = {
-      'imsak_sunrise_noon': Color(0xFFFFF8F0),      // Warm peach
-      'noon_afternoon': Color(0xFFF8F5FF),          // Soft lavender
-      'afternoon_evening': Color(0xFFFFF5F7),       // Soft rose
-      'evening_night': Color(0xFFFFF5F7),           // Soft rose
-      'night_fajr': Color(0xFFFFF8F0),              // Warm peach
-    };
-    return colorMap[prayerPhase] ?? const Color(0xFFFFF8F0);
-  }
+  // Zengin renk paleti - namaz saatleri
+  Map<String, Color> get _colorMap => {
+    'imsak_sunrise': const Color(0xFFFFF3E0),        // Açık portakal
+    'sunrise_noon': const Color(0xFFFFF8DC),         // Krem
+    'noon': const Color(0xFFE8F5E9),                 // Açık yeşil
+    'noon_afternoon': const Color(0xFFF3E5F5),       // Lavanta
+    'afternoon': const Color(0xFFF3E5F5),            // Mor-lavanta
+    'afternoon_evening': const Color(0xFFFFF3E0),    // Sarı
+    'evening': const Color(0xFFFFEBEE),              // Pembe
+    'evening_night': const Color(0xFFE1F5FE),        // Açık mavi
+    'night': const Color(0xFFF1F8E9),                // Açık yeşil-sarı
+  };
 
   String _getCurrentPhase(PrayerProvider prayerProvider) {
     final active = prayerProvider.activePrayer?.name.toLowerCase() ?? '';
     final next = prayerProvider.nextPrayer?.name.toLowerCase() ?? '';
 
     if (active.contains('fajr') || active.contains('imsak')) {
-      if (next.contains('sunrise') || next.contains('gunes')) return 'imsak_sunrise_noon';
-      return 'night_fajr';
+      if (next.contains('sunrise') || next.contains('gunes')) return 'imsak_sunrise';
+      return 'night';
     }
-    if (active.contains('sunrise') || active.contains('gunes')) return 'imsak_sunrise_noon';
-    if (active.contains('dhuhr') || active.contains('ogle')) return 'noon_afternoon';
-    if (active.contains('asr') || active.contains('ikindi')) return 'afternoon_evening';
-    if (active.contains('maghrib') || active.contains('aksam')) return 'evening_night';
+    if (active.contains('sunrise') || active.contains('gunes')) return 'sunrise_noon';
+    if (active.contains('dhuhr') || active.contains('ogle')) return 'noon';
+    if (active.contains('asr') || active.contains('ikindi')) {
+      if (next.contains('maghrib') || next.contains('aksam')) return 'afternoon_evening';
+      return 'afternoon';
+    }
+    if (active.contains('maghrib') || active.contains('aksam')) return 'evening';
     if (active.contains('isha') || active.contains('yatsi')) return 'evening_night';
 
-    return 'imsak_sunrise_noon';
+    return 'imsak_sunrise';
+  }
+
+  Color _getTextColor(String phase) {
+    const textColors = {
+      'imsak_sunrise': Color(0xFF5D4037),      // Kahverengi
+      'sunrise_noon': Color(0xFF1565C0),       // Koyu mavi
+      'noon': Color(0xFF33691E),               // Koyu yeşil
+      'noon_afternoon': Color(0xFF4A148C),     // Koyu mor
+      'afternoon': Color(0xFF4A148C),          // Koyu mor
+      'afternoon_evening': Color(0xFFE65100),  // Koyu portakal
+      'evening': Color(0xFFC2185B),            // Koyu pembe
+      'evening_night': Color(0xFF01579B),      // Çok koyu mavi
+      'night': Color(0xFF33691E),              // Koyu yeşil
+    };
+    return textColors[phase] ?? const Color(0xFF5D4037);
   }
 
   void _updateBackgroundColor(String phase) {
-    final newColor = _getBackgroundColor(phase);
+    final newColor = _colorMap[phase] ?? _colorMap['imsak_sunrise']!;
     if (_currentBackgroundColor != newColor) {
       _backgroundColorAnimation = ColorTween(
         begin: _currentBackgroundColor ?? newColor,
@@ -103,7 +129,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       builder: (context, settings, prayerProvider, _) {
         final phase = _getCurrentPhase(prayerProvider);
         _updateBackgroundColor(phase);
-        final bgColor = _backgroundColorAnimation.value ?? _getBackgroundColor(phase);
+        final bgColor = _backgroundColorAnimation.value ?? _colorMap[phase]!;
+        final textColor = _getTextColor(phase);
 
         return Scaffold(
           backgroundColor: bgColor,
@@ -112,19 +139,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               SafeArea(
                 child: Column(
                   children: [
-                    // Top Bar
-                    _buildTopBar(prayerProvider),
-                    // Hero Section
-                    _buildHeroSection(prayerProvider),
-                    // Prayer Times List
+                    _buildTopBar(prayerProvider, textColor),
+                    _buildHeroSection(prayerProvider, textColor),
                     Expanded(
-                      child: _buildPrayerTimesList(prayerProvider),
+                      child: _buildPrayerTimesList(prayerProvider, textColor),
                     ),
                   ],
                 ),
               ),
-              // Qibla Overlay
-              if (_isQiblaExpanded) _buildQiblaOverlay(context, prayerProvider),
+              // Çiçek gibi açılan kible pusulası overlay
+              if (_isQiblaExpanded) _buildQiblaOverlay(context, prayerProvider, bgColor),
             ],
           ),
         );
@@ -132,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildTopBar(PrayerProvider prayerProvider) {
+  Widget _buildTopBar(PrayerProvider prayerProvider, Color textColor) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
@@ -145,7 +169,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 MaterialPageRoute(builder: (_) => const SettingsScreen()),
               );
             },
-            icon: const Icon(Icons.settings_outlined, size: 24),
+            icon: Icon(Icons.settings_outlined, color: textColor, size: 24),
           ),
           GestureDetector(
             onTap: () async {
@@ -181,34 +205,47 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   prayerProvider.savedCity.isNotEmpty
                       ? prayerProvider.savedCity
                       : 'İstanbul',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                  ),
                 ),
                 const SizedBox(width: 4),
-                const Icon(Icons.location_on_outlined, size: 14),
+                Icon(Icons.location_on_outlined, size: 14, color: textColor),
               ],
             ),
           ),
-          GestureDetector(
-            key: _qiblaIconKey,
-            onTap: () {
-              setState(() => _isQiblaExpanded = !_isQiblaExpanded);
-              if (_isQiblaExpanded) {
-                _qiblaExpansionController.forward();
-              } else {
-                _qiblaExpansionController.reverse();
-              }
+          AnimatedBuilder(
+            animation: Listenable.merge([_qiblaScaleAnimation, _qiblaRotationAnimation]),
+            builder: (context, child) {
+              return GestureDetector(
+                key: _qiblaIconKey,
+                onTap: () {
+                  setState(() => _isQiblaExpanded = !_isQiblaExpanded);
+                  if (_isQiblaExpanded) {
+                    _qiblaExpansionController.forward();
+                  } else {
+                    _qiblaExpansionController.reverse();
+                  }
+                },
+                child: Transform.rotate(
+                  angle: _qiblaRotationAnimation.value,
+                  child: Icon(
+                    _isQiblaExpanded ? Icons.close : Icons.explore,
+                    color: textColor,
+                    size: 24 + (_qiblaScaleAnimation.value * 4),
+                  ),
+                ),
+              );
             },
-            child: Icon(
-              _isQiblaExpanded ? Icons.close : Icons.explore_outlined,
-              size: 24,
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHeroSection(PrayerProvider prayerProvider) {
+  Widget _buildHeroSection(PrayerProvider prayerProvider, Color textColor) {
     final nextPrayer = prayerProvider.nextPrayer;
     if (nextPrayer == null) return const SizedBox.shrink();
 
@@ -217,14 +254,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final minutes = (countdown?.inMinutes ?? 0) % 60;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       child: Column(
         children: [
           Text(
             '${_prayerNameTr(nextPrayer.name)} Vaktine',
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w400),
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w400,
+              color: textColor,
+              letterSpacing: 0.5,
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -232,17 +274,31 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             children: [
               Text(
                 hours.toString(),
-                style: const TextStyle(fontSize: 42, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
               ),
               const SizedBox(width: 8),
-              const Text('sa', style: TextStyle(fontSize: 18)),
-              const SizedBox(width: 16),
+              Text(
+                'sa',
+                style: TextStyle(fontSize: 18, color: textColor.withOpacity(0.7)),
+              ),
+              const SizedBox(width: 20),
               Text(
                 minutes.toString(),
-                style: const TextStyle(fontSize: 42, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
               ),
               const SizedBox(width: 8),
-              const Text('dk', style: TextStyle(fontSize: 18)),
+              Text(
+                'dk',
+                style: TextStyle(fontSize: 18, color: textColor.withOpacity(0.7)),
+              ),
             ],
           ),
         ],
@@ -250,53 +306,66 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildPrayerTimesList(PrayerProvider prayerProvider) {
+  Widget _buildPrayerTimesList(PrayerProvider prayerProvider, Color textColor) {
     final prayerTimes = prayerProvider.currentPrayerTimes?.prayerTimesList ?? [];
     final activePrayer = prayerProvider.activePrayer;
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       itemCount: prayerTimes.length,
       itemBuilder: (context, index) {
         final prayer = prayerTimes[index];
         final isActive = activePrayer?.name == prayer.name;
 
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            decoration: isActive
-                ? BoxDecoration(
-                    color: Colors.black.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(8),
-                  )
+        return Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+          decoration: BoxDecoration(
+            color: isActive
+                ? textColor.withOpacity(0.1)
+                : Colors.white.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(12),
+            border: isActive
+                ? Border.all(color: textColor.withOpacity(0.4), width: 2)
                 : null,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _prayerNameTr(prayer.name),
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                  ),
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: textColor.withOpacity(0.15),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _prayerNameTr(prayer.name),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                  color: textColor,
                 ),
-                Text(
-                  '${prayer.time.hour.toString().padLeft(2, '0')}:${prayer.time.minute.toString().padLeft(2, '0')}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                  ),
+              ),
+              Text(
+                '${prayer.time.hour.toString().padLeft(2, '0')}:${prayer.time.minute.toString().padLeft(2, '0')}',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                  color: textColor.withOpacity(isActive ? 1.0 : 0.7),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         );
       },
     );
   }
 
-  Widget _buildQiblaOverlay(BuildContext context, PrayerProvider prayerProvider) {
+  Widget _buildQiblaOverlay(
+      BuildContext context, PrayerProvider prayerProvider, Color bgColor) {
     return Positioned.fill(
       child: GestureDetector(
         onTap: () {
@@ -304,31 +373,43 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           _qiblaExpansionController.reverse();
         },
         child: Container(
-          color: Colors.black.withOpacity(0.6),
-          child: Center(
-            child: GestureDetector(
-              onTap: () {},
-              child: Container(
-                width: 220,
-                height: 220,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 20,
-                      spreadRadius: 5,
+          color: Colors.black.withOpacity(0.5),
+          child: AnimatedBuilder(
+            animation: Listenable.merge([_qiblaScaleAnimation]),
+            builder: (context, child) {
+              return Transform.scale(
+                scale: _qiblaScaleAnimation.value,
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 80, right: 20),
+                    child: GestureDetector(
+                      onTap: () {},
+                      child: Container(
+                        width: 200,
+                        height: 200,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.4),
+                              blurRadius: 24,
+                              spreadRadius: 8,
+                            ),
+                          ],
+                        ),
+                        child: QiblaCompassWidget(
+                          locale: 'tr',
+                          userLocation: prayerProvider.currentLocation,
+                          startRotationDelay: const Duration(milliseconds: 200),
+                        ),
+                      ),
                     ),
-                  ],
+                  ),
                 ),
-                child: QiblaCompassWidget(
-                  locale: 'tr',
-                  userLocation: prayerProvider.currentLocation,
-                  startRotationDelay: const Duration(milliseconds: 300),
-                ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),

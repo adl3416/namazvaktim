@@ -210,8 +210,8 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
         final labelHeightEstimate = 28.0; // spacing + text
         final showLabel = size >= 120 && (!constraints.maxHeight.isFinite || constraints.maxHeight >= size + labelHeightEstimate);
 
-        // Determine alignment state with higher precision: when needle is very close to zero angle
-        final sensitivityRad = 1.5 * (math.pi / 180.0); // 1.5 degrees sensitivity for reliable accuracy
+        // Determine alignment state with HIGHER precision: when needle is very close to zero angle
+        final sensitivityRad = 0.8 * (math.pi / 180.0); // 0.8 degrees - daha hassas
         final aligned = _hasHeading && (_normalizeAngle(_displayHeading).abs() < sensitivityRad);
         final alignColor = widget.alignmentColor ?? (isDark ? AppColors.darkAccentMint : AppColors.accentMint);
         

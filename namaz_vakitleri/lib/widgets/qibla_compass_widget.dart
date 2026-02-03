@@ -258,15 +258,15 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        (widget.backgroundColor ?? AppColors.getBackground(isDark)).withOpacity(0.02),
-                        (widget.backgroundColor ?? AppColors.getBackground(isDark)).withOpacity(0.06),
+                        Colors.black.withOpacity(0.1),
+                        Colors.black.withOpacity(0.2),
                       ],
                       center: Alignment(-0.2, -0.2),
                       radius: 0.8,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
+                        color: Colors.black.withOpacity(0.1),
                         blurRadius: 12,
                         spreadRadius: 1,
                       ),
@@ -303,21 +303,21 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
                             shape: BoxShape.circle,
                             gradient: RadialGradient(
                               colors: [
-                                alignColor.withOpacity(0.4),
-                                alignColor.withOpacity(0.2),
-                                alignColor.withOpacity(0.0),
+                                Colors.black.withOpacity(0.4),
+                                Colors.black.withOpacity(0.2),
+                                Colors.black.withOpacity(0.0),
                               ],
                               center: Alignment.topCenter,
                               radius: 0.8,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: alignColor.withOpacity(0.6),
+                                color: Colors.black.withOpacity(0.6),
                                 blurRadius: 20,
                                 spreadRadius: 5,
                               ),
                               BoxShadow(
-                                color: alignColor.withOpacity(0.3),
+                                color: Colors.black.withOpacity(0.3),
                                 blurRadius: 40,
                                 spreadRadius: 10,
                               ),
@@ -331,7 +331,7 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
                         height: size * 0.56,
                         child: CustomPaint(
                           painter: NeedlePainter(
-                            color: aligned ? alignColor : AppColors.accentPrimary,
+                            color: Colors.black,
                             isAligned: aligned,
                           ),
                         ),
@@ -349,10 +349,10 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
                                 height: 8,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: alignColor,
+                                  color: Colors.black,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: alignColor.withOpacity(0.8),
+                                      color: Colors.black.withOpacity(0.8),
                                       blurRadius: 15,
                                       spreadRadius: 3,
                                     ),
@@ -372,11 +372,11 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
                   height: math.max(12, size * 0.12),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.accentPrimary,
+                    color: Colors.black,
                     border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.accentPrimary.withOpacity(0.28),
+                        color: Colors.black.withOpacity(0.28),
                         blurRadius: 10,
                       ),
                     ],
@@ -388,7 +388,7 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
                   right: math.max(6, size * 0.05),
                   child: Icon(
                     Icons.check_circle,
-                    color: aligned ? alignColor : AppColors.getTextSecondary(isDark),
+                    color: Colors.black,
                     size: math.max(18, size * 0.12),
                   ),
                 ),
@@ -615,8 +615,8 @@ class CompassPainter extends CustomPainter {
 
       final paint = Paint()
         ..color = (i % 30 == 0
-                ? AppColors.accentPrimary
-                : AppColors.accentPrimary.withOpacity(0.3))
+                ? Colors.black
+                : Colors.black.withOpacity(0.3))
         ..strokeWidth = i % 30 == 0 ? 2 : 1;
 
       canvas.drawLine(start, end, paint);
@@ -624,7 +624,7 @@ class CompassPainter extends CustomPainter {
 
     // Draw decorative circles
     final circlePaint = Paint()
-      ..color = AppColors.accentPrimary.withOpacity(0.15)
+      ..color = Colors.black.withOpacity(0.15)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
@@ -633,7 +633,7 @@ class CompassPainter extends CustomPainter {
 
     // Outer bezel / frame
     final bezelPaint = Paint()
-      ..color = AppColors.accentPrimary.withOpacity(0.14)
+      ..color = Colors.black.withOpacity(0.14)
       ..style = PaintingStyle.stroke
       ..strokeWidth = math.max(3.0, radius * 0.06);
     canvas.drawCircle(center, radius - (bezelPaint.strokeWidth / 2), bezelPaint);
@@ -643,7 +643,7 @@ class CompassPainter extends CustomPainter {
       text: TextSpan(
         text: 'N',
         style: TextStyle(
-          color: AppColors.accentPrimary,
+          color: Colors.black,
           fontSize: math.max(10, radius * 0.12),
           fontWeight: FontWeight.w700,
         ),

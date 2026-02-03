@@ -99,7 +99,7 @@ class PrayerProvider extends ChangeNotifier {
             stayAwake: false,
             contentType: AndroidContentType.music,
             usageType: AndroidUsageType.media,
-            audioFocus: AndroidAudioFocus.gain,
+            audioFocus: AndroidAudioFocus.gainTransientMayDuck,
           ),
         ),
       );
@@ -415,12 +415,28 @@ class PrayerProvider extends ChangeNotifier {
   Future<void> _checkAndPlayAdhanOnTime(PrayerTime prayer) async {
     // Only play adhan if sound is enabled for this prayer
     final soundEnabled = _appSettings.prayerSounds[prayer.name] ?? true;
-    if (!soundEnabled) return;
+    final notificationEnabled = _appSettings.prayerNotifications[prayer.name] ?? true;
+
+    // If neither sound nor notification is enabled, return
+    if (!soundEnabled && !notificationEnabled) return;
 
     // Check if we haven't played adhan for this prayer yet
     if (_lastAdhanPlayedForPrayer != '${prayer.name}_ontime') {
-      print('🔔 Prayer time arrived: ${prayer.name} - Playing adhan');
-      await _playAdhanForPrayer(prayer.name);
+      print('🔔 Prayer time arrived: ${prayer.name} - Playing adhan and showing notification');
+
+      // Show notification if enabled
+      if (notificationEnabled) {
+        await NotificationService.showPrayerTimeNotification(
+          prayerName: prayer.name,
+          language: _appSettings.language,
+        );
+      }
+
+      // Play adhan if sound is enabled
+      if (soundEnabled) {
+        await _playAdhanForPrayer(prayer.name);
+      }
+
       _lastAdhanPlayedForPrayer = '${prayer.name}_ontime';
     }
   }
@@ -508,6 +524,16 @@ class PrayerProvider extends ChangeNotifier {
     } catch (e) {
       print('❌ Error refreshing location: $e');
       throw e;
+    }
+  }
+
+  /// Stop currently playing adhan
+  Future<void> stopAdhan() async {
+    try {
+      await _audioPlayer.stop();
+      print('🛑 Adhan stopped manually');
+    } catch (e) {
+      print('❌ Error stopping adhan: $e');
     }
   }
 }

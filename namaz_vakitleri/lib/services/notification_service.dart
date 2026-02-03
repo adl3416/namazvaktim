@@ -246,8 +246,99 @@ class NotificationService {
     await _flutterLocalNotificationsPlugin.cancel(id);
   }
 
-  /// Cancel all notifications
-  static Future<void> cancelAllNotifications() async {
-    await _flutterLocalNotificationsPlugin.cancelAll();
+  /// Show immediate notification for prayer time (when prayer time arrives)
+  static Future<void> showPrayerTimeNotification({
+    required String prayerName,
+    required String language,
+  }) async {
+    final labels = {
+      'tr': {
+        'Fajr': 'İmsak namaz vakti',
+        'Sunrise': 'Güneş vakti',
+        'Dhuhr': 'Öğle namaz vakti',
+        'Asr': 'İkindi namaz vakti',
+        'Maghrib': 'Akşam namaz vakti',
+        'Isha': 'Yatsı namaz vakti',
+      },
+      'en': {
+        'Fajr': 'Time for Fajr prayer',
+        'Sunrise': 'Sunrise',
+        'Dhuhr': 'Time for Dhuhr prayer',
+        'Asr': 'Time for Asr prayer',
+        'Maghrib': 'Time for Maghrib prayer',
+        'Isha': 'Time for Isha prayer',
+      },
+      'ar': {
+        'Fajr': 'حان وقت الإِمساك',
+        'Sunrise': 'شروق الشمس',
+        'Dhuhr': 'حان وقت صلاة الظهر',
+        'Asr': 'حان وقت صلاة العصر',
+        'Maghrib': 'حان وقت صلاة المغرب',
+        'Isha': 'حان وقت صلاة العشاء',
+      },
+    };
+
+    final label = labels[language]?[prayerName] ?? 'Prayer time';
+
+    // Add emoji to prayer name based on prayer time
+    String getPrayerEmoji(String prayer) {
+      switch (prayer) {
+        case 'Fajr':
+          return '🌅'; // Güneş doğmak üzere
+        case 'Sunrise':
+          return '☀️'; // Güneş doğdu
+        case 'Dhuhr':
+          return '🌞'; // Öğle güneşi
+        case 'Asr':
+          return '🌇'; // İkindi/akşam yaklaşımı
+        case 'Maghrib':
+          return '🌆'; // Güneş batışı
+        case 'Isha':
+          return '🌙'; // Hilal/gece
+        default:
+          return '🕌';
+      }
+    }
+
+    final displayName = '${getPrayerEmoji(prayerName)} $prayerName';
+
+    // Map prayer names to sound files
+    final soundFiles = {
+      'Fajr': 'sabah_ezan.mp3',
+      'Dhuhr': 'ogle_ezan.mp3',
+      'Asr': 'ikindi_ezan.mp3',
+      'Maghrib': 'aksam_ezan.mp3',
+      'Isha': 'yatsi_ezan.mp3',
+    };
+
+    final soundFile = soundFiles[prayerName];
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'prayer_channel',
+      'Prayer Notifications',
+      channelDescription: 'Notifications for prayer times',
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound('sabah_ezan'),
+    );
+
+    const NotificationDetails notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: DarwinNotificationDetails(
+        presentSound: true,
+        presentBadge: true,
+        presentAlert: true,
+      ),
+    );
+
+    await _flutterLocalNotificationsPlugin.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000, // Unique ID based on timestamp
+      displayName,
+      label,
+      notificationDetails,
+    );
+
+    print('🔔 Immediate notification shown for $prayerName');
   }
 }

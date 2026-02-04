@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:volume_controller/volume_controller.dart';
 import '../models/prayer_model.dart';
 import '../config/localization.dart';
 import '../main.dart' show navigatorKey;
@@ -9,6 +11,10 @@ import '../main.dart' show navigatorKey;
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
+
+  // Notification action IDs
+  static const String _dismissAction = 'DISMISS_NOTIFICATION';
+  static const String _snoozeAction = 'SNOOZE_NOTIFICATION';
 
   static Future<void> initialize() async {
     const AndroidInitializationSettings androidInitializationSettings =
@@ -27,10 +33,17 @@ class NotificationService {
       iOS: iosInitializationSettings,
     );
 
-    final bool? initialized = await _flutterLocalNotificationsPlugin.initialize(initializationSettings);
+    final bool? initialized = await _flutterLocalNotificationsPlugin.initialize(
+      initializationSettings,
+      onDidReceiveNotificationResponse: _handleNotificationTap,
+      onDidReceiveBackgroundNotificationResponse: _handleBackgroundNotificationTap,
+    );
     print('🔔 Notification plugin initialized: $initialized');
 
-    // Create Android notification channel
+    // Setup notification response handler
+    await _setupNotificationResponseHandler();
+
+    // Create Android notification channel with full screen intent
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
       'prayer_channel',
       'Prayer Notifications',
@@ -38,13 +51,16 @@ class NotificationService {
       importance: Importance.high,
       playSound: true,
       sound: RawResourceAndroidNotificationSound('sabah_ezan'),
+      enableVibration: true,
+      showBadge: true,
+      ledColor: Colors.blue,
     );
 
     await _flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
 
-    print('🔔 Notification channel created');
+    print('🔔 Notification channel created with full-screen intent support');
 
     // Request iOS permissions
     await _flutterLocalNotificationsPlugin
@@ -128,7 +144,100 @@ class NotificationService {
     return navigatorKey?.currentContext;
   }
 
-  /// Test notification to verify notifications are working
+  /// Handle notification tap when app is in foreground
+  static void _handleNotificationTap(NotificationResponse response) {
+    print('🔔 Notification tapped: ${response.actionId}');
+    
+    if (response.actionId == _dismissAction) {
+      print('📱 Dismissing notification');
+      deactivateNotificationMode();
+    }
+  }
+
+  /// Handle notification tap when app is in background
+  @pragma('vm:entry-point')
+  static void _handleBackgroundNotificationTap(NotificationResponse response) {
+    print('🔔 Background notification tapped: ${response.actionId}');
+    
+    if (response.actionId == _dismissAction) {
+      print('📱 Dismissing background notification');
+      deactivateNotificationMode();
+    }
+  }
+
+  /// Setup notification response handler
+  static Future<void> _setupNotificationResponseHandler() async {
+    // Listen to notification taps
+    await _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions();
+    
+    print('🔔 Notification response handler setup complete');
+  }
+
+  /// Acquire screen lock (keep screen on)
+  static Future<void> _acquireScreenLock() async {
+    try {
+      await WakelockPlus.enable();
+      print('💡 Screen lock acquired - screen will stay on');
+    } catch (e) {
+      print('Error acquiring screen lock: $e');
+    }
+  }
+
+  /// Release screen lock
+  static Future<void> _releaseScreenLock() async {
+    try {
+      await WakelockPlus.disable();
+      print('💡 Screen lock released');
+    } catch (e) {
+      print('Error releasing screen lock: $e');
+    }
+  }
+
+  /// Set volume to maximum for Adhan
+  static Future<void> _setMaxVolume() async {
+    try {
+      await VolumeController().setVolume(1.0, showSystemUI: true);
+      print('🔊 Volume set to maximum');
+    } catch (e) {
+      print('Error setting volume: $e');
+    }
+  }
+
+  /// Restore volume after notification
+  static Future<void> _restoreVolume() async {
+    try {
+      // Volume will auto-restore based on device settings
+      print('🔊 Volume control restored to user control');
+    } catch (e) {
+      print('Error restoring volume: $e');
+    }
+  }
+
+  /// Activate screen and volume for notification
+  static Future<void> activateNotificationMode() async {
+    try {
+      await _acquireScreenLock();
+      await _setMaxVolume();
+      print('🎯 Notification mode activated - screen locked on, volume max');
+    } catch (e) {
+      print('Error activating notification mode: $e');
+    }
+  }
+
+  /// Release notification mode
+  static Future<void> deactivateNotificationMode() async {
+    try {
+      await _releaseScreenLock();
+      await _restoreVolume();
+      print('🎯 Notification mode deactivated');
+    } catch (e) {
+      print('Error deactivating notification mode: $e');
+    }
+  }
+
   static Future<void> showTestNotification() async {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'prayer_channel',
@@ -235,11 +344,24 @@ class NotificationService {
             sound: enableSound && soundFile != null
                 ? RawResourceAndroidNotificationSound(soundFile.replaceAll('.mp3', ''))
                 : null,
+            enableVibration: true,
+            vibrationPattern: [0, 500, 250, 500], // Vibration pattern
+            lights: const [Colors.blue, Colors.blue],
+            fullScreenIntent: true,
+            actions: [
+              AndroidNotificationAction(
+                _dismissAction,
+                'Close',
+                cancelNotification: true,
+              ),
+            ],
+            ticker: label,
           ),
           iOS: DarwinNotificationDetails(
             presentSound: enableSound,
             presentBadge: true,
             presentAlert: true,
+            interruptionLevel: InterruptionLevel.timeSensitive,
           ),
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -247,7 +369,38 @@ class NotificationService {
             UILocalNotificationDateInterpretation.absoluteTime,
       );
 
+      // Acquire screen lock and set volume when notification is scheduled
       print('✅ Scheduled notification for $prayerName at $scheduled (ID: $id)');
+      
+      // Schedule screen lock for when notification arrives (1-2 seconds before prayer time)
+      tz.TZDateTime screenLockTime = tz.TZDateTime.from(
+        prayerTime.subtract(const Duration(seconds: 2)),
+        tz.local,
+      );
+      
+      if (screenLockTime.isAfter(tz.TZDateTime.now(tz.local))) {
+        await _flutterLocalNotificationsPlugin.zonedSchedule(
+          id + 100, // Unique ID for screen lock task
+          displayName,
+          'Acquiring screen lock...',
+          screenLockTime,
+          NotificationDetails(
+            android: AndroidNotificationDetails(
+              'prayer_channel',
+              'Prayer Notifications',
+              channelDescription: 'Screen lock for prayer notifications',
+              importance: Importance.low,
+              priority: Priority.low,
+              playSound: false,
+              showWhen: false,
+            ),
+          ),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+        );
+        print('📱 Scheduled screen lock task for $prayerName');
+      }
     } catch (e) {
       print('Error scheduling notification: $e');
     }

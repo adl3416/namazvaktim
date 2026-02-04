@@ -15,95 +15,11 @@ import 'language_selection_screen.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
 
-  Color _getTimeBasedScaffoldColor(bool isDark) {
-    final now = DateTime.now();
-    final hour = now.hour;
-
-    if (isDark) {
-      // Dark mode için daha koyu tonlar
-      if (hour >= 5 && hour < 11) {
-        return const Color(0xFF4A3A4A); // Koyu pembe
-      } else if (hour >= 11 && hour < 15) {
-        return const Color(0xFF4A4A2A); // Koyu sarı
-      } else if (hour >= 15 && hour < 19) {
-        return const Color(0xFF4A2A2A); // Koyu turuncu
-      } else {
-        return const Color(0xFF2A2A4A); // Koyu mavi
-      }
-    } else {
-      // Light mode için pastel tonlar
-      if (hour >= 5 && hour < 11) {
-        return const Color(0xFFF8E8E8); // Açık pembe - sabah
-      } else if (hour >= 11 && hour < 15) {
-        return const Color(0xFFFFF8E1); // Açık sarı - öğlen
-      } else if (hour >= 15 && hour < 19) {
-        return const Color(0xFFFFE8E1); // Açık turuncu - akşam
-      } else {
-        return const Color(0xFFE8E8F8); // Açık mavi - gece
-      }
-    }
-  }
-
-  LinearGradient _getTimeBasedGradient(bool isDark) {
-    final now = DateTime.now();
-    final hour = now.hour;
-
-    if (isDark) {
-      // Dark mode için gradient'ler
-      if (hour >= 5 && hour < 11) {
-        return const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF4A3A4A), Color(0xFF2A1A2A)],
-        );
-      } else if (hour >= 11 && hour < 15) {
-        return const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF4A4A2A), Color(0xFF2A2A1A)],
-        );
-      } else if (hour >= 15 && hour < 19) {
-        return const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF4A2A2A), Color(0xFF2A1A1A)],
-        );
-      } else {
-        return const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF2A2A4A), Color(0xFF1A1A2A)],
-        );
-      }
-    } else {
-      // Light mode için gradient'ler
-      if (hour >= 5 && hour < 11) {
-        return const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFF8E8E8), Color(0xFFE8D8D8)],
-        );
-      } else if (hour >= 11 && hour < 15) {
-        return const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFFFF8E1), Color(0xFFE8E0D1)],
-        );
-      } else if (hour >= 15 && hour < 19) {
-        return const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFFFE8E1), Color(0xFFE8D8D1)],
-        );
-      } else {
-        return const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFE8E8F8), Color(0xFFD8D8E8)],
-        );
-      }
-    }
-  }
+  // Sabit beyaz/açık arka plan rengi
+  static const Color _staticBackground = Color(0xFFFAFAFA);
+  static const Color _staticAppBarBackground = Colors.white;
+  static const Color _staticTextColor = Color(0xFF212121);
+  static const Color _staticSecondaryTextColor = Color(0xFF757575);
 
   @override
   Widget build(BuildContext context) {
@@ -113,14 +29,10 @@ class SettingsScreen extends StatelessWidget {
         final locale = settings.language;
         final isRTL = AppLocalizations.isRTL(locale);
 
-        // 🎨 Günün zamanına göre gradient arka plan belirleme
-        final timeBasedGradient = _getTimeBasedGradient(isDark);
-
         return Scaffold(
+          backgroundColor: _staticBackground,
           body: Container(
-            decoration: BoxDecoration(
-              gradient: timeBasedGradient,
-            ),
+            color: _staticBackground,
             child: SafeArea(
               child: Column(
                 children: [
@@ -130,16 +42,17 @@ class SettingsScreen extends StatelessWidget {
                       horizontal: AppSpacing.lg,
                       vertical: AppSpacing.md,
                     ),
+                    color: _staticAppBarBackground,
                     child: Row(
                       children: [
                         IconButton(
                           icon: Icon(
                             Icons.arrow_back,
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                            color: _staticTextColor,
                           ),
                           onPressed: () => Navigator.pop(context),
                           style: IconButton.styleFrom(
-                            backgroundColor: (isDark ? AppColors.darkBgSecondary : AppColors.lightBgSecondary).withOpacity(0.8),
+                            backgroundColor: Colors.grey.shade200,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(AppRadius.md),
                             ),
@@ -149,7 +62,7 @@ class SettingsScreen extends StatelessWidget {
                         Text(
                           AppLocalizations.translate('settings', locale),
                           style: AppTypography.h2.copyWith(
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                            color: _staticTextColor,
                             fontWeight: FontWeight.w700,
                           ),
                         ),

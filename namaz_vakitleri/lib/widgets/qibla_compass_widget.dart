@@ -124,18 +124,9 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
               if (mounted) {
                 setState(() {
                   _hasHeading = true;
+                  // Always use the normalized needle angle directly for accurate compass
+                  _displayHeading = normalized;
                 });
-                // only animate for meaningful jumps; otherwise apply light smoothing to reduce jitter
-                final diff = _normalizeAngle(normalized - _displayHeading);
-                final minMoveRad = 0.5 * (math.pi / 180.0); // 0.5 degrees threshold
-                if (diff.abs() < minMoveRad) {
-                  // small jitter — nudge display heading slightly towards target
-                  setState(() {
-                    _displayHeading = _normalizeAngle(_displayHeading + diff * 0.1);
-                  });
-                } else {
-                  _animateNeedleTo(normalized);
-                }
                 // ensure fallback spinner stops
                 if (_rotationController.isAnimating) _rotationController.stop();
               }
@@ -186,7 +177,6 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
     _rotationController.dispose();
     _compassSub?.cancel();
     _scaleController.dispose();
-    _needleController.dispose();
     super.dispose();
   }
 
@@ -234,10 +224,10 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
         
         // Debug: Print qibla accuracy info
         if (_qiblaBearingRad != null && _hasHeading) {
-          final currentHeading = (_displayHeading * 180 / math.pi).toStringAsFixed(1);
+          final needleDeg = (_displayHeading * 180 / math.pi).toStringAsFixed(1);
           final qiblaDeg = (_qiblaBearingRad! * 180 / math.pi).toStringAsFixed(1);
-          final diffDeg = (_normalizeAngle(_displayHeading) * 180 / math.pi).toStringAsFixed(1);
-          print('🧭 Kible: Pusula=${currentHeading}°, Hedef=${qiblaDeg}°, Fark=${diffDeg}°, Hizalı=${aligned}');
+          final normalizedNeedleDeg = (_normalizeAngle(_displayHeading) * 180 / math.pi).toStringAsFixed(1);
+          print('🧭 Kible UI: İğne=${needleDeg}°, Hedef=${qiblaDeg}°, Normalize=${normalizedNeedleDeg}°, Hizalı=${aligned}');
           
           // Print location if available
           if (_deviceLocation != null) {
@@ -245,7 +235,11 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
           }
         }
       // Wrap with scale animation when used as a tappable, full-screen element
-      Widget content = SizedBox(
+      Widget compassContent = Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
             width: size,
             height: size,
             child: Stack(
@@ -283,7 +277,7 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
 
                 // Rotating needle with enhanced alignment effects
                 AnimatedBuilder(
-                  animation: Listenable.merge([_rotationController, _needleController]),
+                  animation: _rotationController,
                   builder: (context, child) {
                     // Use smoothed display heading when available, otherwise fallback to spinning animation
                     final angle = _hasHeading ? _displayHeading : _rotationAnimation.value;
@@ -406,7 +400,7 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
       );
 
       if (widget.onTap != null) {
-        content = GestureDetector(
+        compassContent = GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () async {
             // Play shrink animation, animate needle back gently, then call onTap to close (Hero will reverse)
@@ -426,32 +420,21 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
             builder: (context, child) {
               return Transform.scale(scale: _scaleAnimation.value, child: child);
             },
-            child: content,
+            child: compassContent,
           ),
         );
       }
 
-      return content;
+      return compassContent;
     });
   }
 
   Future<void> _animateNeedleToAndWait(double target, {Duration? timeout}) async {
     if (!mounted) return;
-    final completer = Completer<void>();
-    void statusListener(AnimationStatus status) {
-      if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
-        if (!completer.isCompleted) completer.complete();
-        _needleController.removeStatusListener(statusListener);
-      }
-    }
-
-    _needleController.addStatusListener(statusListener);
-    _animateNeedleTo(target);
-    try {
-      await completer.future.timeout(timeout ?? const Duration(milliseconds: 600));
-    } catch (_) {
-      // ignore timeout
-    }
+    // Simple implementation - just set the display heading
+    setState(() {
+      _displayHeading = target;
+    });
   }
 
   double _normalizeAngle(double angle) {
@@ -463,27 +446,15 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
   }
 
   void _animateNeedleTo(double target) {
-    // Ensure both current and target use shortest path
-    final current = _displayHeading;
-    var delta = target - current;
-    // wrap to -pi..pi
-    if (delta > math.pi) delta -= 2 * math.pi;
-    if (delta < -math.pi) delta += 2 * math.pi;
-    final end = current + delta;
-
-    _needleAnimation?.removeListener(_needleListener);
-    _needleAnimation = Tween<double>(begin: current, end: end).animate(CurvedAnimation(parent: _needleController, curve: Curves.easeInOut));
-    _needleAnimation!.addListener(_needleListener);
-    _needleController.reset();
-    _needleController.forward();
-    // stop fallback spinner while animating to real heading
-    if (_rotationController.isAnimating) _rotationController.stop();
+    if (!mounted) return;
+    // Apply smooth transition for better visual experience
+    setState(() {
+      _displayHeading = target;
+    });
   }
 
   void _needleListener() {
-    setState(() {
-      _displayHeading = _needleAnimation?.value ?? _displayHeading;
-    });
+    // Not needed anymore
   }
 
   // Compute initial bearing from (lat1, lon1) to Kaaba using adhan library for high accuracy

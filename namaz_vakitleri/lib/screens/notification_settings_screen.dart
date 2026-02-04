@@ -41,12 +41,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          'Ayarlar kaydedildi',
-          style: AppTypography.bodyMedium.copyWith(
-            color: Colors.white,
-          ),
-        ),
+        content: Text('Ayarlar kaydedildi'),
         backgroundColor: Colors.green.shade400,
         duration: const Duration(seconds: 2),
       ),
@@ -142,390 +137,121 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Column(
           children: [
-            // Header section with description
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 16,
-                      horizontal: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF1E1E1E)
-                          : const Color(0xFFF5F5F5),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isDark
-                            ? Colors.grey[700]!
-                            : Colors.grey[300]!,
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Her namaz vakti için ayarlar',
-                                    style: AppTypography.h3.copyWith(
-                                      color: isDark ? Colors.white : Colors.black87,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Ezan sesini ve bildirimleri kontrol edin',
-                                    style: AppTypography.bodySmall.copyWith(
-                                      color: isDark
-                                          ? Colors.grey[400]
-                                          : Colors.grey[600],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(
-                              Icons.notifications_active_rounded,
-                              color: const Color(0xFF2196F3),
-                              size: 32,
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Prayer times settings
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Namaz Vakitleri',
-                    style: AppTypography.h3.copyWith(
-                      color: isDark ? Colors.white : Colors.black87,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ..._buildPrayerList(isDark, settings.language),
-                ],
-              ),
-            ),
-
+            ..._buildPrayerList(isDark),
             const SizedBox(height: 30),
-
-            // Global settings section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Genel Ayarlar',
-                    style: AppTypography.h3.copyWith(
-                      color: isDark ? Colors.white : Colors.black87,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildGlobalSettings(isDark, settings),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 40),
           ],
         ),
       ),
     );
   }
 
-  List<Widget> _buildPrayerList(bool isDark, String language) {
+  List<Widget> _buildPrayerList(bool isDark) {
     final prayers = ['İmsak', 'Güneş', 'Öğle', 'İkindi', 'Akşam', 'Yatsı'];
     return List.generate(
       prayers.length,
       (index) => Padding(
         padding: const EdgeInsets.only(bottom: 12.0),
-        child: _buildPrayerCard(prayers[index], isDark),
+        child: _buildSimplePrayerRow(prayers[index], isDark),
       ),
     );
   }
 
-  Widget _buildPrayerCard(String prayerName, bool isDark) {
+  Widget _buildSimplePrayerRow(String prayerName, bool isDark) {
     return Container(
       decoration: BoxDecoration(
-        color: isDark
-            ? const Color(0xFF1E1E1E)
-            : _getPrayerPhaseColor(prayerName).withOpacity(0.6),
-        borderRadius: BorderRadius.circular(12),
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: isDark
-              ? Colors.grey[700]!
-              : _getPrayerTextColor(prayerName).withOpacity(0.2),
-          width: 1.5,
+          color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+          width: 1,
         ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: 16,
-          horizontal: 16,
-        ),
-        child: Row(
-          children: [
-            // Prayer icon and name
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: _getPrayerPhaseColor(prayerName),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                _getPrayerIcon(prayerName),
-                color: _getPrayerTextColor(prayerName),
-                size: 24,
-              ),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      child: Row(
+        children: [
+          // Prayer icon
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: _getPrayerPhaseColor(prayerName),
+              borderRadius: BorderRadius.circular(8),
             ),
-            const SizedBox(width: 16),
+            child: Icon(
+              _getPrayerIcon(prayerName),
+              color: _getPrayerTextColor(prayerName),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
 
-            // Prayer name
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    prayerName,
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: isDark ? Colors.white : _getPrayerTextColor(prayerName),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Ezan ve bildirim seçenekleri',
-                    style: AppTypography.caption.copyWith(
-                      color: isDark
-                          ? Colors.grey[400]
-                          : Colors.grey[600],
-                    ),
-                  ),
-                ],
+          // Prayer name
+          Expanded(
+            child: Text(
+              prayerName,
+              style: AppTypography.bodyLarge.copyWith(
+                color: isDark ? Colors.white : Colors.black87,
+                fontWeight: FontWeight.w500,
               ),
             ),
+          ),
 
-            const SizedBox(width: 8),
+          // Notification button
+          _buildIconButton(
+            isDark: isDark,
+            isActive: _notificationEnabled[prayerName] ?? false,
+            icon: Icons.notifications_outlined,
+            onTap: () {
+              setState(() {
+                _notificationEnabled[prayerName] = !(_notificationEnabled[prayerName] ?? false);
+              });
+            },
+          ),
 
-            // Toggle switches with icons
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Azan sound toggle
-                Tooltip(
-                  message: 'Ezan Sesi',
-                  child: Transform.scale(
-                    scale: 0.8,
-                    child: Switch(
-                      value: _azanSoundEnabled[prayerName] ?? false,
-                      onChanged: (value) {
-                        setState(() {
-                          _azanSoundEnabled[prayerName] = value;
-                        });
-                      },
-                      activeColor: const Color(0xFF2196F3),
-                      inactiveThumbColor: Colors.grey[400],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '🔊',
-                  style: AppTypography.caption,
-                ),
-              ],
-            ),
+          const SizedBox(width: 8),
 
-            const SizedBox(width: 4),
-
-            // Notification toggle
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Tooltip(
-                  message: 'Bildirim',
-                  child: Transform.scale(
-                    scale: 0.8,
-                    child: Switch(
-                      value: _notificationEnabled[prayerName] ?? false,
-                      onChanged: (value) {
-                        setState(() {
-                          _notificationEnabled[prayerName] = value;
-                        });
-                      },
-                      activeColor: const Color(0xFF2196F3),
-                      inactiveThumbColor: Colors.grey[400],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '🔔',
-                  style: AppTypography.caption,
-                ),
-              ],
-            ),
-          ],
-        ),
+          // Azan button
+          _buildIconButton(
+            isDark: isDark,
+            isActive: _azanSoundEnabled[prayerName] ?? false,
+            icon: Icons.volume_up_outlined,
+            onTap: () {
+              setState(() {
+                _azanSoundEnabled[prayerName] = !(_azanSoundEnabled[prayerName] ?? false);
+              });
+            },
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildGlobalSettings(bool isDark, AppSettings settings) {
-    return Column(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5F5F5),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-              width: 1,
-            ),
-          ),
-          child: Column(
-            children: [
-              _buildGlobalSettingRow(
-                isDark,
-                'Tüm Ezanları Aç',
-                'Tüm namaz vaitleri için ezan sesini etkinleştir',
-                Icons.volume_up_rounded,
-                () {
-                  setState(() {
-                    _azanSoundEnabled.updateAll((key, value) => true);
-                  });
-                },
-              ),
-              Divider(
-                height: 1,
-                color: isDark ? Colors.grey[700] : Colors.grey[300],
-              ),
-              _buildGlobalSettingRow(
-                isDark,
-                'Tüm Bildirimler Aç',
-                'Tüm namaz vaitleri için bildirimleri etkinleştir',
-                Icons.notifications_rounded,
-                () {
-                  setState(() {
-                    _notificationEnabled.updateAll((key, value) => true);
-                  });
-                },
-              ),
-              Divider(
-                height: 1,
-                color: isDark ? Colors.grey[700] : Colors.grey[300],
-              ),
-              _buildGlobalSettingRow(
-                isDark,
-                'Tüm Ezanları Kapat',
-                'Tüm namaz vaitleri için ezan sesini devre dışı bırak',
-                Icons.volume_off_rounded,
-                () {
-                  setState(() {
-                    _azanSoundEnabled.updateAll((key, value) => false);
-                  });
-                },
-              ),
-              Divider(
-                height: 1,
-                color: isDark ? Colors.grey[700] : Colors.grey[300],
-              ),
-              _buildGlobalSettingRow(
-                isDark,
-                'Tüm Bildirimler Kapat',
-                'Tüm namaz vaitleri için bildirimleri devre dışı bırak',
-                Icons.notifications_off_rounded,
-                () {
-                  setState(() {
-                    _notificationEnabled.updateAll((key, value) => false);
-                  });
-                },
-              ),
-            ],
-          ),
+  Widget _buildIconButton({
+    required bool isDark,
+    required bool isActive,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: isActive
+              ? const Color(0xFF2196F3).withOpacity(0.2)
+              : Colors.grey.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
         ),
-      ],
-    );
-  }
-
-  Widget _buildGlobalSettingRow(
-    bool isDark,
-    String title,
-    String subtitle,
-    IconData icon,
-    VoidCallback onTap,
-  ) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            vertical: 12,
-            horizontal: 16,
-          ),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                color: isDark ? Colors.white70 : Colors.black54,
-                size: 24,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: AppTypography.bodyMedium.copyWith(
-                        color: isDark ? Colors.white : Colors.black87,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: AppTypography.caption.copyWith(
-                        color: isDark
-                            ? Colors.grey[400]
-                            : Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: isDark ? Colors.grey[600] : Colors.grey[400],
-              ),
-            ],
-          ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: isActive
+              ? const Color(0xFF2196F3)
+              : (isDark ? Colors.grey[500] : Colors.grey[400]),
         ),
       ),
     );

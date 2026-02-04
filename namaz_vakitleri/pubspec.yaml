@@ -50,7 +50,6 @@ dependencies:
   
   # Screen & Power
   wakelock_plus: ^1.2.0
-  volume_controller: ^3.4.1
   
   # Audio
   audioplayers: ^6.0.0

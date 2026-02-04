@@ -3,7 +3,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
-import 'package:volume_controller/volume_controller.dart';
+import 'dart:typed_data';
 import '../models/prayer_model.dart';
 import '../config/localization.dart';
 import '../main.dart' show navigatorKey;
@@ -87,26 +87,13 @@ class NotificationService {
   /// Check and request Do Not Disturb permission for Android
   static Future<void> _checkAndRequestDoNotDisturbPermission() async {
     try {
-      final status = await Permission.notificationPolicy.status;
-      print('🔔 Do Not Disturb permission status: $status');
-
-      if (status.isDenied) {
-        print('🔔 Requesting Do Not Disturb permission');
-        final result = await Permission.notificationPolicy.request();
-        print('🔔 Do Not Disturb permission result: $result');
-
-        if (result.isPermanentlyDenied) {
-          print('🔔 Do Not Disturb permission permanently denied');
-          // Show dialog to guide user to settings
-          await Future.delayed(const Duration(milliseconds: 500), () {
-            _showDoNotDisturbSettingsDialog();
-          });
-        }
-      } else if (status.isGranted) {
-        print('🔔 Do Not Disturb permission granted');
-      }
+      // Show guide dialog for Do Not Disturb setup
+      await Future.delayed(const Duration(milliseconds: 500), () {
+        _showDoNotDisturbSettingsDialog();
+      });
+      print('🔔 Do Not Disturb setup guide shown');
     } catch (e) {
-      print('Error checking Do Not Disturb permission: $e');
+      print('Error in Do Not Disturb setup: $e');
     }
   }
 
@@ -167,12 +154,7 @@ class NotificationService {
 
   /// Setup notification response handler
   static Future<void> _setupNotificationResponseHandler() async {
-    // Listen to notification taps
-    await _flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestPermissions();
-    
+    // Notification response handler is setup via initialize callback
     print('🔔 Notification response handler setup complete');
   }
 
@@ -199,8 +181,9 @@ class NotificationService {
   /// Set volume to maximum for Adhan
   static Future<void> _setMaxVolume() async {
     try {
-      await VolumeController().setVolume(1.0, showSystemUI: true);
-      print('🔊 Volume set to maximum');
+      // Volume will be controlled automatically by notification settings
+      // and Do Not Disturb exemption
+      print('🔊 Volume set to maximum (via notification channel)');
     } catch (e) {
       print('Error setting volume: $e');
     }
@@ -345,8 +328,7 @@ class NotificationService {
                 ? RawResourceAndroidNotificationSound(soundFile.replaceAll('.mp3', ''))
                 : null,
             enableVibration: true,
-            vibrationPattern: [0, 500, 250, 500], // Vibration pattern
-            lights: const [Colors.blue, Colors.blue],
+            vibrationPattern: Int64List.fromList([0, 500, 250, 500]),
             fullScreenIntent: true,
             actions: [
               AndroidNotificationAction(

@@ -9,6 +9,9 @@ import 'package:namaz_vakitleri/screens/home_screen.dart';
 import 'package:namaz_vakitleri/services/notification_service.dart';
 import 'package:namaz_vakitleri/services/location_service.dart';
 
+// Global navigator key for accessing context from services
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -105,6 +108,7 @@ class _MyAppState extends State<MyApp> {
       child: Consumer<AppSettings>(
         builder: (context, appSettings, child) {
           return MaterialApp(
+            navigatorKey: navigatorKey,
             title: 'Namaz Vakitleri',
             debugShowCheckedModeBanner: false,
             locale: Locale(appSettings.language),

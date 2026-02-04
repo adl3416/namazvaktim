@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'package:permission_handler/permission_handler.dart';
 import '../models/prayer_model.dart';
 import '../config/localization.dart';
+import '../main.dart' show navigatorKey;
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
@@ -61,6 +63,69 @@ class NotificationService {
         ?.requestNotificationsPermission();
 
     print('🔔 Notification permissions requested');
+
+    // Check and request Do Not Disturb permission for Android
+    await _checkAndRequestDoNotDisturbPermission();
+  }
+
+  /// Check and request Do Not Disturb permission for Android
+  static Future<void> _checkAndRequestDoNotDisturbPermission() async {
+    try {
+      final status = await Permission.notificationPolicy.status;
+      print('🔔 Do Not Disturb permission status: $status');
+
+      if (status.isDenied) {
+        print('🔔 Requesting Do Not Disturb permission');
+        final result = await Permission.notificationPolicy.request();
+        print('🔔 Do Not Disturb permission result: $result');
+
+        if (result.isPermanentlyDenied) {
+          print('🔔 Do Not Disturb permission permanently denied');
+          // Show dialog to guide user to settings
+          await Future.delayed(const Duration(milliseconds: 500), () {
+            _showDoNotDisturbSettingsDialog();
+          });
+        }
+      } else if (status.isGranted) {
+        print('🔔 Do Not Disturb permission granted');
+      }
+    } catch (e) {
+      print('Error checking Do Not Disturb permission: $e');
+    }
+  }
+
+  /// Show dialog to guide user to Do Not Disturb settings
+  static void _showDoNotDisturbSettingsDialog() {
+    final context = getContext();
+    if (context != null && context.mounted) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text(AppLocalizations.translate('dnd_permission_title', 'tr')),
+            content: Text(AppLocalizations.translate('dnd_permission_message', 'tr')),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(AppLocalizations.translate('later', 'tr')),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  openAppSettings(); // Opens app settings
+                },
+                child: Text(AppLocalizations.translate('go_to_settings', 'tr')),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
+  /// Get context if available (for showing dialogs)
+  static BuildContext? getContext() {
+    return navigatorKey?.currentContext;
   }
 
   /// Test notification to verify notifications are working

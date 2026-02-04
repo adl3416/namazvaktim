@@ -44,6 +44,10 @@ class AppLocalizations {
       'notification_enabled': 'Bildirim Açık',
       'notification_disabled': 'Bildirim Kapalı',
       'notification_settings': 'Bildirim Ayarları',
+      'dnd_permission_title': 'Rahatsız Etme İzni',
+      'dnd_permission_message': 'Namaz bildirimlerinin Rahatsız Etme modunda çalışması için izin vermeniz gerekiyor. Ayarlara giderek "Rahatsız Etme erişimi" iznini etkinleştirin.',
+      'later': 'Sonra',
+      'go_to_settings': 'Ayarlara Git',
     },
     'en': {
       'app_title': 'Prayer Times',
@@ -87,6 +91,10 @@ class AppLocalizations {
       'notification_enabled': 'Notifications Enabled',
       'notification_disabled': 'Notifications Disabled',
       'notification_settings': 'Notification Settings',
+      'dnd_permission_title': 'Do Not Disturb Permission',
+      'dnd_permission_message': 'To allow prayer notifications to work in Do Not Disturb mode, you need to grant permission. Go to settings and enable "Do Not Disturb access".',
+      'later': 'Later',
+      'go_to_settings': 'Go to Settings',
     },
     'ar': {
       'app_title': 'مواقيت الصلاة',
@@ -130,6 +138,10 @@ class AppLocalizations {
       'notification_enabled': 'الإخطارات مفعلة',
       'notification_disabled': 'الإخطارات معطلة',
       'notification_settings': 'إعدادات الإخطارات',
+      'dnd_permission_title': 'إذن عدم الإزعاج',
+      'dnd_permission_message': 'للسماح لإخطارات الصلاة بالعمل في وضع عدم الإزعاج، تحتاج إلى منح الإذن. انتقل إلى الإعدادات وقم بتفعيل "الوصول إلى عدم الإزعاج".',
+      'later': 'لاحقاً',
+      'go_to_settings': 'الذهاب إلى الإعدادات',
     },
   };
 

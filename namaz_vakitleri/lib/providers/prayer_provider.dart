@@ -94,12 +94,12 @@ class PrayerProvider extends ChangeNotifier {
       // Set up audio context for adhan playback before playing any sounds
       await _audioPlayer.setAudioContext(
         AudioContext(
-          android: AudioContextAndroid(
+          android: AndroidContextAndroid(
             isSpeakerphoneOn: true,
             stayAwake: false,
             contentType: AndroidContentType.music,
             usageType: AndroidUsageType.media,
-            audioFocus: AndroidAudioFocus.gainTransientMayDuck,
+            audioFocus: AndroidAudioFocus.gain,
           ),
         ),
       );
@@ -321,10 +321,8 @@ class PrayerProvider extends ChangeNotifier {
           _activePrayer = newActivePrayer;
           print('🔄 Active prayer changed to: ${_activePrayer?.name}');
 
-          // Play adhan for newly active prayer if sounds are enabled
-          if (_activePrayer != null) {
-            await _checkAndPlayAdhanForActivePrayer(_activePrayer!);
-          }
+          // NOTE: Adhan playback is now handled only through notifications
+          // Do NOT play adhan here - let the notification service handle it
         }
       }
 

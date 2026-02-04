@@ -41,6 +41,10 @@ class PrayerProvider extends ChangeNotifier {
   String? _lastAdhanPlayedForPrayer;
   final Duration _adhanThreshold = const Duration(minutes: 15);
   
+  // Track audio player listeners to avoid duplicates
+  StreamSubscription<void>? _playerStateSubscription;
+  StreamSubscription<void>? _playerCompleteSubscription;
+  
   // Track scheduled notifications to avoid duplicates
   Set<String> _scheduledNotifications = {};
 
@@ -57,6 +61,10 @@ class PrayerProvider extends ChangeNotifier {
   Future<void> initialize() async {
     try {
       _prefs = await SharedPreferences.getInstance();
+      
+      // Load settings immediately to ensure persistence
+      await _appSettings.loadSettings();
+      print('⚙️ Settings loaded: notifications=${_appSettings.prayerNotifications}, sounds=${_appSettings.prayerSounds}');
 
       _savedCity = _prefs.getString('city') ?? '';
       _savedCountry = _prefs.getString('country') ?? '';
@@ -107,16 +115,6 @@ class PrayerProvider extends ChangeNotifier {
           ),
         ),
       );
-
-      // Listen for audio focus changes to stop adhan when volume keys are pressed
-      _audioPlayer.onPlayerStateChanged.listen((state) {
-        print('🎵 Audio player state changed: $state');
-      });
-
-      // Handle audio interruptions (like volume key presses)
-      _audioPlayer.onPlayerComplete.listen((event) {
-        print('✅ Adhan playback completed');
-      });
 
       // Start countdown timer
       _startCountdownTimer();
@@ -256,20 +254,27 @@ class PrayerProvider extends ChangeNotifier {
           '⏭️ Next Prayer: ${_nextPrayer?.name} at ${_nextPrayer?.time.hour}:${_nextPrayer?.time.minute.toString().padLeft(2, '0')}',
         );
 
-        // Schedule notifications - but only if we haven't scheduled them for today already
-        // This prevents duplicate notifications from being sent
+        // Schedule notifications - ONLY ONCE PER DAY to prevent duplicates
         final today = DateTime.now().toString().split(' ')[0];
-        if (_scheduledNotifications.isEmpty || !_scheduledNotifications.contains(today)) {
-          print('📢 Scheduling notifications for today ($today)...');
+        final todayKey = '${today}_${_appSettings.language}';
+        
+        // Clear old notifications first if we're scheduling for new day
+        if (!_scheduledNotifications.contains(todayKey)) {
+          print('📢 Clearing old notifications and scheduling for ($today)...');
+          await NotificationService.cancelAllNotifications();
+          
           await NotificationService.scheduleAllPrayerNotificationsWithSettings(
             prayers: prayerTimes.prayerTimesList,
             language: _appSettings.language,
             notificationSettings: _appSettings.prayerNotifications,
             soundSettings: _appSettings.prayerSounds,
           );
-          _scheduledNotifications.add(today);
+          
+          // Clear old entries and add today
+          _scheduledNotifications.clear();
+          _scheduledNotifications.add(todayKey);
         } else {
-          print('⏭️ Notifications already scheduled for today ($today), skipping');
+          print('⏭️ Notifications already scheduled for today ($todayKey), skipping');
         }
 
         _errorMessage = '';
@@ -351,17 +356,30 @@ class PrayerProvider extends ChangeNotifier {
         return;
       }
 
-      // Prayer time has arrived or passed - play adhan if not already played
+      // Prayer time has arrived or passed - handle adhan and refresh
       if (_nextPrayer != null && !_isFetching) {
         final timeDiff = _nextPrayer!.time.difference(now);
 
-        // If prayer time has just arrived (within last minute) or just passed, play adhan
-        if (timeDiff <= Duration.zero && timeDiff > Duration(minutes: -1)) {
+        // If prayer time has just arrived (within last 10 seconds), trigger immediate notification
+        if (timeDiff <= Duration.zero && timeDiff > Duration(seconds: -10)) {
+          print('🔔 PRAYER TIME ARRIVED: ${_nextPrayer!.name} - Triggering immediate actions');
           await _checkAndPlayAdhanOnTime(_nextPrayer!);
+          
+          // Force immediate notification if enabled
+          final notificationEnabled = _appSettings.prayerNotifications[_nextPrayer!.name] ?? true;
+          if (notificationEnabled) {
+            await NotificationService.showPrayerTimeNotification(
+              prayerName: _nextPrayer!.name,
+              language: _appSettings.language,
+            );
+          }
         }
 
-        // Schedule next prayer times
-        await fetchPrayerTimes();
+        // Only fetch new times if prayer has passed by more than 1 minute
+        if (timeDiff < Duration(minutes: -1)) {
+          print('🔄 Prayer time passed, fetching next prayer times...');
+          await fetchPrayerTimes();
+        }
       }
     });
   }
@@ -369,6 +387,9 @@ class PrayerProvider extends ChangeNotifier {
   @override
   void dispose() {
     super.dispose();
+    // Cancel audio player subscriptions
+    _playerStateSubscription?.cancel();
+    _playerCompleteSubscription?.cancel();
     _audioPlayer.dispose();
   }
 
@@ -466,6 +487,10 @@ class PrayerProvider extends ChangeNotifier {
   /// Play adhan sound for a specific prayer
   Future<void> _playAdhanForPrayer(String prayerName) async {
     try {
+      // Cancel any previous listeners to prevent duplicates
+      await _playerStateSubscription?.cancel();
+      await _playerCompleteSubscription?.cancel();
+      
       // Stop any currently playing audio first
       await _audioPlayer.stop();
       
@@ -490,28 +515,34 @@ class PrayerProvider extends ChangeNotifier {
         await _audioPlayer.setSource(AssetSource('sounds/$soundFile'));
         await _audioPlayer.resume();
         
+        // Flag to prevent multiple state callbacks for the same stop event
+        bool _stopHandled = false;
+        
         // Listen for completion to stop the player
-        _audioPlayer.onPlayerComplete.listen((event) {
-          print('✅ Adhan playback completed for $prayerName');
-          _notifyAdhanStopped();
-          _audioPlayer.stop();
+        _playerCompleteSubscription = _audioPlayer.onPlayerComplete.listen((event) {
+          if (!_stopHandled) {
+            _stopHandled = true;
+            print('✅ Adhan playback completed for $prayerName');
+            _notifyAdhanStopped();
+          }
         });
         
-        // Listen for state changes (including volume button presses, user pausing, etc)
-        _audioPlayer.onPlayerStateChanged.listen((state) {
-          print('🎵 Audio player state: $state for $prayerName');
-          
-          // If paused by volume button or user action, stop it
-          if (state == PlayerState.paused || state == PlayerState.stopped) {
-            print('🔇 Adhan stopped by user (volume button, gesture, or system)');
-            _notifyAdhanStopped();
-            _audioPlayer.stop();
+        // Listen for state changes ONLY (don't call stop again - it causes loop)
+        _playerStateSubscription = _audioPlayer.onPlayerStateChanged.listen((state) {
+          if (!_stopHandled) {
+            // If paused by volume button or user action, mark as handled
+            if (state == PlayerState.paused || state == PlayerState.stopped) {
+              _stopHandled = true;
+              print('🔇 Adhan stopped: $state');
+              _notifyAdhanStopped();
+            }
           }
         });
         
         // Safety timeout - stop after 2 minutes max
         Future.delayed(const Duration(minutes: 2), () {
-          if (_audioPlayer.state == PlayerState.playing) {
+          if (!_stopHandled && _audioPlayer.state == PlayerState.playing) {
+            _stopHandled = true;
             print('⏰ Safety timeout: stopping adhan playback for $prayerName');
             _notifyAdhanStopped();
             _audioPlayer.stop();

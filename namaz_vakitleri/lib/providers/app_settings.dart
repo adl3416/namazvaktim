@@ -49,7 +49,13 @@ class AppSettings extends ChangeNotifier {
 
   Future<void> initialize() async {
     _prefs = await SharedPreferences.getInstance();
-    
+    await loadSettings();
+    _initialized = true;
+    print('⚙️ AppSettings initialized');
+  }
+
+  // Load settings from SharedPreferences
+  Future<void> loadSettings() async {
     _language = _prefs.getString('language') ?? 
         AppLocalizations.getLocale(null);
     

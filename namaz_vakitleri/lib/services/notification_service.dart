@@ -391,35 +391,8 @@ class NotificationService {
       // Acquire screen lock and set volume when notification is scheduled
       print('✅ Scheduled notification for $prayerName at $scheduled (ID: $id)');
       
-      // Schedule screen lock for when notification arrives (1-2 seconds before prayer time)
-      tz.TZDateTime screenLockTime = tz.TZDateTime.from(
-        prayerTime.subtract(const Duration(seconds: 2)),
-        tz.local,
-      );
-      
-      if (screenLockTime.isAfter(tz.TZDateTime.now(tz.local))) {
-        await _flutterLocalNotificationsPlugin.zonedSchedule(
-          id + 100, // Unique ID for screen lock task
-          displayName,
-          'Acquiring screen lock...',
-          screenLockTime,
-          NotificationDetails(
-            android: AndroidNotificationDetails(
-              'prayer_channel',
-              'Prayer Notifications',
-              channelDescription: 'Screen lock for prayer notifications',
-              importance: Importance.low,
-              priority: Priority.low,
-              playSound: false,
-              showWhen: false,
-            ),
-          ),
-          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              UILocalNotificationDateInterpretation.absoluteTime,
-        );
-        print('📱 Scheduled screen lock task for $prayerName');
-      }
+      // NOTE: Removed screen lock duplicate notification to fix 29x notification issue
+      // The main notification with fullScreenIntent is sufficient
     } catch (e) {
       print('Error scheduling notification: $e');
     }
@@ -478,6 +451,12 @@ class NotificationService {
   /// Cancel a specific notification
   static Future<void> cancelNotification(int id) async {
     await _flutterLocalNotificationsPlugin.cancel(id);
+  }
+  
+  /// Cancel all scheduled notifications
+  static Future<void> cancelAllNotifications() async {
+    await _flutterLocalNotificationsPlugin.cancelAll();
+    print('🗑️ All notifications cancelled');
   }
 
   /// Show immediate notification for prayer time (when prayer time arrives)

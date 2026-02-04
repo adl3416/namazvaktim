@@ -475,13 +475,13 @@ class PrayerProvider extends ChangeNotifier {
           _audioPlayer.stop();
         });
         
-        // Listen for state changes (including volume button presses)
+        // Listen for state changes (including volume button presses, user pausing, etc)
         _audioPlayer.onPlayerStateChanged.listen((state) {
           print('🎵 Audio player state: $state for $prayerName');
           
           // If paused by volume button or user action, stop it
           if (state == PlayerState.paused || state == PlayerState.stopped) {
-            print('🔇 Adhan stopped by user (volume button or gesture)');
+            print('🔇 Adhan stopped by user (volume button, gesture, or system)');
             _audioPlayer.stop();
           }
         });
@@ -503,6 +503,9 @@ class PrayerProvider extends ChangeNotifier {
       await _audioPlayer.stop();
     }
   }
+  
+  /// Get current audio player state (for testing and debugging)
+  PlayerState get currentAudioState => _audioPlayer.state;
 
   /// Force refresh current location and prayer times
   Future<void> refreshLocation() async {

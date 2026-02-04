@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -48,7 +49,22 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     _appSettings = AppSettings();
     _prayerProvider = PrayerProvider(appSettings: _appSettings);
+    _setupMethodChannels();
     _initializeApp();
+  }
+
+  /// Set up method channels to receive volume button presses from Android
+  void _setupMethodChannels() {
+    const platform = MethodChannel('com.vakit.app.namaz_vakitleri/adhan');
+    
+    platform.setMethodCallHandler((call) async {
+      if (call.method == 'onVolumeButtonPressed') {
+        // Stop adhan when volume button is pressed
+        await _prayerProvider.stopAdhan();
+        print('🔊 Volume button pressed - stopping adhan');
+      }
+      return null;
+    });
   }
 
   Future<void> _initializeApp() async {

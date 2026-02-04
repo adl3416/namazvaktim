@@ -3,10 +3,12 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:provider/provider.dart';
 import 'dart:typed_data';
 import '../models/prayer_model.dart';
 import '../config/localization.dart';
 import '../main.dart' show navigatorKey;
+import '../providers/prayer_provider.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
@@ -136,8 +138,28 @@ class NotificationService {
     print('🔔 Notification tapped: ${response.actionId}');
     
     if (response.actionId == _dismissAction) {
-      print('📱 Dismissing notification');
+      print('📱 Dismissing notification and stopping adhan');
       deactivateNotificationMode();
+      
+      // Stop any playing audio when user dismisses notification
+      _stopPlayingAudio();
+    }
+  }
+  
+  /// Stop playing adhan audio via PrayerProvider
+  static void _stopPlayingAudio() {
+    try {
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        // Get PrayerProvider from context
+        final prayerProvider = Provider.of<PrayerProvider>(context, listen: false);
+        prayerProvider.stopAdhan();
+        print('🔇 Adhan stopped via notification dismiss');
+      } else {
+        print('⚠️ Could not access context to stop audio');
+      }
+    } catch (e) {
+      print('❌ Error stopping audio: $e');
     }
   }
 
@@ -147,8 +169,11 @@ class NotificationService {
     print('🔔 Background notification tapped: ${response.actionId}');
     
     if (response.actionId == _dismissAction) {
-      print('📱 Dismissing background notification');
+      print('📱 Dismissing background notification and stopping adhan');
       deactivateNotificationMode();
+      
+      // Stop any playing audio when user dismisses notification
+      _stopPlayingAudio();
     }
   }
 

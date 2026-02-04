@@ -94,7 +94,7 @@ class PrayerProvider extends ChangeNotifier {
       // Set up audio context for adhan playback before playing any sounds
       await _audioPlayer.setAudioContext(
         AudioContext(
-          android: AndroidContextAndroid(
+          android: AudioContextAndroid(
             isSpeakerphoneOn: true,
             stayAwake: false,
             contentType: AndroidContentType.music,

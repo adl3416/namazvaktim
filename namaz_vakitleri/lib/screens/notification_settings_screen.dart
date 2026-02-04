@@ -140,6 +140,74 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Column(
           children: [
+            // Header section
+            Padding(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Namaz Vakitleri',
+                    style: AppTypography.h2.copyWith(
+                      color: isDark ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Her namaz için bildirim ve ezan sesi ayarları',
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: isDark ? Colors.grey[400] : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Column headers
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      'Vakit',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 1,
+                    child: Center(
+                      child: Text(
+                        'Bildirim',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    flex: 1,
+                    child: Center(
+                      child: Text(
+                        'Ezan',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: isDark ? Colors.grey[400] : Colors.grey[600],
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Prayer list
             ..._buildPrayerList(isDark),
             const SizedBox(height: 30),
           ],
@@ -169,60 +237,74 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           width: 1,
         ),
       ),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
       child: Row(
         children: [
-          // Prayer icon
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: _getPrayerPhaseColor(prayerName),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              _getPrayerIcon(prayerName),
-              color: _getPrayerTextColor(prayerName),
-              size: 20,
+          // Prayer icon and name - 3 parts
+          Expanded(
+            flex: 3,
+            child: Row(
+              children: [
+                // Prayer icon
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: _getPrayerPhaseColor(prayerName),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    _getPrayerIcon(prayerName),
+                    color: _getPrayerTextColor(prayerName),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+
+                // Prayer name
+                Text(
+                  prayerName,
+                  style: AppTypography.bodyLarge.copyWith(
+                    color: isDark ? Colors.white : Colors.black87,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 12),
 
-          // Prayer name
+          // Notification button - 1 part
           Expanded(
-            child: Text(
-              prayerName,
-              style: AppTypography.bodyLarge.copyWith(
-                color: isDark ? Colors.white : Colors.black87,
-                fontWeight: FontWeight.w500,
+            flex: 1,
+            child: Center(
+              child: _buildIconButton(
+                isDark: isDark,
+                isActive: _notificationEnabled[prayerName] ?? false,
+                icon: Icons.notifications_outlined,
+                onTap: () {
+                  setState(() {
+                    _notificationEnabled[prayerName] = !(_notificationEnabled[prayerName] ?? false);
+                  });
+                },
               ),
             ),
           ),
 
-          // Notification button
-          _buildIconButton(
-            isDark: isDark,
-            isActive: _notificationEnabled[prayerName] ?? false,
-            icon: Icons.notifications_outlined,
-            onTap: () {
-              setState(() {
-                _notificationEnabled[prayerName] = !(_notificationEnabled[prayerName] ?? false);
-              });
-            },
-          ),
-
-          const SizedBox(width: 8),
-
-          // Azan button
-          _buildIconButton(
-            isDark: isDark,
-            isActive: _azanSoundEnabled[prayerName] ?? false,
-            icon: Icons.volume_up_outlined,
-            onTap: () {
-              setState(() {
-                _azanSoundEnabled[prayerName] = !(_azanSoundEnabled[prayerName] ?? false);
-              });
-            },
+          // Azan button - 1 part
+          Expanded(
+            flex: 1,
+            child: Center(
+              child: _buildIconButton(
+                isDark: isDark,
+                isActive: _azanSoundEnabled[prayerName] ?? false,
+                icon: Icons.volume_up_outlined,
+                onTap: () {
+                  setState(() {
+                    _azanSoundEnabled[prayerName] = !(_azanSoundEnabled[prayerName] ?? false);
+                  });
+                },
+              ),
+            ),
           ),
         ],
       ),

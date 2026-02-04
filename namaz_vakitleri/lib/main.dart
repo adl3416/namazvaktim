@@ -58,10 +58,10 @@ class _MyAppState extends State<MyApp> {
     const platform = MethodChannel('com.vakit.app.namaz_vakitleri/adhan');
     
     platform.setMethodCallHandler((call) async {
-      if (call.method == 'onVolumeButtonPressed') {
-        // Stop adhan when volume button is pressed
+      if (call.method == 'stopAdhan') {
+        // Stop adhan immediately when volume button is pressed
         await _prayerProvider.stopAdhan();
-        print('🔊 Volume button pressed - stopping adhan');
+        print('🔊 Volume button pressed - stopping adhan immediately');
       }
       return null;
     });

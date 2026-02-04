@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -452,6 +453,10 @@ class PrayerProvider extends ChangeNotifier {
       // Stop any currently playing audio first
       await _audioPlayer.stop();
       
+      // Notify Android that adhan is starting (for volume button monitoring)
+      const platform = MethodChannel('com.vakit.app.namaz_vakitleri/adhan');
+      await platform.invokeMethod('startAdhanPlayback');
+      
       // Map prayer names to sound files
       final soundFiles = {
         'Fajr': 'sabah_ezan.mp3',
@@ -472,6 +477,7 @@ class PrayerProvider extends ChangeNotifier {
         // Listen for completion to stop the player
         _audioPlayer.onPlayerComplete.listen((event) {
           print('✅ Adhan playback completed for $prayerName');
+          _notifyAdhanStopped();
           _audioPlayer.stop();
         });
         
@@ -482,6 +488,7 @@ class PrayerProvider extends ChangeNotifier {
           // If paused by volume button or user action, stop it
           if (state == PlayerState.paused || state == PlayerState.stopped) {
             print('🔇 Adhan stopped by user (volume button, gesture, or system)');
+            _notifyAdhanStopped();
             _audioPlayer.stop();
           }
         });
@@ -490,17 +497,30 @@ class PrayerProvider extends ChangeNotifier {
         Future.delayed(const Duration(minutes: 2), () {
           if (_audioPlayer.state == PlayerState.playing) {
             print('⏰ Safety timeout: stopping adhan playback for $prayerName');
+            _notifyAdhanStopped();
             _audioPlayer.stop();
           }
         });
         
       } else {
         print('❌ No sound file found for prayer: $prayerName');
+        _notifyAdhanStopped();
       }
     } catch (e) {
       print('❌ Error playing adhan for $prayerName: $e');
       // Ensure player is stopped on error
+      _notifyAdhanStopped();
       await _audioPlayer.stop();
+    }
+  }
+  
+  /// Notify Android that adhan playback has stopped
+  Future<void> _notifyAdhanStopped() async {
+    try {
+      const platform = MethodChannel('com.vakit.app.namaz_vakitleri/adhan');
+      await platform.invokeMethod('stopAdhanPlayback');
+    } catch (e) {
+      print('⚠️ Error notifying adhan stop: $e');
     }
   }
   
@@ -545,6 +565,7 @@ class PrayerProvider extends ChangeNotifier {
   Future<void> stopAdhan() async {
     try {
       await _audioPlayer.stop();
+      _notifyAdhanStopped();
       print('🛑 Adhan stopped manually');
     } catch (e) {
       print('❌ Error stopping adhan: $e');

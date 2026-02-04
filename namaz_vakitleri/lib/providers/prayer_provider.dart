@@ -475,9 +475,15 @@ class PrayerProvider extends ChangeNotifier {
           _audioPlayer.stop();
         });
         
-        // Also listen for errors
+        // Listen for state changes (including volume button presses)
         _audioPlayer.onPlayerStateChanged.listen((state) {
           print('🎵 Audio player state: $state for $prayerName');
+          
+          // If paused by volume button or user action, stop it
+          if (state == PlayerState.paused || state == PlayerState.stopped) {
+            print('🔇 Adhan stopped by user (volume button or gesture)');
+            _audioPlayer.stop();
+          }
         });
         
         // Safety timeout - stop after 2 minutes max

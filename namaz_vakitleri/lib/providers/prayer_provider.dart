@@ -40,6 +40,9 @@ class PrayerProvider extends ChangeNotifier {
   final AudioPlayer _audioPlayer = AudioPlayer();
   String? _lastAdhanPlayedForPrayer;
   final Duration _adhanThreshold = const Duration(minutes: 15);
+  
+  // Track scheduled notifications to avoid duplicates
+  Set<String> _scheduledNotifications = {};
 
   PrayerTimes? get currentPrayerTimes => _currentPrayerTimes;
   PrayerTime? get nextPrayer => _nextPrayer;
@@ -253,13 +256,21 @@ class PrayerProvider extends ChangeNotifier {
           '⏭️ Next Prayer: ${_nextPrayer?.name} at ${_nextPrayer?.time.hour}:${_nextPrayer?.time.minute.toString().padLeft(2, '0')}',
         );
 
-        // Schedule notifications
-        await NotificationService.scheduleAllPrayerNotificationsWithSettings(
-          prayers: prayerTimes.prayerTimesList,
-          language: _appSettings.language,
-          notificationSettings: _appSettings.prayerNotifications,
-          soundSettings: _appSettings.prayerSounds,
-        );
+        // Schedule notifications - but only if we haven't scheduled them for today already
+        // This prevents duplicate notifications from being sent
+        final today = DateTime.now().toString().split(' ')[0];
+        if (_scheduledNotifications.isEmpty || !_scheduledNotifications.contains(today)) {
+          print('📢 Scheduling notifications for today ($today)...');
+          await NotificationService.scheduleAllPrayerNotificationsWithSettings(
+            prayers: prayerTimes.prayerTimesList,
+            language: _appSettings.language,
+            notificationSettings: _appSettings.prayerNotifications,
+            soundSettings: _appSettings.prayerSounds,
+          );
+          _scheduledNotifications.add(today);
+        } else {
+          print('⏭️ Notifications already scheduled for today ($today), skipping');
+        }
 
         _errorMessage = '';
       } else {
@@ -324,6 +335,8 @@ class PrayerProvider extends ChangeNotifier {
 
           // NOTE: Adhan playback is now handled only through notifications
           // Do NOT play adhan here - let the notification service handle it
+          // BUG FIX: Removed automatic adhan playing for active prayers
+          // User can enable/disable adhan from settings
         }
       }
 
@@ -363,11 +376,15 @@ class PrayerProvider extends ChangeNotifier {
   Future<void> _checkAndPlayAdhan(PrayerTime prayer, Duration remaining) async {
     // Only play adhan if sound is enabled for this prayer
     final soundEnabled = _appSettings.prayerSounds[prayer.name] ?? true;
-    if (!soundEnabled) return;
+    if (!soundEnabled) {
+      print('🔇 Sound disabled for ${prayer.name}, skipping approaching adhan');
+      return;
+    }
 
     // Check if we're within the threshold and haven't played for this prayer yet
     if (remaining <= _adhanThreshold && remaining > Duration.zero) {
       if (_lastAdhanPlayedForPrayer != prayer.name) {
+        print('🔔 Approaching prayer: ${prayer.name} - ${remaining.inMinutes} minutes remaining');
         await _playAdhanForPrayer(prayer.name);
         _lastAdhanPlayedForPrayer = prayer.name;
       }
@@ -418,29 +435,28 @@ class PrayerProvider extends ChangeNotifier {
 
     print('🔔 Prayer Time Check: ${prayer.name} | Sound: $soundEnabled | Notification: $notificationEnabled');
 
-    // If neither sound nor notification is enabled, return
-    if (!soundEnabled && !notificationEnabled) {
-      print('⚠️ Both sound and notification disabled for ${prayer.name}');
+    // If sound is disabled, skip adhan playback
+    if (!soundEnabled) {
+      print('🔇 Sound disabled for ${prayer.name}, skipping adhan');
       return;
     }
 
     // Check if we haven't played adhan for this prayer yet
     if (_lastAdhanPlayedForPrayer != '${prayer.name}_ontime') {
-      print('🔔 Prayer time arrived: ${prayer.name} - Playing adhan and showing notification');
+      print('🔔 Prayer time arrived: ${prayer.name} - Playing adhan');
 
-      // Show notification if enabled
+      // Play adhan regardless of notification setting
+      // Sound and notification are independent
+      print('🎵 Playing adhan sound for ${prayer.name}');
+      await _playAdhanForPrayer(prayer.name);
+
+      // Show notification if enabled (separately from sound)
       if (notificationEnabled) {
         print('📢 Showing notification for ${prayer.name} in ${_appSettings.language}');
         await NotificationService.showPrayerTimeNotification(
           prayerName: prayer.name,
           language: _appSettings.language,
         );
-      }
-
-      // Play adhan if sound is enabled
-      if (soundEnabled) {
-        print('🎵 Playing adhan sound for ${prayer.name}');
-        await _playAdhanForPrayer(prayer.name);
       }
 
       _lastAdhanPlayedForPrayer = '${prayer.name}_ontime';

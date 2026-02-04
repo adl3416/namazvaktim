@@ -38,7 +38,7 @@ class NotificationService {
     final bool? initialized = await _flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: _handleNotificationTap,
-      onDidReceiveBackgroundNotificationResponse: _handleBackgroundNotificationTap,
+      onDidReceiveBackgroundNotificationResponse: _handleBackgroundNotificationTapStateless,
     );
     print('🔔 Notification plugin initialized: $initialized');
 
@@ -50,7 +50,7 @@ class NotificationService {
       'prayer_channel',
       'Prayer Notifications',
       description: 'Notifications for prayer times',
-      importance: Importance.high,
+      importance: Importance.max,
       playSound: true,
       sound: RawResourceAndroidNotificationSound('sabah_ezan'),
       enableVibration: true,
@@ -164,6 +164,17 @@ class NotificationService {
   }
 
   /// Handle notification tap when app is in background
+  @pragma('vm:entry-point')
+  static void _handleBackgroundNotificationTapStateless(NotificationResponse response) {
+    print('🔔 Background notification tapped: ${response.actionId}');
+    
+    if (response.actionId == _dismissAction) {
+      print('📱 Dismissing background notification and stopping adhan');
+      deactivateNotificationMode();
+    }
+  }
+
+  /// Handle notification tap when app is in background (legacy)
   @pragma('vm:entry-point')
   static void _handleBackgroundNotificationTap(NotificationResponse response) {
     print('🔔 Background notification tapped: ${response.actionId}');
@@ -346,15 +357,16 @@ class NotificationService {
             'prayer_channel',
             'Prayer Notifications',
             channelDescription: 'Notifications for prayer times',
-            importance: Importance.high,
-            priority: Priority.high,
+            importance: Importance.max,
+            priority: Priority.max,
             playSound: enableSound,
             sound: enableSound && soundFile != null
                 ? RawResourceAndroidNotificationSound(soundFile.replaceAll('.mp3', ''))
                 : null,
             enableVibration: true,
-            vibrationPattern: Int64List.fromList([0, 500, 250, 500]),
             fullScreenIntent: true,
+            autoCancel: false,
+            onlyAlertOnce: false,
             actions: [
               AndroidNotificationAction(
                 _dismissAction,
@@ -420,8 +432,9 @@ class NotificationService {
     required Map<String, bool> notificationSettings,
     required Map<String, bool> soundSettings,
   }) async {
-    // Cancel all previous notifications
-    await _flutterLocalNotificationsPlugin.cancelAll();
+    // Do NOT cancel all notifications - only schedule for enabled prayers
+    // This prevents duplicate notification scheduling
+    print('📋 Processing ${prayers.length} prayers for notification scheduling');
 
     // Map prayer names to sound files
     final soundFiles = {
@@ -431,6 +444,9 @@ class NotificationService {
       'Maghrib': 'aksam_ezan.mp3',
       'Isha': 'yatsi_ezan.mp3',
     };
+
+    int scheduledCount = 0;
+    int skippedCount = 0;
 
     for (int i = 0; i < prayers.length; i++) {
       final prayer = prayers[i];
@@ -449,10 +465,14 @@ class NotificationService {
           soundFile: soundFile,
         );
         print('✅ Notification scheduled for ${prayer.name}');
+        scheduledCount++;
       } else {
-        print('🚫 Notification disabled for ${prayer.name}');
+        print('🚫 Notification disabled for ${prayer.name} - skipping');
+        skippedCount++;
       }
     }
+    
+    print('📊 Notification scheduling summary: scheduled=$scheduledCount, skipped=$skippedCount');
   }
 
   /// Cancel a specific notification

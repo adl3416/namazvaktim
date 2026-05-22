@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../models/prayer_model.dart';
 import '../services/aladhan_service.dart';
+import '../services/home_widget_service.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
 import '../providers/app_settings.dart';
@@ -249,6 +250,8 @@ class PrayerProvider extends ChangeNotifier {
         }
 
         _lastFetchTime = DateTime.now();
+
+        await HomeWidgetService.syncPrayerTimes(prayerTimes: prayerTimes);
 
         // Reset adhan tracking for new prayer cycle
         _lastAdhanPlayedForPrayer = null;

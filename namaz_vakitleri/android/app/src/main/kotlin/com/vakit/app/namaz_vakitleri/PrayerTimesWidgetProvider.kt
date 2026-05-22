@@ -1,6 +1,8 @@
 package com.vakit.app.namaz_vakitleri
 
 import android.app.PendingIntent
+import android.os.Bundle
+import android.view.View
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
@@ -38,6 +40,16 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
         }
     }
 
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle
+    ) {
+        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
+        updateAppWidget(context, appWidgetManager, appWidgetId)
+    }
+
     companion object {
         private const val PREFS_NAME = "prayer_widget"
         private const val KEY_CITY = "city"
@@ -64,12 +76,19 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             val prayersJson = prefs.getString(KEY_PRAYERS_JSON, "[]") ?: "[]"
             val prayers = parsePrayers(prayersJson)
             val nextPrayerName = findNextPrayerName(prayers)
+            val nextPrayer = prayers.firstOrNull { it.name == nextPrayerName } ?: prayers.firstOrNull()
+            val isCompact = isCompactWidget(appWidgetManager.getAppWidgetOptions(appWidgetId))
 
             val views = RemoteViews(context.packageName, R.layout.prayer_times_widget)
             views.setTextViewText(R.id.widget_header, "$city - $dateLabel")
+            views.setInt(
+                R.id.widget_header_container,
+                "setBackgroundColor",
+                resolvePrayerHeaderColor(nextPrayerName)
+            )
 
-            bindNextPrayerCard(views, prayers, nextPrayerName)
-            bindPrayerRows(views, prayers, nextPrayerName)
+            bindNextPrayerCard(views, nextPrayer, isCompact)
+            bindPrayerRows(views, prayers, nextPrayerName, isCompact)
             bindLaunchIntent(context, views)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
@@ -88,10 +107,9 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
 
         private fun bindNextPrayerCard(
             views: RemoteViews,
-            prayers: List<WidgetPrayer>,
-            nextPrayerName: String?
+            nextPrayer: WidgetPrayer?,
+            isCompact: Boolean
         ) {
-            val nextPrayer = prayers.firstOrNull { it.name == nextPrayerName } ?: prayers.firstOrNull()
             views.setTextViewText(
                 R.id.widget_next_name,
                 nextPrayer?.displayName ?: "Vakit yok"
@@ -100,13 +118,29 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
                 R.id.widget_next_time,
                 nextPrayer?.timeLabel ?: "--:--"
             )
+            views.setViewVisibility(
+                R.id.widget_countdown,
+                if (isCompact) View.VISIBLE else View.GONE
+            )
+            if (isCompact) {
+                views.setTextViewText(
+                    R.id.widget_countdown,
+                    nextPrayer?.let { "Kalan sure ${formatRemaining(it.remainingMillis)}" }
+                        ?: "Kalan sure --"
+                )
+            }
         }
 
         private fun bindPrayerRows(
             views: RemoteViews,
             prayers: List<WidgetPrayer>,
-            nextPrayerName: String?
+            nextPrayerName: String?,
+            isCompact: Boolean
         ) {
+            views.setViewVisibility(
+                R.id.widget_prayer_list,
+                if (isCompact) View.GONE else View.VISIBLE
+            )
             val rowIds = listOf(
                 Pair(R.id.row_name_1, R.id.row_time_1),
                 Pair(R.id.row_name_2, R.id.row_time_2),
@@ -116,8 +150,8 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
                 Pair(R.id.row_name_6, R.id.row_time_6),
             )
 
-            val accentColor = Color.parseColor("#1FAA59")
-            val textColor = Color.parseColor("#F5F8FF")
+            val accentColor = Color.parseColor("#15803D")
+            val textColor = Color.parseColor("#2B241D")
 
             rowIds.forEachIndexed { index, ids ->
                 val prayer = prayers.getOrNull(index)
@@ -164,6 +198,39 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             val formatter = SimpleDateFormat("d MMMM yyyy", Locale("tr", "TR"))
             return formatter.format(Date())
         }
+
+        private fun isCompactWidget(options: Bundle): Boolean {
+            val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
+            return minWidth in 1..229
+        }
+
+        private fun formatRemaining(remainingMillis: Long): String {
+            if (remainingMillis <= 0L) return "00d 00s"
+
+            val totalMinutes = remainingMillis / 60000
+            val hours = totalMinutes / 60
+            val minutes = totalMinutes % 60
+            return "${hours.toString().padStart(2, '0')}s ${minutes.toString().padStart(2, '0')}d"
+        }
+
+        private fun resolvePrayerHeaderColor(prayerName: String?): Int {
+            val normalized = prayerName?.lowercase(Locale.ROOT) ?: return Color.parseColor("#C89B53")
+            return when {
+                normalized.contains("fajr") || normalized.contains("imsak") ->
+                    Color.parseColor("#7DB7D9")
+                normalized.contains("sunrise") || normalized.contains("gunes") ->
+                    Color.parseColor("#E3B55F")
+                normalized.contains("dhuhr") || normalized.contains("ogle") ->
+                    Color.parseColor("#D7A93D")
+                normalized.contains("asr") || normalized.contains("ikindi") ->
+                    Color.parseColor("#D89245")
+                normalized.contains("maghrib") || normalized.contains("aksam") ->
+                    Color.parseColor("#C96C4B")
+                normalized.contains("isha") || normalized.contains("yatsi") ->
+                    Color.parseColor("#5E77C8")
+                else -> Color.parseColor("#C89B53")
+            }
+        }
     }
 }
 
@@ -186,6 +253,9 @@ data class WidgetPrayer(
                 0L
             }
         }
+
+    val remainingMillis: Long
+        get() = (timestamp - System.currentTimeMillis()).coerceAtLeast(0L)
 
     val timeLabel: String
         get() = if (isoTime.length >= 16) isoTime.substring(11, 16) else "--:--"

@@ -17,87 +17,76 @@ class _QiblaScreenState extends State<QiblaScreen> {
   QiblaTelemetry _telemetry = const QiblaTelemetry();
   bool _vibrationEnabled = true;
 
+  String _text(
+    String locale, {
+    required String tr,
+    required String en,
+    required String ar,
+  }) {
+    switch (locale) {
+      case 'tr':
+        return tr;
+      case 'ar':
+        return ar;
+      default:
+        return en;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer2<AppSettings, PrayerProvider>(
       builder: (context, settings, prayerProvider, _) {
         final locale = settings.language;
-        final hasLocation = prayerProvider.currentLocation != null;
+        final location = prayerProvider.currentLocation;
+        final city = prayerProvider.savedCity.isNotEmpty
+            ? prayerProvider.savedCity
+            : (location?.city ?? _text(
+                locale,
+                tr: 'Konum bekleniyor',
+                en: 'Waiting for location',
+                ar: 'بانتظار الموقع',
+              ));
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF3EEE5),
+          backgroundColor: const Color(0xFFF6F1E8),
           body: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color(0xFFF5EFE3),
-                  Color(0xFFE2D4C0),
-                  Color(0xFFEEE8DE),
+                  Color(0xFFF6F0E6),
+                  Color(0xFFE7DCCB),
+                  Color(0xFFF9F6F1),
                 ],
               ),
             ),
             child: SafeArea(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          AppLocalizations.translate('qibla', locale),
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -1,
-                            color: Color(0xFF1E1A16),
-                          ),
-                        ),
-                      ),
-                      Material(
-                        color: const Color(0xFF1E3A34).withOpacity(0.10),
-                        borderRadius: BorderRadius.circular(14),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(14),
-                          onTap: () {
-                            setState(() {
-                              _vibrationEnabled = !_vibrationEnabled;
-                            });
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Icon(
-                              _vibrationEnabled
-                                  ? Icons.vibration_rounded
-                                  : Icons.mobile_off_rounded,
-                              color: const Color(0xFF1E3A34),
-                              size: 20,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
                   Container(
-                    padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
+                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 22),
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(32),
+                      borderRadius: BorderRadius.circular(34),
                       gradient: const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Color(0xFF1E3A34),
-                          Color(0xFF2E5A50),
-                          Color(0xFF4B7A6D),
+                          Color(0xFF11232D),
+                          Color(0xFF18313D),
+                          Color(0xFF22414D),
                         ],
+                      ),
+                      border: Border.all(
+                        color: const Color(0xFFC89B53).withOpacity(0.22),
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF1E3A34).withOpacity(0.28),
-                          blurRadius: 24,
-                          offset: const Offset(0, 14),
+                          color: Colors.black.withOpacity(0.34),
+                          blurRadius: 34,
+                          offset: const Offset(0, 18),
                         ),
                       ],
                     ),
@@ -105,54 +94,82 @@ class _QiblaScreenState extends State<QiblaScreen> {
                       children: [
                         Row(
                           children: [
-                            _CompassStatPill(
-                              label: 'QIBLA',
-                              value: _telemetry.qiblaBearing != null
-                                  ? '${_telemetry.qiblaBearing!.round()}°'
-                                  : '--',
+                            _TopActionButton(
+                              icon: Icons.place_rounded,
+                              active: true,
                             ),
-                            const SizedBox(width: 10),
-                            _CompassStatPill(
-                              label: 'SAPMA',
-                              value: _telemetry.relativeAngle != null
-                                  ? '${_telemetry.relativeAngle!.abs().round()}°'
-                                  : '--',
-                              highlighted: _telemetry.isAligned,
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Text(
+                                    _text(
+                                      locale,
+                                      tr: 'KIBLE PUSULASI',
+                                      en: 'QIBLA COMPASS',
+                                      ar: 'بوصلة القبلة',
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      color: Color(0xFFE1BF84),
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 2.4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    _text(
+                                      locale,
+                                      tr: 'Kibleye yonelin',
+                                      en: 'Face the Qibla',
+                                      ar: 'اتجه نحو القبلة',
+                                    ),
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.82),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            _TopActionButton(
+                              icon: _vibrationEnabled
+                                  ? Icons.vibration_rounded
+                                  : Icons.mobile_off_rounded,
+                              active: _vibrationEnabled,
+                              onTap: () {
+                                setState(() {
+                                  _vibrationEnabled = !_vibrationEnabled;
+                                });
+                              },
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        AspectRatio(
-                          aspectRatio: 1,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 320),
-                            curve: Curves.easeOutCubic,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0xFFF8F3EC),
-                              border: Border.all(
-                                color: _telemetry.isAligned
-                                    ? const Color(0xFF34D399)
-                                    : Colors.white.withOpacity(0.24),
-                                width: _telemetry.isAligned ? 12 : 10,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _telemetry.isAligned
-                                      ? const Color(0xFF22C55E).withOpacity(0.38)
-                                      : Colors.black.withOpacity(0.10),
-                                  blurRadius: _telemetry.isAligned ? 30 : 18,
-                                  spreadRadius: _telemetry.isAligned ? 4 : 0,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            padding: const EdgeInsets.all(16),
+                        const SizedBox(height: 18),
+                        _SideInfoCard(
+                          icon: Icons.location_on_rounded,
+                          title: _text(
+                            locale,
+                            tr: 'Konumunuz',
+                            en: 'Your location',
+                            ar: 'موقعك',
+                          ),
+                          value: city,
+                          lightStyle: true,
+                          multiline: true,
+                          trailingIcon: Icons.gps_fixed_rounded,
+                        ),
+                        const SizedBox(height: 18),
+                        ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 520),
+                          child: AspectRatio(
+                            aspectRatio: 1,
                             child: QiblaCompassWidget(
                               locale: locale,
-                              userLocation: prayerProvider.currentLocation,
-                              alignmentColor: const Color(0xFFD7B56D),
-                              backgroundColor: const Color(0xFFF8F3EC),
+                              userLocation: location,
+                              alignmentColor: const Color(0xFFE0B86D),
+                              backgroundColor: const Color(0xFF0B141B),
                               vibrationEnabled: _vibrationEnabled,
                               onTelemetry: (telemetry) {
                                 if (!mounted || telemetry == _telemetry) return;
@@ -163,44 +180,116 @@ class _QiblaScreenState extends State<QiblaScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 14),
-                        _StatusBadge(aligned: _telemetry.isAligned),
+                        const SizedBox(height: 18),
+                        _StatusBadge(
+                          aligned: _telemetry.isAligned,
+                          alignedLabel: _text(
+                            locale,
+                            tr: 'Kible hizalandi',
+                            en: 'Qibla aligned',
+                            ar: 'تمت محاذاة القبلة',
+                          ),
+                          searchingLabel: _headlineForTelemetry(locale, _telemetry),
+                        ),
                         const SizedBox(height: 16),
-                        Text(
-                          _headlineForTelemetry(_telemetry),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.4,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _BottomStat(
+                                label: _text(
+                                  locale,
+                                  tr: 'Kible Yonu',
+                                  en: 'Qibla Bearing',
+                                  ar: 'اتجاه القبلة',
+                                ),
+                                value: _telemetry.qiblaBearing == null
+                                    ? '--'
+                                    : '${_telemetry.qiblaBearing!.round()}°',
+                              ),
+                            ),
+                            Expanded(
+                              child: _BottomStat(
+                                label: _text(
+                                  locale,
+                                  tr: 'Enlem',
+                                  en: 'Latitude',
+                                  ar: 'خط العرض',
+                                ),
+                                value: location == null
+                                    ? '--'
+                                    : '${location.latitude.toStringAsFixed(4)}°',
+                              ),
+                            ),
+                            Expanded(
+                              child: _BottomStat(
+                                label: _text(
+                                  locale,
+                                  tr: 'Boylam',
+                                  en: 'Longitude',
+                                  ar: 'خط الطول',
+                                ),
+                                value: location == null
+                                    ? '--'
+                                    : '${location.longitude.toStringAsFixed(4)}°',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 16,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(999),
+                            color: const Color(0xFF0A141B),
+                            border: Border.all(
+                              color: const Color(0xFFC89B53).withOpacity(0.18),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: const Color(0xFFC89B53).withOpacity(0.12),
+                                  border: Border.all(
+                                    color: const Color(0xFFC89B53).withOpacity(0.30),
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.auto_awesome_rounded,
+                                  color: Color(0xFFE1BF84),
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Text(
+                                  _text(
+                                    locale,
+                                    tr: 'Kible; nerede olursan ol, yonun ayni olsun.',
+                                    en: 'Wherever you are, let your direction remain the same.',
+                                    ar: 'أينما كنت، فلتبق وجهتك واحدة.',
+                                  ),
+                                  style: TextStyle(
+                                    color: const Color(0xFFF5E7CC).withOpacity(0.96),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                  if (!hasLocation) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.76),
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.78),
-                        ),
-                      ),
-                      child: const Text(
-                        'Konum olmadan kible yonu tam hesaplanamaz.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF554C43),
-                          fontWeight: FontWeight.w700,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -211,19 +300,194 @@ class _QiblaScreenState extends State<QiblaScreen> {
   }
 }
 
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.aligned});
+class _TopActionButton extends StatelessWidget {
+  const _TopActionButton({
+    required this.icon,
+    this.onTap,
+    this.active = false,
+  });
 
-  final bool aligned;
+  final IconData icon;
+  final VoidCallback? onTap;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFF0E1B24),
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          width: 54,
+          height: 54,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: (active
+                      ? const Color(0xFFE1BF84)
+                      : Colors.white.withOpacity(0.12))
+                  .withOpacity(0.45),
+            ),
+          ),
+          child: Icon(
+            icon,
+            color: active ? const Color(0xFFE1BF84) : Colors.white.withOpacity(0.86),
+            size: 24,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SideInfoCard extends StatelessWidget {
+  const _SideInfoCard({
+    required this.icon,
+    required this.title,
+    required this.value,
+    this.emphasized = false,
+    this.lightStyle = false,
+    this.multiline = false,
+    this.trailingIcon,
+  });
+
+  final IconData icon;
+  final String title;
+  final String value;
+  final bool emphasized;
+  final bool lightStyle;
+  final bool multiline;
+  final IconData? trailingIcon;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: lightStyle
+            ? const Color(0xFFF7F1E7)
+            : Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: lightStyle
+              ? const Color(0xFFE2D2BC)
+              : emphasized
+                  ? const Color(0xFF4ADE80).withOpacity(0.34)
+                  : Colors.white.withOpacity(0.10),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: lightStyle
+                  ? const Color(0xFFC89B53).withOpacity(0.12)
+                  : emphasized
+                      ? const Color(0xFF14532D).withOpacity(0.42)
+                      : const Color(0xFFE1BF84).withOpacity(0.12),
+            ),
+            child: Icon(
+              icon,
+              color: lightStyle
+                  ? const Color(0xFFB28A4B)
+                  : emphasized
+                      ? const Color(0xFF4ADE80)
+                      : const Color(0xFFE1BF84),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: multiline
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: lightStyle
+                              ? const Color(0xFF6E5C45)
+                              : Colors.white.withOpacity(0.64),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        value,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: lightStyle
+                              ? const Color(0xFF1E1A16)
+                              : emphasized
+                                  ? const Color(0xFF86EFAC)
+                                  : Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          height: 1.1,
+                        ),
+                      ),
+                    ],
+                  )
+                : Text(
+                    '$title  $value',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: lightStyle
+                          ? const Color(0xFF1E1A16)
+                          : emphasized
+                              ? const Color(0xFF86EFAC)
+                              : Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      height: 1.1,
+                    ),
+                  ),
+          ),
+          if (trailingIcon != null) ...[
+            const SizedBox(width: 8),
+            Icon(
+              trailingIcon,
+              size: 20,
+              color: lightStyle
+                  ? const Color(0xFF8C7453)
+                  : Colors.white.withOpacity(0.72),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({
+    required this.aligned,
+    required this.alignedLabel,
+    required this.searchingLabel,
+  });
+
+  final bool aligned;
+  final String alignedLabel;
+  final String searchingLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
       decoration: BoxDecoration(
         color: aligned
-            ? const Color(0xFF34D399).withOpacity(0.22)
-            : Colors.white.withOpacity(0.14),
+            ? const Color(0xFF14532D).withOpacity(0.42)
+            : Colors.white.withOpacity(0.08),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
           color: aligned
@@ -231,78 +495,117 @@ class _StatusBadge extends StatelessWidget {
               : Colors.white.withOpacity(0.10),
         ),
       ),
-      child: Text(
-        aligned ? 'Kible hizalandi' : 'Yon araniyor',
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            aligned ? Icons.check_circle_rounded : Icons.explore_rounded,
+            size: 18,
+            color: aligned ? const Color(0xFF86EFAC) : const Color(0xFFE1BF84),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              aligned ? alignedLabel : searchingLabel,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _CompassStatPill extends StatelessWidget {
-  const _CompassStatPill({
+class _BottomStat extends StatelessWidget {
+  const _BottomStat({
     required this.label,
     required this.value,
-    this.highlighted = false,
   });
 
   final String label;
   final String value;
-  final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: highlighted
-              ? const Color(0xFF34D399).withOpacity(0.18)
-              : Colors.white.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: highlighted
-                ? const Color(0xFF6EE7B7).withOpacity(0.55)
-                : Colors.white.withOpacity(0.14),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          right: BorderSide(
+            color: Colors.white.withOpacity(0.08),
+            width: 1,
           ),
         ),
-        child: Column(
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.66),
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-              ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.56),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
             ),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.5,
-              ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Color(0xFFF8EBD1),
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.2,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-String _headlineForTelemetry(QiblaTelemetry telemetry) {
-  if (!telemetry.hasCompass) return 'Pusula verisi bekleniyor';
-  if (telemetry.isAligned) return 'Kible yonu yakalandi';
-  if (telemetry.relativeAngle == null) return 'Yon hesaplanamadi';
-
-  return telemetry.relativeAngle! > 0
-      ? 'Biraz saga don'
-      : 'Biraz sola don';
+String _headlineForTelemetry(String locale, QiblaTelemetry telemetry) {
+  if (!telemetry.hasCompass) {
+    switch (locale) {
+      case 'tr':
+        return 'Pusula verisi bekleniyor';
+      case 'ar':
+        return 'بانتظار بيانات البوصلة';
+      default:
+        return 'Waiting for compass data';
+    }
+  }
+  if (telemetry.relativeAngle == null) {
+    switch (locale) {
+      case 'tr':
+        return 'Yon hesaplanamadi';
+      case 'ar':
+        return 'تعذر حساب الاتجاه';
+      default:
+        return 'Direction unavailable';
+    }
+  }
+  if (telemetry.relativeAngle! > 0) {
+    switch (locale) {
+      case 'tr':
+        return 'Biraz saga don';
+      case 'ar':
+        return 'استدر قليلاً إلى اليمين';
+      default:
+        return 'Turn slightly right';
+    }
+  }
+  switch (locale) {
+    case 'tr':
+      return 'Biraz sola don';
+    case 'ar':
+      return 'استدر قليلاً إلى اليسار';
+    default:
+      return 'Turn slightly left';
+  }
 }

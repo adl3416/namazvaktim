@@ -207,7 +207,7 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
   @override
   Widget build(BuildContext context) {
     final accent = widget.alignmentColor ?? const Color(0xFFD7B56D);
-    final bg = widget.backgroundColor ?? const Color(0xFFF8F3EC);
+    final bg = widget.backgroundColor ?? const Color(0xFF0B141B);
 
     Widget compass = LayoutBuilder(
       builder: (context, constraints) {
@@ -224,13 +224,13 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
                 gradient: RadialGradient(
                   colors: [
                     bg,
-                    Color.lerp(bg, Colors.black, 0.05) ?? bg,
+                    Color.lerp(bg, Colors.black, 0.24) ?? bg,
                   ],
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.10),
-                    blurRadius: 20,
+                    color: Colors.black.withOpacity(0.26),
+                    blurRadius: 24,
                     offset: const Offset(0, 10),
                   ),
                 ],
@@ -239,26 +239,31 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
             CustomPaint(
               size: Size.square(size),
               painter: _CompassDialPainter(
-                color: const Color(0xFF2E2924),
+                color: const Color(0xFFF4E6CC),
                 accentColor: accent,
                 isAligned: _isAligned,
               ),
             ),
             AnimatedContainer(
               duration: const Duration(milliseconds: 260),
-              width: size * 0.20,
-              height: size * 0.20,
+              width: size * 0.24,
+              height: size * 0.24,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: _isAligned
-                    ? accent.withOpacity(0.14)
+                    ? accent.withOpacity(0.22)
                     : Colors.transparent,
                 boxShadow: _isAligned
                     ? [
                         BoxShadow(
-                          color: const Color(0xFF22C55E).withOpacity(0.26),
-                          blurRadius: 26,
-                          spreadRadius: 4,
+                          color: const Color(0xFF4ADE80).withOpacity(0.38),
+                          blurRadius: 34,
+                          spreadRadius: 8,
+                        ),
+                        BoxShadow(
+                          color: const Color(0xFFE0B86D).withOpacity(0.22),
+                          blurRadius: 46,
+                          spreadRadius: 6,
                         ),
                       ]
                     : const [],
@@ -274,17 +279,65 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
               },
               child: Icon(
                 Icons.navigation_rounded,
-                size: size * 0.42,
-                color: _isAligned ? accent : const Color(0xFF204B43),
+                size: size * 0.46,
+                color: _isAligned ? accent : const Color(0xFFE0B86D),
+                shadows: [
+                  if (_isAligned)
+                    Shadow(
+                      color: const Color(0xFF4ADE80).withOpacity(0.55),
+                      blurRadius: 28,
+                    ),
+                  if (_isAligned)
+                    Shadow(
+                      color: const Color(0xFFE0B86D).withOpacity(0.38),
+                      blurRadius: 18,
+                    ),
+                  Shadow(
+                    color: Colors.black.withOpacity(0.30),
+                    blurRadius: 14,
+                  ),
+                ],
               ),
             ),
             Container(
-              width: math.max(16, size * 0.09),
-              height: math.max(16, size * 0.09),
+              width: math.max(22, size * 0.14),
+              height: math.max(22, size * 0.14),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF201A16),
-                border: Border.all(color: Colors.white, width: 2),
+                gradient: const RadialGradient(
+                  colors: [
+                    Color(0xFFF4D089),
+                    Color(0xFFB8873D),
+                    Color(0xFF6A4A20),
+                  ],
+                ),
+                border: Border.all(
+                  color: const Color(0xFFF4E6CC).withOpacity(0.65),
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: _isAligned
+                        ? const Color(0xFF4ADE80).withOpacity(0.34)
+                        : Colors.black.withOpacity(0.24),
+                    blurRadius: _isAligned ? 20 : 14,
+                    spreadRadius: _isAligned ? 2 : 0,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Container(
+                  width: math.max(12, size * 0.07),
+                  height: math.max(12, size * 0.07),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF0B141B),
+                    border: Border.all(
+                      color: const Color(0xFFF4D089).withOpacity(0.40),
+                    ),
+                  ),
+                ),
               ),
             ),
             Positioned(
@@ -300,7 +353,7 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
                   border: Border.all(
                     color: _isAligned
                         ? const Color(0xFF6EE7B7).withOpacity(0.75)
-                        : const Color(0xFF204B43).withOpacity(0.10),
+                        : const Color(0xFFE1BF84).withOpacity(0.16),
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -320,7 +373,7 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
                       size: math.max(12, size * 0.05),
                       color: _isAligned
                           ? const Color(0xFF16A34A)
-                          : const Color(0xFF204B43),
+                          : const Color(0xFFC89B53),
                     ),
                     SizedBox(width: math.max(5, size * 0.018)),
                     Text(
@@ -334,7 +387,7 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
                         letterSpacing: 1.1,
                         color: _isAligned
                             ? const Color(0xFF166534)
-                            : const Color(0xFF204B43),
+                            : const Color(0xFF7A5A28),
                       ),
                     ),
                   ],
@@ -430,14 +483,29 @@ class _CompassDialPainter extends CustomPainter {
 
     final ringPaint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = radius * 0.08
-      ..color = color.withOpacity(0.10);
+      ..strokeWidth = radius * 0.05
+      ..shader = const LinearGradient(
+        colors: [
+          Color(0xFF6E4D24),
+          Color(0xFFE8C27A),
+          Color(0xFF8C6330),
+        ],
+      ).createShader(Rect.fromCircle(center: center, radius: radius));
     canvas.drawCircle(center, radius - ringPaint.strokeWidth / 2, ringPaint);
+
+    final innerGlowPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = radius * 0.02
+      ..color = (isAligned
+              ? const Color(0xFF86EFAC)
+              : const Color(0xFFF1D39A))
+          .withOpacity(isAligned ? 0.34 : 0.18);
+    canvas.drawCircle(center, radius * 0.92, innerGlowPaint);
 
     final guideRingPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = radius * 0.012
-      ..color = color.withOpacity(0.12);
+      ..color = color.withOpacity(0.10);
     canvas.drawCircle(center, radius * 0.68, guideRingPaint);
     canvas.drawCircle(center, radius * 0.82, guideRingPaint);
 
@@ -459,9 +527,11 @@ class _CompassDialPainter extends CustomPainter {
       final markPaint = Paint()
         ..strokeCap = StrokeCap.round
         ..strokeWidth = longMark ? 2.4 : 1.2
-        ..color = degree == 0 && isAligned
-            ? accentColor
-            : color.withOpacity(longMark ? 0.85 : 0.35);
+        ..color = degree % 90 == 0
+            ? const Color(0xFF4ADE80).withOpacity(isAligned ? 0.95 : 0.74)
+            : degree == 0
+                ? accentColor
+                : color.withOpacity(longMark ? 0.72 : 0.24);
 
       canvas.drawLine(start, end, markPaint);
     }
@@ -527,8 +597,8 @@ class _CompassDialPainter extends CustomPainter {
         text: label,
         style: TextStyle(
           color: label == 'N'
-              ? (isAligned ? accentColor : const Color(0xFF204B43))
-              : color.withOpacity(0.62),
+              ? (isAligned ? const Color(0xFF86EFAC) : const Color(0xFFF4E6CC))
+              : color.withOpacity(0.78),
           fontWeight: label == 'N' ? FontWeight.w900 : FontWeight.w700,
           fontSize: label == 'N'
               ? math.max(12, radius * 0.17)

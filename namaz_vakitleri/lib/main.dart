@@ -1,47 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:provider/provider.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:namaz_vakitleri/config/color_system.dart';
 import 'package:namaz_vakitleri/providers/app_settings.dart';
 import 'package:namaz_vakitleri/providers/prayer_provider.dart';
 import 'package:namaz_vakitleri/screens/main_navigation_screen.dart';
-import 'package:namaz_vakitleri/services/notification_service.dart';
+import 'package:namaz_vakitleri/screens/splash_screen.dart';
 import 'package:namaz_vakitleri/services/location_service.dart';
+import 'package:namaz_vakitleri/services/notification_service.dart';
+import 'package:provider/provider.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
 
-// Global navigator key for accessing context from services
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize timezone
   tz.initializeTimeZones();
 
-  // Initialize notifications
-  print('🚀 Initializing notifications...');
+  print('Initializing notifications...');
   await NotificationService.initialize();
-  print('✅ Notifications initialized');
+  print('Notifications initialized');
 
-  // Request location permission early
-  print('📍 Requesting location permission...');
+  print('Requesting location permission...');
   await LocationService.requestLocationPermission();
-  print('✅ Location permission requested');
+  print('Location permission requested');
 
   runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  late AppSettings _appSettings;
-  late PrayerProvider _prayerProvider;
+  late final AppSettings _appSettings;
+  late final PrayerProvider _prayerProvider;
   bool _isInitialized = false;
 
   @override
@@ -53,15 +50,13 @@ class _MyAppState extends State<MyApp> {
     _initializeApp();
   }
 
-  /// Set up method channels to receive volume button presses from Android
   void _setupMethodChannels() {
     const platform = MethodChannel('com.vakit.app.namaz_vakitleri/adhan');
-    
+
     platform.setMethodCallHandler((call) async {
       if (call.method == 'stopAdhan') {
-        // Stop adhan immediately when volume button is pressed
         await _prayerProvider.stopAdhan();
-        print('🔊 Volume button pressed - stopping adhan immediately');
+        print('Volume button pressed, adhan stopped');
       }
       return null;
     });
@@ -69,30 +64,31 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _initializeApp() async {
     try {
-      print('⚙️ Initializing app settings...');
+      print('Initializing app settings...');
       await _appSettings.initialize();
-      print('✅ App settings initialized');
+      print('App settings initialized');
 
-      print('📱 Initializing prayer provider...');
+      print('Initializing prayer provider...');
       await _prayerProvider.initialize();
-      print('✅ Prayer provider initialized');
+      print('Prayer provider initialized');
 
       if (mounted) {
         setState(() {
           _isInitialized = true;
         });
-        // Request critical permissions after UI is ready so dialogs can appear
+
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           await Future.delayed(const Duration(milliseconds: 800));
           await NotificationService.checkAndRequestCriticalPermissions();
         });
       }
-      print('🎉 App initialization complete');
+
+      print('App initialization complete');
     } catch (e) {
-      print('❌ Error initializing app: $e');
+      print('Error initializing app: $e');
       if (mounted) {
         setState(() {
-          _isInitialized = true; // Continue even with errors
+          _isInitialized = true;
         });
       }
     }
@@ -101,23 +97,9 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized) {
-      return MaterialApp(
-        home: Scaffold(
-          backgroundColor: Colors.teal,
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(color: Colors.white),
-                SizedBox(height: 16),
-                Text(
-                  'Namaz Vakitleri Yükleniyor...',
-                  style: TextStyle(color: Colors.white, fontSize: 18),
-                ),
-              ],
-            ),
-          ),
-        ),
+      return const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: SplashScreen(),
       );
     }
 

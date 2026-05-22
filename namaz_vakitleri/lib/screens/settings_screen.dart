@@ -50,16 +50,10 @@ class SettingsScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
                 children: [
-                  Text(
-                    AppLocalizations.translate('settings', locale),
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1,
-                      color: Color(0xFF1E1A16),
-                    ),
+                  _SettingsHero(
+                    title: AppLocalizations.translate('settings', locale),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 22),
                   _SettingsTile(
                     icon: Icons.notifications_active_rounded,
                     iconColor: const Color(0xFFEA580C),
@@ -236,71 +230,134 @@ class _SettingsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Material(
-        color: Colors.white.withOpacity(0.78),
-        borderRadius: BorderRadius.circular(28),
+        color: Colors.white.withOpacity(0.84),
+        borderRadius: BorderRadius.circular(30),
         child: InkWell(
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(30),
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.all(18),
+            height: 78,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(30),
               border: Border.all(color: Colors.white.withOpacity(0.82)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
+                  color: const Color(0xFFA58E69).withOpacity(0.10),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
             child: Row(
               children: [
                 Container(
-                  width: 50,
-                  height: 50,
+                  width: 42,
+                  height: 42,
                   decoration: BoxDecoration(
                     color: iconColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Icon(icon, color: iconColor),
+                  child: Icon(icon, color: iconColor, size: 21),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 17,
+                          fontSize: 16,
                           fontWeight: FontWeight.w800,
                           color: Color(0xFF1E1A16),
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 2),
                       Text(
                         subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Color(0xFF655B51),
+                          fontSize: 13,
                           height: 1.4,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 trailing ??
                     const Icon(
                       Icons.arrow_forward_ios_rounded,
-                      size: 18,
+                      size: 16,
                       color: Color(0xFF8A7B6A),
                     ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsHero extends StatelessWidget {
+  const _SettingsHero({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 300,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(34),
+        border: Border.all(color: Colors.white.withOpacity(0.86)),
+        image: const DecorationImage(
+          image: AssetImage('assets/images/arkafon.png'),
+          fit: BoxFit.contain,
+          alignment: Alignment.center,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(34),
+        child: Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white.withOpacity(0.22),
+                    Colors.white.withOpacity(0.02),
+                    Colors.white.withOpacity(0.08),
+                  ],
+                ),
+              ),
+            ),
+            Align(
+              alignment: Alignment.topCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF1E1A16),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

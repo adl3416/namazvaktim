@@ -74,19 +74,19 @@ class _QiblaScreenState extends State<QiblaScreen> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Color(0xFF11232D),
-                          Color(0xFF18313D),
-                          Color(0xFF22414D),
+                          Color(0xFFFBF8F2),
+                          Color(0xFFF2E9DA),
+                          Color(0xFFF7F1E6),
                         ],
                       ),
                       border: Border.all(
-                        color: const Color(0xFFC89B53).withOpacity(0.22),
+                        color: const Color(0xFFE5D8C2),
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.34),
-                          blurRadius: 34,
-                          offset: const Offset(0, 18),
+                          color: const Color(0xFFB9A381).withOpacity(0.18),
+                          blurRadius: 28,
+                          offset: const Offset(0, 14),
                         ),
                       ],
                     ),
@@ -110,7 +110,7 @@ class _QiblaScreenState extends State<QiblaScreen> {
                                     ),
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
-                                      color: Color(0xFFE1BF84),
+                                      color: Color(0xFF8C7140),
                                       fontSize: 18,
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: 2.4,
@@ -125,7 +125,7 @@ class _QiblaScreenState extends State<QiblaScreen> {
                                       ar: 'اتجه نحو القبلة',
                                     ),
                                     style: TextStyle(
-                                      color: Colors.white.withOpacity(0.82),
+                                      color: const Color(0xFF7B6A53),
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -244,9 +244,9 @@ class _QiblaScreenState extends State<QiblaScreen> {
                           ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(999),
-                            color: const Color(0xFF0A141B),
+                            color: Colors.white.withOpacity(0.80),
                             border: Border.all(
-                              color: const Color(0xFFC89B53).withOpacity(0.18),
+                              color: const Color(0xFFE4D7C2),
                             ),
                           ),
                           child: Row(
@@ -277,7 +277,7 @@ class _QiblaScreenState extends State<QiblaScreen> {
                                     ar: 'أينما كنت، فلتبق وجهتك واحدة.',
                                   ),
                                   style: TextStyle(
-                                    color: const Color(0xFFF5E7CC).withOpacity(0.96),
+                                    color: const Color(0xFF4B3D2B),
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     height: 1.35,
@@ -314,7 +314,7 @@ class _TopActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFF0E1B24),
+      color: const Color(0xFFFFFBF5),
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -327,13 +327,13 @@ class _TopActionButton extends StatelessWidget {
             border: Border.all(
               color: (active
                       ? const Color(0xFFE1BF84)
-                      : Colors.white.withOpacity(0.12))
+                      : const Color(0xFFE0D2BA))
                   .withOpacity(0.45),
             ),
           ),
           child: Icon(
             icon,
-            color: active ? const Color(0xFFE1BF84) : Colors.white.withOpacity(0.86),
+            color: active ? const Color(0xFFC89B53) : const Color(0xFF8A7758),
             size: 24,
           ),
         ),
@@ -368,14 +368,14 @@ class _SideInfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: lightStyle
             ? const Color(0xFFF7F1E7)
-            : Colors.white.withOpacity(0.05),
+            : Colors.white.withOpacity(0.66),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
           color: lightStyle
               ? const Color(0xFFE2D2BC)
               : emphasized
                   ? const Color(0xFF4ADE80).withOpacity(0.34)
-                  : Colors.white.withOpacity(0.10),
+                  : const Color(0xFFE8DCC8),
         ),
       ),
       child: Row(
@@ -414,7 +414,7 @@ class _SideInfoCard extends StatelessWidget {
                         style: TextStyle(
                           color: lightStyle
                               ? const Color(0xFF6E5C45)
-                              : Colors.white.withOpacity(0.64),
+                              : const Color(0xFF8D775C),
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -429,7 +429,7 @@ class _SideInfoCard extends StatelessWidget {
                               ? const Color(0xFF1E1A16)
                               : emphasized
                                   ? const Color(0xFF86EFAC)
-                                  : Colors.white,
+                                  : const Color(0xFF1E1A16),
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                           height: 1.1,
@@ -446,7 +446,7 @@ class _SideInfoCard extends StatelessWidget {
                           ? const Color(0xFF1E1A16)
                           : emphasized
                               ? const Color(0xFF86EFAC)
-                              : Colors.white,
+                              : const Color(0xFF1E1A16),
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       height: 1.1,
@@ -460,7 +460,7 @@ class _SideInfoCard extends StatelessWidget {
               size: 20,
               color: lightStyle
                   ? const Color(0xFF8C7453)
-                  : Colors.white.withOpacity(0.72),
+                  : const Color(0xFF8C7453),
             ),
           ],
         ],
@@ -487,12 +487,12 @@ class _StatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: aligned
             ? const Color(0xFF14532D).withOpacity(0.42)
-            : Colors.white.withOpacity(0.08),
+            : Colors.white.withOpacity(0.74),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
           color: aligned
               ? const Color(0xFF6EE7B7).withOpacity(0.55)
-              : Colors.white.withOpacity(0.10),
+              : const Color(0xFFE2D4BE),
         ),
       ),
       child: Row(
@@ -508,7 +508,7 @@ class _StatusBadge extends StatelessWidget {
             child: Text(
               aligned ? alignedLabel : searchingLabel,
               style: const TextStyle(
-                color: Colors.white,
+                color: Color(0xFF2B241B),
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -546,7 +546,7 @@ class _BottomStat extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.56),
+              color: const Color(0xFF8A775B),
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
@@ -557,7 +557,7 @@ class _BottomStat extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              color: Color(0xFFF8EBD1),
+              color: Color(0xFF2A2218),
               fontSize: 17,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.2,

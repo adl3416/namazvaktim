@@ -56,6 +56,25 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     );
   }
 
+  String _text(
+    String language, {
+    required String tr,
+    required String en,
+    required String ar,
+  }) {
+    switch (language) {
+      case 'tr':
+        return tr;
+      case 'ar':
+        return ar;
+      default:
+        return en;
+    }
+  }
+
+  String _prayerLabel(String prayerName, String language) =>
+      AppLocalizations.prayerName(prayerName, language);
+
   // Prayer time color mapping matching home_screen.dart
   Color _getPrayerPhaseColor(String prayerName) {
     switch (prayerName) {
@@ -456,20 +475,20 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
 
     return PopupMenuButton<int>(
       onSelected: (int selectedOffset) {
-        final willEnable = !(isActive && currentOffset == selectedOffset);
-        final newOffset = selectedOffset;
         setState(() {
-          if (isActive && currentOffset == selectedOffset) {
+          if (selectedOffset == 0) {
             _notificationEnabled[prayerName] = false;
           } else {
             _notificationEnabled[prayerName] = true;
-            _notificationOffset[prayerName] = newOffset;
+            _notificationOffset[prayerName] = selectedOffset;
           }
         });
         // Save immediately so closing the app doesn't lose the change
         final settings = context.read<AppSettings>();
-        settings.setPrayerNotification(prayerName, willEnable);
-        settings.setPrayerNotificationOffset(prayerName, newOffset);
+        settings.setPrayerNotification(prayerName, selectedOffset != 0);
+        if (selectedOffset != 0) {
+          settings.setPrayerNotificationOffset(prayerName, selectedOffset);
+        }
         // Reschedule so the new offset takes effect right away
         context.read<PrayerProvider>().rescheduleNotifications();
       },
@@ -477,6 +496,28 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       itemBuilder: (context) => [
+        PopupMenuItem<int>(
+          value: 0,
+          child: Row(
+            children: [
+              Icon(
+                !isActive ? Icons.check_circle : Icons.radio_button_unchecked,
+                size: 18,
+                color: !isActive
+                    ? const Color(0xFFEF4444)
+                    : (isDark ? Colors.grey[400] : Colors.grey[600]),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Kapali',
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
+                  fontWeight: !isActive ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        ),
         PopupMenuItem<int>(
           value: 5,
           child: Row(

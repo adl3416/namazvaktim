@@ -469,21 +469,15 @@ class PrayerProvider extends ChangeNotifier {
     if (_lastAdhanPlayedForPrayer != '${prayer.name}_ontime') {
       print('🔔 Prayer time arrived: ${prayer.name}');
 
-      // Sound and notification are independent.
-      if (soundEnabled) {
+      // If a scheduled notification is enabled, let that exact-time system alert
+      // handle the visible notification and any configured sound to avoid duplicates.
+      if (notificationEnabled) {
+        print('📢 Scheduled exact notification will handle ${prayer.name}; skipping in-app fallback');
+      } else if (soundEnabled) {
         print('🎵 Playing adhan sound for ${prayer.name}');
         await _playAdhanForPrayer(prayer.name);
       } else {
         print('🔇 Sound disabled for ${prayer.name}, skipping adhan');
-      }
-
-      // Show notification if enabled (separately from sound)
-      if (notificationEnabled) {
-        print('📢 Showing notification for ${prayer.name} in ${_appSettings.language}');
-        await NotificationService.showPrayerTimeNotification(
-          prayerName: prayer.name,
-          language: _appSettings.language,
-        );
       }
 
       _lastAdhanPlayedForPrayer = '${prayer.name}_ontime';

@@ -163,4 +163,35 @@ class AppLocalizations {
   }
 
   static bool isRTL(String locale) => locale == 'ar';
+
+  static String prayerName(String prayerKey, String locale) {
+    switch (prayerKey) {
+      case 'Fajr':
+        return translate('fajr', locale);
+      case 'Sunrise':
+        return translate('sunrise', locale);
+      case 'Dhuhr':
+        return translate('dhuhr', locale);
+      case 'Asr':
+        return translate('asr', locale);
+      case 'Maghrib':
+        return translate('maghrib', locale);
+      case 'Isha':
+        return translate('isha', locale);
+      default:
+        return prayerKey;
+    }
+  }
+
+  static String template(
+    String fallback,
+    String locale, {
+    Map<String, String> values = const {},
+  }) {
+    var value = fallback;
+    values.forEach((key, replacement) {
+      value = value.replaceAll('{$key}', replacement);
+    });
+    return value;
+  }
 }

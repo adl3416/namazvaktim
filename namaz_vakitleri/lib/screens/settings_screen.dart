@@ -14,13 +14,30 @@ import 'theme_selection_screen.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({Key? key}) : super(key: key);
 
+  String _text(
+    String language, {
+    required String tr,
+    required String en,
+    required String ar,
+  }) {
+    switch (language) {
+      case 'tr':
+        return tr;
+      case 'ar':
+        return ar;
+      default:
+        return en;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer2<AppSettings, PrayerProvider>(
       builder: (context, settings, prayerProvider, _) {
         final locale = settings.language;
         final locationName =
-            prayerProvider.currentLocation?.city ?? 'Konum secilmedi';
+            prayerProvider.currentLocation?.city ??
+                _text(locale, tr: 'Konum secilmedi', en: 'Location not selected', ar: 'لم يتم تحديد الموقع');
 
         return Scaffold(
           backgroundColor: const Color(0xFFF6F1E8),
@@ -51,7 +68,12 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Diyanet tarzi yardimci ayarlar ile uygulamani konum, bildirim ve tema bazinda hizlica sekillendir.',
+                    _text(
+                      locale,
+                      tr: 'Diyanet tarzi yardimci ayarlar ile uygulamani konum, bildirim ve tema bazinda hizlica sekillendir.',
+                      en: 'Shape the app quickly with helper settings for location, notifications, and theme.',
+                      ar: 'خصص التطبيق بسرعة عبر إعدادات الموقع والإشعارات والمظهر.',
+                    ),
                     style: TextStyle(
                       fontSize: 15,
                       height: 1.45,
@@ -67,7 +89,7 @@ class SettingsScreen extends StatelessWidget {
                   _SettingsTile(
                     icon: Icons.location_on_rounded,
                     iconColor: const Color(0xFF2563EB),
-                    title: 'Konum',
+                    title: AppLocalizations.translate('location', locale),
                     subtitle: locationName,
                     onTap: () {
                       Navigator.push(
@@ -81,8 +103,8 @@ class SettingsScreen extends StatelessWidget {
                   _SettingsTile(
                     icon: Icons.notifications_active_rounded,
                     iconColor: const Color(0xFFEA580C),
-                    title: 'Bildirimler',
-                    subtitle: 'Ezan, hatirlatma ve vakit ayarlarini yonet',
+                    title: AppLocalizations.translate('notifications', locale),
+                    subtitle: _text(locale, tr: 'Ezan, hatirlatma ve vakit ayarlarini yonet', en: 'Manage adhan, reminders, and prayer time settings', ar: 'أدر الأذان والتذكيرات وإعدادات أوقات الصلاة'),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -96,8 +118,8 @@ class SettingsScreen extends StatelessWidget {
                   _SettingsTile(
                     icon: Icons.palette_rounded,
                     iconColor: const Color(0xFF7C3AED),
-                    title: 'Tema',
-                    subtitle: 'Uygulamanin gorunus dilini degistir',
+                    title: AppLocalizations.translate('theme', locale),
+                    subtitle: _text(locale, tr: 'Uygulamanin gorunusunu degistir', en: 'Change the look of the app', ar: 'غيّر مظهر التطبيق'),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -110,8 +132,8 @@ class SettingsScreen extends StatelessWidget {
                   _SettingsTile(
                     icon: Icons.language_rounded,
                     iconColor: const Color(0xFF15803D),
-                    title: 'Dil',
-                    subtitle: 'Su an: ${settings.language.toUpperCase()}',
+                    title: AppLocalizations.translate('language', locale),
+                    subtitle: '${_text(locale, tr: 'Su an', en: 'Current', ar: 'الحالية')}: ${settings.language.toUpperCase()}',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -125,8 +147,8 @@ class SettingsScreen extends StatelessWidget {
                   _SettingsTile(
                     icon: Icons.notifications_rounded,
                     iconColor: const Color(0xFF0891B2),
-                    title: 'Test bildirimi',
-                    subtitle: 'Aninda test gondererek sistemi kontrol et',
+                    title: _text(locale, tr: 'Test bildirimi', en: 'Test notification', ar: 'إشعار تجريبي'),
+                    subtitle: _text(locale, tr: 'Aninda test gondererek sistemi kontrol et', en: 'Verify the system with an instant test', ar: 'تحقق من النظام عبر اختبار فوري'),
                     trailing: const Icon(
                       Icons.send_rounded,
                       color: Color(0xFF0891B2),
@@ -136,8 +158,8 @@ class SettingsScreen extends StatelessWidget {
                       await NotificationService.showTestNotification();
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Test bildirimi gonderildi'),
+                        SnackBar(
+                          content: Text(_text(locale, tr: 'Test bildirimi gonderildi', en: 'Test notification sent', ar: 'تم إرسال الإشعار التجريبي')),
                           backgroundColor: Color(0xFF15803D),
                         ),
                       );
@@ -146,12 +168,12 @@ class SettingsScreen extends StatelessWidget {
                   _SettingsTile(
                     icon: Icons.support_agent_rounded,
                     iconColor: const Color(0xFFB45309),
-                    title: 'Iletisim ve destek',
-                    subtitle: 'Geri bildirim ve yardim bolumu',
+                    title: _text(locale, tr: 'Iletisim ve destek', en: 'Contact and support', ar: 'التواصل والدعم'),
+                    subtitle: _text(locale, tr: 'Geri bildirim ve yardim bolumu', en: 'Feedback and help section', ar: 'قسم الملاحظات والمساعدة'),
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Destek bolumu yakinda eklenecek'),
+                        SnackBar(
+                          content: Text(_text(locale, tr: 'Destek bolumu yakinda eklenecek', en: 'Support section will be added soon', ar: 'سيتم إضافة قسم الدعم قريباً')),
                           backgroundColor: Color(0xFF1F4C43),
                         ),
                       );

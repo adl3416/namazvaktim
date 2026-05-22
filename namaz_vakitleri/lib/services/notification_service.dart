@@ -10,6 +10,7 @@ import 'dart:io' show Platform;
 import '../models/prayer_model.dart';
 import '../config/localization.dart';
 import '../main.dart' show navigatorKey;
+import '../providers/app_settings.dart';
 import '../providers/prayer_provider.dart';
 
 class NotificationService {
@@ -19,6 +20,49 @@ class NotificationService {
   // Notification action IDs
   static const String _dismissAction = 'DISMISS_NOTIFICATION';
   static const String _snoozeAction = 'SNOOZE_NOTIFICATION';
+
+  static String _channelNameForLocale(String language, {required bool reminder}) {
+    switch (language) {
+      case 'tr':
+        return reminder ? 'Namaz Hatirlatmalari' : 'Namaz Bildirimleri';
+      case 'ar':
+        return reminder ? 'تذكيرات الصلاة' : 'إشعارات الصلاة';
+      default:
+        return reminder ? 'Prayer Reminders' : 'Prayer Notifications';
+    }
+  }
+
+  static String _channelDescriptionForLocale(String language, {required bool reminder}) {
+    switch (language) {
+      case 'tr':
+        return reminder
+            ? 'Namaz vakti oncesi sessiz hatirlatmalar'
+            : 'Namaz vakitleri icin bildirimler';
+      case 'ar':
+        return reminder
+            ? 'تذكيرات صامتة قبل أوقات الصلاة'
+            : 'إشعارات لمواقيت الصلاة';
+      default:
+        return reminder
+            ? 'Silent reminders before prayer times'
+            : 'Notifications for prayer times';
+    }
+  }
+
+  static String _textByLanguage(String language, {
+    required String tr,
+    required String en,
+    required String ar,
+  }) {
+    switch (language) {
+      case 'tr':
+        return tr;
+      case 'ar':
+        return ar;
+      default:
+        return en;
+    }
+  }
 
   static Future<void> initialize() async {
     const AndroidInitializationSettings androidInitializationSettings =
@@ -206,23 +250,25 @@ class NotificationService {
   static void _showDoNotDisturbSettingsDialog() {
     final context = getContext();
     if (context != null && context.mounted) {
+      final language =
+          Provider.of<AppSettings>(context, listen: false).language;
       showDialog(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text(AppLocalizations.translate('dnd_permission_title', 'tr')),
-            content: Text(AppLocalizations.translate('dnd_permission_message', 'tr')),
+            title: Text(AppLocalizations.translate('dnd_permission_title', language)),
+            content: Text(AppLocalizations.translate('dnd_permission_message', language)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text(AppLocalizations.translate('later', 'tr')),
+                child: Text(AppLocalizations.translate('later', language)),
               ),
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                   openAppSettings(); // Opens app settings
                 },
-                child: Text(AppLocalizations.translate('go_to_settings', 'tr')),
+                child: Text(AppLocalizations.translate('go_to_settings', language)),
               ),
             ],
           );
@@ -386,7 +432,11 @@ class NotificationService {
   }
 
   static Future<void> showTestNotification() async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    final language = navigatorKey.currentContext != null
+        ? Provider.of<AppSettings>(navigatorKey.currentContext!, listen: false)
+            .language
+        : 'en';
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'test_notifications',
       'Test Bildirimleri',
       channelDescription: 'Debug test notifications — no ezan sound',
@@ -395,9 +445,9 @@ class NotificationService {
       playSound: false,
     );
 
-    const NotificationDetails notificationDetails = NotificationDetails(
+    final NotificationDetails notificationDetails = NotificationDetails(
       android: androidDetails,
-      iOS: DarwinNotificationDetails(
+      iOS: const DarwinNotificationDetails(
         presentSound: false,
         presentBadge: true,
         presentAlert: true,
@@ -508,7 +558,7 @@ class NotificationService {
   static Future<AndroidScheduleMode> _resolveScheduleMode() async {
     final canScheduleExact = await canScheduleExactNotifications();
     if (canScheduleExact == true) {
-      return AndroidScheduleMode.exactAllowWhileIdle;
+      return AndroidScheduleMode.alarmClock;
     }
     return AndroidScheduleMode.inexactAllowWhileIdle;
   }
@@ -519,22 +569,26 @@ class NotificationService {
     required int offsetMinutes,
   }) {
     if (offsetMinutes <= 0) return prayerLabel;
-    switch (language) {
-      case 'tr':
-        return '$prayerLabel icin $offsetMinutes dakika kaldi.';
-      case 'ar':
-        return 'تبقى $offsetMinutes دقيقة على $prayerLabel.';
-      default:
-        return '$offsetMinutes minutes left until $prayerLabel.';
-    }
+    return _textByLanguage(
+      language,
+      tr: '$prayerLabel icin $offsetMinutes dakika kaldi.',
+      en: '$offsetMinutes minutes left until $prayerLabel.',
+      ar: 'تبقى $offsetMinutes دقيقة على $prayerLabel.',
+    );
   }
 
   static String _buildReminderTitle({
     required String prayerName,
+    required String language,
     required int offsetMinutes,
   }) {
     if (offsetMinutes <= 0) return prayerName;
-    return '$prayerName - $offsetMinutes dk kaldi';
+    return _textByLanguage(
+      language,
+      tr: '$prayerName - $offsetMinutes dk kaldi',
+      en: '$prayerName - $offsetMinutes min left',
+      ar: '$prayerName - بقي $offsetMinutes د',
+    );
   }
 
   /// Schedule a notification for prayer time
@@ -563,6 +617,7 @@ class NotificationService {
         return AppLocalizations.translate(key, language);
       }
 
+      final localizedPrayerName = AppLocalizations.prayerName(prayerName, language);
       final label = getNotificationLabel(prayerName, language);
       final isReminderNotification = offsetMinutes > 0;
       final notificationBody = _buildReminderBody(
@@ -591,10 +646,11 @@ class NotificationService {
         }
       }
 
-      final displayName = '${getPrayerEmoji(prayerName)} $prayerName';
+      final displayName = '${getPrayerEmoji(prayerName)} $localizedPrayerName';
       final notificationTitle = isReminderNotification
           ? _buildReminderTitle(
-              prayerName: prayerName,
+              prayerName: localizedPrayerName,
+              language: language,
               offsetMinutes: offsetMinutes,
             )
           : displayName;
@@ -624,11 +680,11 @@ class NotificationService {
                 ? 'prayer_reminders'
                 : _channelIdForPrayer(prayerName),
             isReminderNotification
-                ? 'Prayer Reminders'
+                ? _channelNameForLocale(language, reminder: true)
                 : _channelNameForPrayer(prayerName),
             channelDescription: isReminderNotification
-                ? 'Silent reminder notifications before prayer times'
-                : 'Notifications for prayer times',
+                ? _channelDescriptionForLocale(language, reminder: true)
+                : _channelDescriptionForLocale(language, reminder: false),
             importance: isReminderNotification ? Importance.high : Importance.max,
             priority: isReminderNotification ? Priority.high : Priority.max,
             playSound: isReminderNotification ? false : enableSound,
@@ -639,7 +695,7 @@ class NotificationService {
             actions: [
               AndroidNotificationAction(
                 _dismissAction,
-                'Close',
+                _textByLanguage(language, tr: 'Kapat', en: 'Close', ar: 'اغلاق'),
                 cancelNotification: true,
               ),
             ],
@@ -698,24 +754,38 @@ class NotificationService {
       final enableNotification = notificationSettings[prayer.name] ?? true;
       final enableSound = soundSettings[prayer.name] ?? true;
       final soundFile = soundFiles[prayer.name];
+      final offsetMinutes = offsetSettings?[prayer.name] ?? 5;
 
-      if (enableNotification) {
-        final offsetMinutes = offsetSettings?[prayer.name] ?? 5;
-        print('🔔 Scheduling notification for ${prayer.name} at ${prayer.time} (${offsetMinutes}m before) with sound: $enableSound ($soundFile)');
+      if (enableNotification && offsetMinutes > 0) {
+        print('🔔 Scheduling reminder for ${prayer.name} at ${prayer.time} (${offsetMinutes}m before)');
         await schedulePrayerNotification(
-          id: i,
+          id: 100 + i,
+          prayerName: prayer.name,
+          prayerTime: prayer.time,
+          language: language,
+          enableSound: false,
+          soundFile: soundFile,
+          offsetMinutes: offsetMinutes,
+        );
+        print('✅ Reminder scheduled for ${prayer.name}');
+        scheduledCount++;
+      } else if (!enableNotification) {
+        print('🚫 Notification disabled for ${prayer.name} - skipping');
+        skippedCount++;
+      }
+
+      if (enableNotification || enableSound) {
+        print('🔔 Scheduling exact prayer alert for ${prayer.name} at ${prayer.time} with sound: $enableSound');
+        await schedulePrayerNotification(
+          id: 1000 + i,
           prayerName: prayer.name,
           prayerTime: prayer.time,
           language: language,
           enableSound: enableSound,
           soundFile: soundFile,
-          offsetMinutes: offsetMinutes,
+          offsetMinutes: 0,
         );
-        print('✅ Notification scheduled for ${prayer.name}');
-        scheduledCount++;
-      } else {
-        print('🚫 Notification disabled for ${prayer.name} - skipping');
-        skippedCount++;
+        print('✅ Exact prayer alert scheduled for ${prayer.name}');
       }
     }
     

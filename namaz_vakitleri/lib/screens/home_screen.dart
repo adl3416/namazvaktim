@@ -62,24 +62,23 @@ class HomeScreen extends StatelessWidget {
                       parent: AlwaysScrollableScrollPhysics(),
                     ),
                     slivers: [
+                      SliverPersistentHeader(
+                        pinned: true,
+                        delegate: _StickyTopHeaderDelegate(
+                          scheme: scheme,
+                          city: prayerProvider.savedCity.isNotEmpty
+                              ? prayerProvider.savedCity
+                              : 'Istanbul',
+                          onRefreshLocation: () =>
+                              _refreshLocation(context, prayerProvider),
+                        ),
+                      ),
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                          padding: const EdgeInsets.fromLTRB(10, 8, 10, 24),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _TopHeader(
-                                scheme: scheme,
-                                city: prayerProvider.savedCity.isNotEmpty
-                                    ? prayerProvider.savedCity
-                                    : 'Istanbul',
-                                country: prayerProvider.savedCountry,
-                                onRefreshLocation: () =>
-                                    _refreshLocation(context, prayerProvider),
-                              ),
-                              const SizedBox(height: 10),
-                              _DateRow(scheme: scheme),
-                              const SizedBox(height: 20),
                               _HeroCountdownCard(
                                 scheme: scheme,
                                 nextPrayer: nextPrayer,
@@ -97,7 +96,7 @@ class HomeScreen extends StatelessWidget {
                         ),
                       ),
                       SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+                        padding: const EdgeInsets.fromLTRB(10, 0, 10, 28),
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate((context, index) {
                             final prayer = prayerTimes[index];
@@ -181,61 +180,125 @@ class _TopHeader extends StatelessWidget {
   const _TopHeader({
     required this.scheme,
     required this.city,
-    required this.country,
     required this.onRefreshLocation,
+    this.compact = false,
   });
 
   final _HomePalette scheme;
   final String city;
-  final String country;
   final VoidCallback onRefreshLocation;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                city,
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1.2,
-                  color: scheme.textPrimary,
-                ),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              city,
+              style: TextStyle(
+                fontSize: compact ? 14 : 16,
+                fontWeight: compact ? FontWeight.w700 : FontWeight.w700,
+                letterSpacing: compact ? -0.2 : -0.5,
+                color: Colors.white,
               ),
-              if (country.isNotEmpty)
-                Text(
-                  country,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: scheme.textSecondary,
-                  ),
-                ),
-            ],
+            ),
           ),
         ),
         Material(
-          color: scheme.primary.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(22),
+          color: Colors.white.withOpacity(compact ? 0.14 : 0.18),
+          borderRadius: BorderRadius.circular(14),
           child: InkWell(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(14),
             onTap: onRefreshLocation,
             child: Padding(
-              padding: const EdgeInsets.all(14),
+              padding: EdgeInsets.all(compact ? 8 : 9),
               child: Icon(
                 Icons.my_location_rounded,
-                color: scheme.primary,
-                size: 22,
+                color: Colors.white,
+                size: compact ? 16 : 17,
               ),
             ),
           ),
         ),
       ],
     );
+  }
+}
+
+class _StickyTopHeaderDelegate extends SliverPersistentHeaderDelegate {
+  _StickyTopHeaderDelegate({
+    required this.scheme,
+    required this.city,
+    required this.onRefreshLocation,
+  });
+
+  final _HomePalette scheme;
+  final String city;
+  final VoidCallback onRefreshLocation;
+
+  @override
+  double get minExtent => 44;
+
+  @override
+  double get maxExtent => 54;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final progress =
+        (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
+    final compact = progress > 0.45;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        compact ? 2 : 4,
+        20,
+        compact ? 2 : 4,
+      ),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color.lerp(scheme.primary, scheme.secondary, progress * 0.35)!
+                .withOpacity(0.92),
+            Color.lerp(scheme.secondary, scheme.tertiary, progress * 0.35)!
+                .withOpacity(0.88),
+          ],
+        ),
+        border: overlapsContent
+            ? Border(
+                bottom: BorderSide(
+                  color: Colors.white.withOpacity(0.10),
+                  width: 1,
+                ),
+              )
+            : null,
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: _TopHeader(
+          scheme: scheme,
+          city: city,
+          onRefreshLocation: onRefreshLocation,
+          compact: compact,
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _StickyTopHeaderDelegate oldDelegate) {
+    return oldDelegate.scheme != scheme ||
+        oldDelegate.city != city ||
+        oldDelegate.onRefreshLocation != onRefreshLocation;
   }
 }
 
@@ -269,9 +332,9 @@ class _HeroCountdownCard extends StatelessWidget {
     final seconds = (countdown?.inSeconds ?? 0) % 60;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(20),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -293,20 +356,32 @@ class _HeroCountdownCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Next prayer label
-          Text(
-            nextPrayer != null
-                ? '${_prayerNameTr(nextPrayer!.name)} Vaktine'
-                : 'Vakit Bilgisi Bekleniyor',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.88),
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
-            ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final title = nextPrayer != null
+                  ? '${_prayerNameTr(nextPrayer!.name)} Vaktine'
+                  : 'Vakit Bilgisi Bekleniyor';
+              final isShortTitle = title.length <= 16;
+              final fontSize = isShortTitle ? 20.0 : 16.0;
+
+              return FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.88),
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              );
+            },
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           // Active prayer pill
-          if (activePrayerName != null)
+          if (false && activePrayerName != null)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
               decoration: BoxDecoration(
@@ -317,12 +392,12 @@ class _HeroCountdownCard extends StatelessWidget {
                 'Şu an: ${_prayerNameTr(activePrayerName!)}',
                 style: TextStyle(
                   color: Colors.white.withOpacity(0.80),
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 8),
           if (isLoading)
             const SizedBox(
               height: 60,
@@ -336,7 +411,7 @@ class _HeroCountdownCard extends StatelessWidget {
             )
           else ...[
             _CountdownDisplay(hours: hours, minutes: minutes, seconds: seconds),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             if (nextPrayer != null)
               Text(
                 _formatTime(nextPrayer!.time),
@@ -347,15 +422,9 @@ class _HeroCountdownCard extends StatelessWidget {
                   letterSpacing: 1.5,
                 ),
               ),
-            const SizedBox(height: 18),
-            _DailyProgressBar(
-              progress: progress,
-              completedCount: completedCount,
-              totalCount: totalCount,
-            ),
           ],
           if (errorMessage.isNotEmpty) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             Text(
               errorMessage,
               textAlign: TextAlign.center,
@@ -366,6 +435,31 @@ class _HeroCountdownCard extends StatelessWidget {
               ),
             ),
           ],
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Flexible(
+                child: _DateBadge(
+                  icon: Icons.calendar_today_rounded,
+                  label: _miladiDate(),
+                  scheme: scheme,
+                  useLightStyle: true,
+                  alignment: Alignment.centerLeft,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: _DateBadge(
+                  icon: Icons.brightness_3_rounded,
+                  label: _hijriDate(),
+                  scheme: scheme,
+                  useLightStyle: true,
+                  alignment: Alignment.centerRight,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -402,36 +496,57 @@ class _DateBadge extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.scheme,
+    this.useLightStyle = false,
+    this.alignment = Alignment.center,
   });
 
   final IconData icon;
   final String label;
   final _HomePalette scheme;
+  final bool useLightStyle;
+  final Alignment alignment;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: scheme.primary.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: scheme.primary.withOpacity(0.18)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: scheme.primary),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: scheme.textPrimary,
-              letterSpacing: 0.1,
-            ),
+    return Align(
+      alignment: alignment,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: useLightStyle
+              ? Colors.white.withOpacity(0.16)
+              : scheme.primary.withOpacity(0.10),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: useLightStyle
+                ? Colors.white.withOpacity(0.22)
+                : scheme.primary.withOpacity(0.18),
           ),
-        ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 12,
+              color: useLightStyle ? Colors.white : scheme.primary,
+            ),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: useLightStyle ? Colors.white : scheme.textPrimary,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -595,12 +710,12 @@ class _PrayerTile extends StatelessWidget {
                 : _slotLabel(prayer.time);
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
         color: isActive
             ? scheme.surfaceStrong
             : Colors.white.withOpacity(isCompleted ? 0.58 : 0.76),
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: isActive
               ? scheme.primary.withOpacity(0.55)
@@ -610,23 +725,23 @@ class _PrayerTile extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: scheme.shadow.withOpacity(isActive ? 0.26 : 0.10),
-            blurRadius: isActive ? 22 : 16,
-            offset: const Offset(0, 10),
+            blurRadius: isActive ? 18 : 13,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
         child: Row(
           children: [
             Container(
-              width: 52,
-              height: 52,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
                 color: isActive
                     ? scheme.primary
                     : isCompleted
                         ? scheme.textSecondary.withOpacity(0.10)
                         : scheme.primary.withOpacity(0.10),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 _iconForPrayer(prayer.name),
@@ -635,9 +750,10 @@ class _PrayerTile extends StatelessWidget {
                     : isCompleted
                         ? scheme.textSecondary
                         : scheme.primary,
+                size: 19,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -646,26 +762,26 @@ class _PrayerTile extends StatelessWidget {
                   label,
                   style: TextStyle(
                     color: scheme.textPrimary,
-                    fontSize: 17,
+                      fontSize: 14,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 2),
                 Text(
                   badgeLabel,
                   style: TextStyle(
                     color: isNext ? scheme.primary : scheme.textSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                      fontSize: 9,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
-          Container(
-            width: 10,
-            height: 10,
+           const SizedBox(width: 8),
+           Container(
+             width: 7,
+             height: 7,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: isActive
@@ -682,15 +798,15 @@ class _PrayerTile extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          Text(
-            _formatTime(prayer.time),
-            style: TextStyle(
-              color: scheme.textPrimary,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.8,
-            ),
+           const SizedBox(width: 8),
+           Text(
+             _formatTime(prayer.time),
+             style: TextStyle(
+               color: scheme.textPrimary,
+               fontSize: 19,
+               fontWeight: FontWeight.w900,
+               letterSpacing: -0.8,
+             ),
           ),
         ],
       ),
@@ -783,12 +899,12 @@ class _Separator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 22, left: 5, right: 5),
+      padding: const EdgeInsets.only(bottom: 30, left: 4, right: 4),
       child: Text(
         ':',
         style: TextStyle(
           color: Colors.white.withOpacity(0.50),
-          fontSize: 40,
+          fontSize: 34,
           fontWeight: FontWeight.w900,
           height: 1.0,
         ),
@@ -806,6 +922,7 @@ class _TimeUnit extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           value.toString().padLeft(2, '0'),
@@ -817,14 +934,26 @@ class _TimeUnit extends StatelessWidget {
             height: 1.0,
           ),
         ),
-        const SizedBox(height: 5),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.60),
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 2.0,
+        const SizedBox(height: 4),
+        Container(
+          margin: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.14),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.16),
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.82),
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.1,
+              height: 1.0,
+            ),
           ),
         ),
       ],

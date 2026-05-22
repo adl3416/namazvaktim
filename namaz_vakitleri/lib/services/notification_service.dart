@@ -74,6 +74,18 @@ class NotificationService {
       await androidPlugin?.createNotificationChannel(channel);
     }
 
+    const reminderChannel = AndroidNotificationChannel(
+      'prayer_reminders',
+      'Prayer Reminders',
+      description: 'Silent reminder notifications before prayer times',
+      importance: Importance.high,
+      playSound: false,
+      enableVibration: true,
+      showBadge: true,
+      ledColor: Colors.blue,
+    );
+    await androidPlugin?.createNotificationChannel(reminderChannel);
+
     print('🔔 Per-prayer notification channels created');
 
     // Request iOS permissions
@@ -501,6 +513,30 @@ class NotificationService {
     return AndroidScheduleMode.inexactAllowWhileIdle;
   }
 
+  static String _buildReminderBody({
+    required String prayerLabel,
+    required String language,
+    required int offsetMinutes,
+  }) {
+    if (offsetMinutes <= 0) return prayerLabel;
+    switch (language) {
+      case 'tr':
+        return '$prayerLabel icin $offsetMinutes dakika kaldi.';
+      case 'ar':
+        return 'تبقى $offsetMinutes دقيقة على $prayerLabel.';
+      default:
+        return '$offsetMinutes minutes left until $prayerLabel.';
+    }
+  }
+
+  static String _buildReminderTitle({
+    required String prayerName,
+    required int offsetMinutes,
+  }) {
+    if (offsetMinutes <= 0) return prayerName;
+    return '$prayerName - $offsetMinutes dk kaldi';
+  }
+
   /// Schedule a notification for prayer time
   static Future<void> schedulePrayerNotification({
     required int id,
@@ -528,6 +564,12 @@ class NotificationService {
       }
 
       final label = getNotificationLabel(prayerName, language);
+      final isReminderNotification = offsetMinutes > 0;
+      final notificationBody = _buildReminderBody(
+        prayerLabel: label,
+        language: language,
+        offsetMinutes: offsetMinutes,
+      );
 
       // Add emoji to prayer name based on prayer time
       String getPrayerEmoji(String prayer) {
@@ -550,6 +592,12 @@ class NotificationService {
       }
 
       final displayName = '${getPrayerEmoji(prayerName)} $prayerName';
+      final notificationTitle = isReminderNotification
+          ? _buildReminderTitle(
+              prayerName: prayerName,
+              offsetMinutes: offsetMinutes,
+            )
+          : displayName;
 
       // Keep the user's intended wall-clock time as an exact instant.
       // Subtract the offset so notification fires before the actual prayer time.
@@ -567,20 +615,26 @@ class NotificationService {
 
       await _flutterLocalNotificationsPlugin.zonedSchedule(
         id,
-        displayName,
-        label,
+        notificationTitle,
+        notificationBody,
         scheduled,
         NotificationDetails(
           android: AndroidNotificationDetails(
-            _channelIdForPrayer(prayerName),
-            _channelNameForPrayer(prayerName),
-            channelDescription: 'Notifications for prayer times',
-            importance: Importance.max,
-            priority: Priority.max,
-            playSound: enableSound,
+            isReminderNotification
+                ? 'prayer_reminders'
+                : _channelIdForPrayer(prayerName),
+            isReminderNotification
+                ? 'Prayer Reminders'
+                : _channelNameForPrayer(prayerName),
+            channelDescription: isReminderNotification
+                ? 'Silent reminder notifications before prayer times'
+                : 'Notifications for prayer times',
+            importance: isReminderNotification ? Importance.high : Importance.max,
+            priority: isReminderNotification ? Priority.high : Priority.max,
+            playSound: isReminderNotification ? false : enableSound,
             enableVibration: true,
-            fullScreenIntent: true,
-            autoCancel: false,
+            fullScreenIntent: !isReminderNotification,
+            autoCancel: isReminderNotification,
             onlyAlertOnce: false,
             actions: [
               AndroidNotificationAction(
@@ -592,10 +646,12 @@ class NotificationService {
             ticker: label,
           ),
           iOS: DarwinNotificationDetails(
-            presentSound: enableSound,
+            presentSound: isReminderNotification ? false : enableSound,
             presentBadge: true,
             presentAlert: true,
-            interruptionLevel: InterruptionLevel.timeSensitive,
+            interruptionLevel: isReminderNotification
+                ? InterruptionLevel.active
+                : InterruptionLevel.timeSensitive,
           ),
         ),
         androidScheduleMode: scheduleMode,

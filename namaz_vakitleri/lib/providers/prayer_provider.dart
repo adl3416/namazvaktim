@@ -39,6 +39,7 @@ class PrayerProvider extends ChangeNotifier {
   // Adhan playing
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool _isAdhanPlaying = false;
+  double _currentAdhanVolume = 1.0;
   String? _lastAdhanPlayedForPrayer;
   final Duration _adhanThreshold = const Duration(minutes: 15);
   
@@ -59,6 +60,7 @@ class PrayerProvider extends ChangeNotifier {
   String get savedCountry => _savedCountry;
   Duration? get countdownDuration => _countdownDuration;
   bool get isAdhanPlaying => _isAdhanPlaying;
+  double get currentAdhanVolume => _currentAdhanVolume;
 
   Future<void> initialize() async {
     try {
@@ -497,6 +499,7 @@ class PrayerProvider extends ChangeNotifier {
       
       // Stop any currently playing audio first
       await _audioPlayer.stop();
+      _currentAdhanVolume = 1.0;
       
       // Notify Android that adhan is starting (for volume button monitoring).
       // Wrapped in try-catch: if the native channel is unavailable, audio still plays.
@@ -522,6 +525,7 @@ class PrayerProvider extends ChangeNotifier {
         
         // Set audio source and play
         await _audioPlayer.setSource(AssetSource('sounds/$soundFile'));
+        await _audioPlayer.setVolume(_currentAdhanVolume);
         await _audioPlayer.resume();
         _isAdhanPlaying = true;
         notifyListeners();
@@ -575,6 +579,7 @@ class PrayerProvider extends ChangeNotifier {
   /// Notify Android that adhan playback has stopped
   Future<void> _notifyAdhanStopped() async {
     _isAdhanPlaying = false;
+    _currentAdhanVolume = 1.0;
     notifyListeners();
     try {
       const platform = MethodChannel('com.vakit.app.namaz_vakitleri/adhan');
@@ -626,11 +631,36 @@ class PrayerProvider extends ChangeNotifier {
     try {
       await _audioPlayer.stop();
       _isAdhanPlaying = false;
+      _currentAdhanVolume = 1.0;
       notifyListeners();
       _notifyAdhanStopped();
       print('🛑 Adhan stopped manually');
     } catch (e) {
       print('❌ Error stopping adhan: $e');
+    }
+  }
+
+  Future<void> lowerAdhanVolume() async {
+    if (!_isAdhanPlaying) return;
+    try {
+      _currentAdhanVolume = (_currentAdhanVolume - 0.25).clamp(0.0, 1.0);
+      await _audioPlayer.setVolume(_currentAdhanVolume);
+      notifyListeners();
+      print('🔉 Adhan volume lowered to $_currentAdhanVolume');
+    } catch (e) {
+      print('❌ Error lowering adhan volume: $e');
+    }
+  }
+
+  Future<void> muteAdhan() async {
+    if (!_isAdhanPlaying) return;
+    try {
+      _currentAdhanVolume = 0.0;
+      await _audioPlayer.setVolume(0.0);
+      notifyListeners();
+      print('🔇 Adhan muted');
+    } catch (e) {
+      print('❌ Error muting adhan: $e');
     }
   }
 }

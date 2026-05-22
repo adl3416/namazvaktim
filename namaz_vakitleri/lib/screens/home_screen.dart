@@ -131,6 +131,8 @@ class HomeScreen extends StatelessWidget {
                   bottom: 24,
                   child: _AdhanStopBar(
                     scheme: scheme,
+                    onLower: () => prayerProvider.lowerAdhanVolume(),
+                    onMute: () => prayerProvider.muteAdhan(),
                     onStop: () => prayerProvider.stopAdhan(),
                   ),
                 ),
@@ -439,8 +441,15 @@ class _DateBadge extends StatelessWidget {
 // Floating adhan stop bar
 // ---------------------------------------------------------------------------
 class _AdhanStopBar extends StatelessWidget {
-  const _AdhanStopBar({required this.scheme, required this.onStop});
+  const _AdhanStopBar({
+    required this.scheme,
+    required this.onLower,
+    required this.onMute,
+    required this.onStop,
+  });
   final _HomePalette scheme;
+  final VoidCallback onLower;
+  final VoidCallback onMute;
   final VoidCallback onStop;
 
   @override
@@ -474,6 +483,58 @@ class _AdhanStopBar extends StatelessWidget {
                 ),
               ),
             ),
+            GestureDetector(
+              onTap: onLower,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.volume_down_rounded, color: Colors.white, size: 16),
+                    SizedBox(width: 4),
+                    Text(
+                      'Kis',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            GestureDetector(
+              onTap: onMute,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.volume_off_rounded, color: Colors.white, size: 16),
+                    SizedBox(width: 4),
+                    Text(
+                      'Sessiz',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
             GestureDetector(
               onTap: onStop,
               child: Container(

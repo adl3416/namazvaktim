@@ -4,7 +4,9 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:typed_data';
+import 'dart:io' show Platform;
 import '../models/prayer_model.dart';
 import '../config/localization.dart';
 import '../main.dart' show navigatorKey;
@@ -45,24 +47,34 @@ class NotificationService {
     // Setup notification response handler
     await _setupNotificationResponseHandler();
 
-    // Create Android notification channel with full screen intent
-    const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'prayer_channel',
-      'Prayer Notifications',
-      description: 'Notifications for prayer times',
-      importance: Importance.max,
-      playSound: true,
-      sound: RawResourceAndroidNotificationSound('sabah_ezan'),
-      enableVibration: true,
-      showBadge: true,
-      ledColor: Colors.blue,
-    );
+    // Create per-prayer Android notification channels (one per prayer for correct sound)
+    const prayerChannels = [
+      ('prayer_fajr',    'Fajr Prayer',    'sabah_ezan'),
+      ('prayer_dhuhr',   'Dhuhr Prayer',   'ogle_ezan'),
+      ('prayer_asr',     'Asr Prayer',     'ikindi_ezan'),
+      ('prayer_maghrib', 'Maghrib Prayer', 'aksam_ezan'),
+      ('prayer_isha',    'Isha Prayer',    'yatsi_ezan'),
+    ];
 
-    await _flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+    final androidPlugin = _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
 
-    print('🔔 Notification channel created with full-screen intent support');
+    for (final (channelId, channelName, soundName) in prayerChannels) {
+      final channel = AndroidNotificationChannel(
+        channelId,
+        channelName,
+        description: 'Notifications for prayer times',
+        importance: Importance.max,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound(soundName),
+        enableVibration: true,
+        showBadge: true,
+        ledColor: Colors.blue,
+      );
+      await androidPlugin?.createNotificationChannel(channel);
+    }
+
+    print('🔔 Per-prayer notification channels created');
 
     // Request iOS permissions
     await _flutterLocalNotificationsPlugin
@@ -82,17 +94,96 @@ class NotificationService {
 
     print('🔔 Notification permissions requested');
 
-    // Check and request Do Not Disturb permission for Android
+    // NOTE: Critical permission checks (exact alarm, battery optimization, DND)
+    // are done AFTER runApp() via checkAndRequestCriticalPermissions().
+    // They cannot run here because navigatorKey has no context yet.
+  }
+
+  /// Call this AFTER the app UI is shown (post-frame) so dialogs can be displayed.
+  static Future<void> checkAndRequestCriticalPermissions() async {
+    if (!Platform.isAndroid) return;
+    final androidPlugin = _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+    await _checkExactAlarmPermission(androidPlugin);
+    await _checkBatteryOptimization();
     await _checkAndRequestDoNotDisturbPermission();
   }
 
-  /// Check and request Do Not Disturb permission for Android
+  /// Check SCHEDULE_EXACT_ALARM permission (Android 12+) and guide user to grant it
+  static Future<void> _checkExactAlarmPermission(
+      AndroidFlutterLocalNotificationsPlugin? androidPlugin) async {
+    try {
+      final canSchedule = await androidPlugin?.canScheduleExactNotifications();
+      if (canSchedule == false) {
+        print('⚠️ Exact alarm permission not granted — requesting...');
+        // Delay slightly so any initialization dialogs settle
+        await Future.delayed(const Duration(milliseconds: 800));
+        final context = getContext();
+        if (context != null && context.mounted) {
+          await showDialog<void>(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Zamanlı Bildirim İzni'),
+              content: const Text(
+                'Namaz vakitlerinde bildirim gelebilmesi için "Kesin Alarmlar" iznini açmanız gerekiyor.\n\n'
+                'Açılacak ekranda "Namaz Vaktim" uygulamasını bulup izni açın.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Sonra'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.of(ctx).pop();
+                    await androidPlugin?.requestExactAlarmsPermission();
+                  },
+                  child: const Text('İzin Ver'),
+                ),
+              ],
+            ),
+          );
+        } else {
+          // Context not ready yet — try opening the settings directly
+          await androidPlugin?.requestExactAlarmsPermission();
+        }
+      } else {
+        print('✅ Exact alarm permission granted');
+      }
+    } catch (e) {
+      print('Error checking exact alarm permission: $e');
+    }
+  }
+
+  /// Request ignore battery optimization so alarms fire on time
+  static Future<void> _checkBatteryOptimization() async {
+    try {
+      final status = await Permission.ignoreBatteryOptimizations.status;
+      if (!status.isGranted) {
+        print('⚠️ Battery optimization not bypassed — requesting...');
+        await Permission.ignoreBatteryOptimizations.request();
+      } else {
+        print('✅ Battery optimization bypass granted');
+      }
+    } catch (e) {
+      print('Error checking battery optimization: $e');
+    }
+  }
+
+  /// Check and request Do Not Disturb permission for Android (shown only once)
   static Future<void> _checkAndRequestDoNotDisturbPermission() async {
     try {
-      // Show guide dialog for Do Not Disturb setup
-      await Future.delayed(const Duration(milliseconds: 500), () {
+      final prefs = await SharedPreferences.getInstance();
+      final alreadyShown = prefs.getBool('dnd_guide_shown') ?? false;
+      if (alreadyShown) {
+        print('🔔 DND guide already shown before, skipping');
+        return;
+      }
+      await Future.delayed(const Duration(milliseconds: 1200), () {
         _showDoNotDisturbSettingsDialog();
       });
+      await prefs.setBool('dnd_guide_shown', true);
       print('🔔 Do Not Disturb setup guide shown');
     } catch (e) {
       print('Error in Do Not Disturb setup: $e');
@@ -257,21 +348,45 @@ class NotificationService {
     }
   }
 
+  /// Returns null on non-Android or if check fails; false = permission missing.
+  static Future<bool?> canScheduleExactNotifications() async {
+    if (!Platform.isAndroid) return true;
+    try {
+      final androidPlugin = _flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      return await androidPlugin?.canScheduleExactNotifications();
+    } catch (e) {
+      print('Error checking canScheduleExactNotifications: $e');
+      return null;
+    }
+  }
+
+  /// Opens the Alarms & Reminders settings page on Android 12+.
+  static Future<void> requestExactAlarmPermission() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final androidPlugin = _flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      await androidPlugin?.requestExactAlarmsPermission();
+    } catch (e) {
+      print('Error requesting exact alarm permission: $e');
+    }
+  }
+
   static Future<void> showTestNotification() async {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'prayer_channel',
-      'Prayer Notifications',
-      channelDescription: 'Notifications for prayer times',
+      'test_notifications',
+      'Test Bildirimleri',
+      channelDescription: 'Debug test notifications — no ezan sound',
       importance: Importance.high,
       priority: Priority.high,
-      playSound: true,
-      sound: RawResourceAndroidNotificationSound('sabah_ezan'),
+      playSound: false,
     );
 
     const NotificationDetails notificationDetails = NotificationDetails(
       android: androidDetails,
       iOS: DarwinNotificationDetails(
-        presentSound: true,
+        presentSound: false,
         presentBadge: true,
         presentAlert: true,
       ),
@@ -279,12 +394,100 @@ class NotificationService {
 
     await _flutterLocalNotificationsPlugin.show(
       999, // Test ID
-      '🔔 Test Notification',
-      'Namaz vakti uygulaması çalışıyor!',
+      '🔔 Test Bildirimi (Anlık)',
+      'Bildirim kanalı çalışıyor!',
       notificationDetails,
     );
 
     print('🔔 Test notification sent');
+  }
+
+  /// Schedule a test notification 10 seconds in the future.
+  /// Returns a diagnostic string describing what happened.
+  static Future<String> scheduleTestNotificationIn10Seconds() async {
+    try {
+      final scheduledTime = DateTime.now().add(const Duration(seconds: 10));
+      final tzScheduled = _toScheduledInstant(scheduledTime);
+
+      await _flutterLocalNotificationsPlugin.zonedSchedule(
+        998, // Test scheduled ID
+        '⏰ Test Bildirimi (10 sn)',
+        'Zamanlı bildirimler çalışıyor!',
+        tzScheduled,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'test_notifications',
+            'Test Bildirimleri',
+            channelDescription: 'Debug test notifications — no ezan sound',
+            importance: Importance.max,
+            priority: Priority.max,
+            playSound: false,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentSound: false,
+            presentBadge: true,
+            presentAlert: true,
+          ),
+        ),
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+
+      // Check how many notifications are now pending
+      final pending =
+          await _flutterLocalNotificationsPlugin.pendingNotificationRequests();
+      final pendingIds = pending.map((n) => n.id).toList();
+      print('✅ Test notification scheduled at $tzScheduled. Pending IDs: $pendingIds');
+
+      if (pending.any((n) => n.id == 998)) {
+        return '✅ Zamanlandı (${tzScheduled.toLocal()})\n'
+            'Bekleyen bildirim sayısı: ${pending.length}';
+      } else {
+        return '❌ Zamanlanamadı — pending listede yok!\n'
+            'Bekleyen bildirim sayısı: ${pending.length}\n'
+            'Muhtemel sebep: Kesin alarm izni yok.';
+      }
+    } catch (e) {
+      print('❌ Error scheduling test notification: $e');
+      return '❌ Hata: $e';
+    }
+  }
+
+  // Keep old name as alias for backward compatibility
+  static Future<void> scheduleTestNotificationIn30Seconds() =>
+      scheduleTestNotificationIn10Seconds();
+
+  static String _channelIdForPrayer(String prayerName) {
+    switch (prayerName) {
+      case 'Fajr':    return 'prayer_fajr';
+      case 'Dhuhr':   return 'prayer_dhuhr';
+      case 'Asr':     return 'prayer_asr';
+      case 'Maghrib': return 'prayer_maghrib';
+      case 'Isha':    return 'prayer_isha';
+      default:        return 'prayer_fajr';
+    }
+  }
+
+  static String _channelNameForPrayer(String prayerName) {
+    switch (prayerName) {
+      case 'Fajr':    return 'Fajr Prayer';
+      case 'Dhuhr':   return 'Dhuhr Prayer';
+      case 'Asr':     return 'Asr Prayer';
+      case 'Maghrib': return 'Maghrib Prayer';
+      case 'Isha':    return 'Isha Prayer';
+      default:        return 'Fajr Prayer';
+    }
+  }
+
+  /// Convert a device-local [DateTime] into a fixed absolute instant for scheduling.
+  ///
+  /// We intentionally schedule against UTC instead of `tz.local` because this app
+  /// does not currently set the timezone package's local location from the device.
+  /// Using UTC here preserves the exact instant the user selected/tested.
+  static tz.TZDateTime _toScheduledInstant(DateTime dateTime) {
+    final utcTime = dateTime.toUtc();
+    return tz.TZDateTime.from(utcTime, tz.UTC);
   }
 
   /// Schedule a notification for prayer time
@@ -295,6 +498,7 @@ class NotificationService {
     required String language,
     required bool enableSound,
     String? soundFile,
+    int offsetMinutes = 0,
   }) async {
     try {
       // Kullanıcının seçtiği dildeki bildirim mesajlarını al
@@ -336,14 +540,16 @@ class NotificationService {
 
       final displayName = '${getPrayerEmoji(prayerName)} $prayerName';
 
-      // Convert to TZDateTime in local zone and ensure it's in the future
-      tz.TZDateTime scheduled = tz.TZDateTime.from(prayerTime, tz.local);
-      final now = tz.TZDateTime.now(tz.local);
+      // Keep the user's intended wall-clock time as an exact instant.
+      // Subtract the offset so notification fires before the actual prayer time.
+      final scheduledTime = prayerTime.subtract(Duration(minutes: offsetMinutes));
+      final scheduled = _toScheduledInstant(scheduledTime);
+      final now = tz.TZDateTime.now(tz.UTC);
       
       // Only schedule notifications for prayer times that haven't passed yet today
       // If the prayer time has already passed, don't schedule a notification
       if (scheduled.isBefore(now)) {
-        print('⏰ Prayer time for $prayerName has already passed today ($scheduled), skipping notification');
+        print('⏰ Notification time for $prayerName has already passed today ($scheduled, offset=${offsetMinutes}m), skipping');
         return;
       }
 
@@ -354,15 +560,12 @@ class NotificationService {
         scheduled,
         NotificationDetails(
           android: AndroidNotificationDetails(
-            'prayer_channel',
-            'Prayer Notifications',
+            _channelIdForPrayer(prayerName),
+            _channelNameForPrayer(prayerName),
             channelDescription: 'Notifications for prayer times',
             importance: Importance.max,
             priority: Priority.max,
             playSound: enableSound,
-            sound: enableSound && soundFile != null
-                ? RawResourceAndroidNotificationSound(soundFile.replaceAll('.mp3', ''))
-                : null,
             enableVibration: true,
             fullScreenIntent: true,
             autoCancel: false,
@@ -383,7 +586,7 @@ class NotificationService {
             interruptionLevel: InterruptionLevel.timeSensitive,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
@@ -404,6 +607,7 @@ class NotificationService {
     required String language,
     required Map<String, bool> notificationSettings,
     required Map<String, bool> soundSettings,
+    Map<String, int>? offsetSettings,
   }) async {
     // Do NOT cancel all notifications - only schedule for enabled prayers
     // This prevents duplicate notification scheduling
@@ -428,7 +632,8 @@ class NotificationService {
       final soundFile = soundFiles[prayer.name];
 
       if (enableNotification) {
-        print('🔔 Scheduling notification for ${prayer.name} at ${prayer.time} with sound: $enableSound ($soundFile)');
+        final offsetMinutes = offsetSettings?[prayer.name] ?? 5;
+        print('🔔 Scheduling notification for ${prayer.name} at ${prayer.time} (${offsetMinutes}m before) with sound: $enableSound ($soundFile)');
         await schedulePrayerNotification(
           id: i,
           prayerName: prayer.name,
@@ -436,6 +641,7 @@ class NotificationService {
           language: language,
           enableSound: enableSound,
           soundFile: soundFile,
+          offsetMinutes: offsetMinutes,
         );
         print('✅ Notification scheduled for ${prayer.name}');
         scheduledCount++;
@@ -503,7 +709,7 @@ class NotificationService {
 
     final displayName = '${getPrayerEmoji(prayerName)} $prayerName';
 
-    // Map prayer names to sound files
+    // Map prayer names to sound files (kept for reference)
     final soundFiles = {
       'Fajr': 'sabah_ezan.mp3',
       'Dhuhr': 'ogle_ezan.mp3',
@@ -512,21 +718,26 @@ class NotificationService {
       'Isha': 'yatsi_ezan.mp3',
     };
 
+    // soundFile is unused here — the channel itself carries the correct sound
+    // ignore: unused_local_variable
     final soundFile = soundFiles[prayerName];
+    final channelId = _channelIdForPrayer(prayerName);
+    final channelName = _channelNameForPrayer(prayerName);
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'prayer_channel',
-      'Prayer Notifications',
+    final androidDetails = AndroidNotificationDetails(
+      channelId,
+      channelName,
       channelDescription: 'Notifications for prayer times',
-      importance: Importance.high,
-      priority: Priority.high,
+      importance: Importance.max,
+      priority: Priority.max,
       playSound: true,
-      sound: RawResourceAndroidNotificationSound('sabah_ezan'),
+      enableVibration: true,
+      fullScreenIntent: true,
     );
 
-    const NotificationDetails notificationDetails = NotificationDetails(
+    final notificationDetails = NotificationDetails(
       android: androidDetails,
-      iOS: DarwinNotificationDetails(
+      iOS: const DarwinNotificationDetails(
         presentSound: true,
         presentBadge: true,
         presentAlert: true,

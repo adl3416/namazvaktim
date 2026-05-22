@@ -32,12 +32,23 @@ class AppSettings extends ChangeNotifier {
     'Isha': true,
   };
 
+  // Minutes before prayer time to fire the notification (5 or 15)
+  Map<String, int> _prayerNotificationOffsets = {
+    'Fajr': 5,
+    'Sunrise': 5,
+    'Dhuhr': 5,
+    'Asr': 5,
+    'Maghrib': 5,
+    'Isha': 5,
+  };
+
   String get language => _language;
   ThemeMode get themeMode => _themeMode;
   bool get enableAdhanSound => _enableAdhanSound;
   bool get enablePrayerNotifications => _enablePrayerNotifications;
   Map<String, bool> get prayerNotifications => Map.unmodifiable(_prayerNotifications);
   Map<String, bool> get prayerSounds => Map.unmodifiable(_prayerSounds);
+  Map<String, int> get prayerNotificationOffsets => Map.unmodifiable(_prayerNotificationOffsets);
 
   // Theme palettes stored as name -> (section -> ARGB int)
   Map<String, Map<String, int>> _palettes = {};
@@ -85,6 +96,18 @@ class AppSettings extends ChangeNotifier {
         decoded.forEach((key, value) {
           if (_prayerSounds.containsKey(key)) {
             _prayerSounds[key] = value as bool;
+          }
+        });
+      } catch (_) {}
+    }
+
+    final prayerOffsetsRaw = _prefs.getString('prayer_notification_offsets');
+    if (prayerOffsetsRaw != null) {
+      try {
+        final decoded = jsonDecode(prayerOffsetsRaw) as Map<String, dynamic>;
+        decoded.forEach((key, value) {
+          if (_prayerNotificationOffsets.containsKey(key)) {
+            _prayerNotificationOffsets[key] = (value as num).toInt();
           }
         });
       } catch (_) {}
@@ -224,6 +247,16 @@ class AppSettings extends ChangeNotifier {
       _prayerSounds[prayerName] = enabled;
       if (_initialized) {
         await _prefs.setString('prayer_sounds', jsonEncode(_prayerSounds));
+      }
+      notifyListeners();
+    }
+  }
+
+  Future<void> setPrayerNotificationOffset(String prayerName, int minutes) async {
+    if (_prayerNotificationOffsets.containsKey(prayerName)) {
+      _prayerNotificationOffsets[prayerName] = minutes;
+      if (_initialized) {
+        await _prefs.setString('prayer_notification_offsets', jsonEncode(_prayerNotificationOffsets));
       }
       notifyListeners();
     }

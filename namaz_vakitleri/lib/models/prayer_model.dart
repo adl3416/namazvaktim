@@ -255,21 +255,3 @@ class GeoLocation {
     required this.country,
   });
 }
-
-class Mosque {
-  final String name;
-  final double latitude;
-  final double longitude;
-  final double distance; // in km
-  final String? address;
-  final String? phone;
-
-  Mosque({
-    required this.name,
-    required this.latitude,
-    required this.longitude,
-    required this.distance,
-    this.address,
-    this.phone,
-  });
-}

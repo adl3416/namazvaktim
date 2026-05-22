@@ -38,6 +38,7 @@ class PrayerProvider extends ChangeNotifier {
   
   // Adhan playing
   final AudioPlayer _audioPlayer = AudioPlayer();
+  bool _isAdhanPlaying = false;
   String? _lastAdhanPlayedForPrayer;
   final Duration _adhanThreshold = const Duration(minutes: 15);
   
@@ -57,6 +58,7 @@ class PrayerProvider extends ChangeNotifier {
   String get savedCity => _savedCity;
   String get savedCountry => _savedCountry;
   Duration? get countdownDuration => _countdownDuration;
+  bool get isAdhanPlaying => _isAdhanPlaying;
 
   Future<void> initialize() async {
     try {
@@ -101,8 +103,6 @@ class PrayerProvider extends ChangeNotifier {
         '📍 Final Location: ${_currentLocation?.city} (${_currentLocation?.latitude}, ${_currentLocation?.longitude})',
       );
 
-      await fetchPrayerTimes();
-
       // Set up audio context for adhan playback before playing any sounds
       await _audioPlayer.setAudioContext(
         AudioContext(
@@ -116,7 +116,11 @@ class PrayerProvider extends ChangeNotifier {
         ),
       );
 
-      // Start countdown timer
+      // Fetch prayer times first
+      await fetchPrayerTimes();
+
+      // Start countdown timer only after initial fetch is complete
+      // This prevents auto-playing adhan on app startup
       _startCountdownTimer();
     } catch (e, stacktrace) {
       print('❌ Error initializing PrayerProvider: $e');
@@ -268,6 +272,7 @@ class PrayerProvider extends ChangeNotifier {
             language: _appSettings.language,
             notificationSettings: _appSettings.prayerNotifications,
             soundSettings: _appSettings.prayerSounds,
+            offsetSettings: _appSettings.prayerNotificationOffsets,
           );
           
           // Clear old entries and add today
@@ -360,18 +365,14 @@ class PrayerProvider extends ChangeNotifier {
       if (_nextPrayer != null && !_isFetching) {
         final timeDiff = _nextPrayer!.time.difference(now);
 
-        // If prayer time has just arrived (within last 10 seconds), trigger immediate notification
-        if (timeDiff <= Duration.zero && timeDiff > Duration(seconds: -10)) {
+        // If prayer time has just arrived (within last 3 minutes), trigger adhan.
+        // Wide window so the app catching up after brief background/Doze still plays adhan.
+        if (timeDiff <= Duration.zero && timeDiff > Duration(minutes: -3)) {
           print('🔔 PRAYER TIME ARRIVED: ${_nextPrayer!.name} - Triggering immediate actions');
-          await _checkAndPlayAdhanOnTime(_nextPrayer!);
-          
-          // Force immediate notification if enabled
-          final notificationEnabled = _appSettings.prayerNotifications[_nextPrayer!.name] ?? true;
-          if (notificationEnabled) {
-            await NotificationService.showPrayerTimeNotification(
-              prayerName: _nextPrayer!.name,
-              language: _appSettings.language,
-            );
+          // Only trigger once per prayer time
+          if (_lastAdhanPlayedForPrayer != '${_nextPrayer!.name}_ontime') {
+            await _checkAndPlayAdhanOnTime(_nextPrayer!);
+            _lastAdhanPlayedForPrayer = '${_nextPrayer!.name}_ontime';
           }
         }
 
@@ -393,24 +394,30 @@ class PrayerProvider extends ChangeNotifier {
     _audioPlayer.dispose();
   }
 
-  /// Check if adhan should be played when approaching prayer time
-  Future<void> _checkAndPlayAdhan(PrayerTime prayer, Duration remaining) async {
-    // Only play adhan if sound is enabled for this prayer
-    final soundEnabled = _appSettings.prayerSounds[prayer.name] ?? true;
-    if (!soundEnabled) {
-      print('🔇 Sound disabled for ${prayer.name}, skipping approaching adhan');
-      return;
-    }
+  /// Force-reschedule all notifications with the latest settings.
+  /// Call this whenever notification settings (offset, enabled, sound) change.
+  Future<void> rescheduleNotifications() async {
+    if (_currentPrayerTimes == null) return;
+    print('🔄 Rescheduling notifications with updated settings...');
+    _scheduledNotifications.clear();
+    await NotificationService.cancelAllNotifications();
+    await NotificationService.scheduleAllPrayerNotificationsWithSettings(
+      prayers: _currentPrayerTimes!.prayerTimesList,
+      language: _appSettings.language,
+      notificationSettings: _appSettings.prayerNotifications,
+      soundSettings: _appSettings.prayerSounds,
+      offsetSettings: _appSettings.prayerNotificationOffsets,
+    );
+    final today = DateTime.now().toString().split(' ')[0];
+    _scheduledNotifications.add('${today}_${_appSettings.language}');
+    print('✅ Notifications rescheduled');
+  }
 
-    // Check if we're within the threshold and haven't played for this prayer yet
-    if (remaining <= _adhanThreshold && remaining > Duration.zero) {
-      if (_lastAdhanPlayedForPrayer != prayer.name) {
-        print('🔔 Approaching prayer: ${prayer.name} - ${remaining.inMinutes} minutes remaining');
-        await _playAdhanForPrayer(prayer.name);
-        _lastAdhanPlayedForPrayer = prayer.name;
-      }
-    } else if (remaining > _adhanThreshold) {
-      // Reset when we're outside the threshold (new prayer cycle)
+  /// Reset adhan tracking state when approaching a new prayer cycle
+  Future<void> _checkAndPlayAdhan(PrayerTime prayer, Duration remaining) async {
+    // Adhan plays ONLY at the exact prayer time via _checkAndPlayAdhanOnTime.
+    // This function now only resets the tracking state for the next cycle.
+    if (remaining > _adhanThreshold) {
       _lastAdhanPlayedForPrayer = null;
     }
   }
@@ -494,9 +501,14 @@ class PrayerProvider extends ChangeNotifier {
       // Stop any currently playing audio first
       await _audioPlayer.stop();
       
-      // Notify Android that adhan is starting (for volume button monitoring)
-      const platform = MethodChannel('com.vakit.app.namaz_vakitleri/adhan');
-      await platform.invokeMethod('startAdhanPlayback');
+      // Notify Android that adhan is starting (for volume button monitoring).
+      // Wrapped in try-catch: if the native channel is unavailable, audio still plays.
+      try {
+        const platform = MethodChannel('com.vakit.app.namaz_vakitleri/adhan');
+        await platform.invokeMethod('startAdhanPlayback');
+      } catch (e) {
+        print('ℹ️ Native adhan channel unavailable, continuing with audio: $e');
+      }
       
       // Map prayer names to sound files
       final soundFiles = {
@@ -514,6 +526,8 @@ class PrayerProvider extends ChangeNotifier {
         // Set audio source and play
         await _audioPlayer.setSource(AssetSource('sounds/$soundFile'));
         await _audioPlayer.resume();
+        _isAdhanPlaying = true;
+        notifyListeners();
         
         // Flag to prevent multiple state callbacks for the same stop event
         bool _stopHandled = false;
@@ -563,6 +577,8 @@ class PrayerProvider extends ChangeNotifier {
   
   /// Notify Android that adhan playback has stopped
   Future<void> _notifyAdhanStopped() async {
+    _isAdhanPlaying = false;
+    notifyListeners();
     try {
       const platform = MethodChannel('com.vakit.app.namaz_vakitleri/adhan');
       await platform.invokeMethod('stopAdhanPlayback');
@@ -612,6 +628,8 @@ class PrayerProvider extends ChangeNotifier {
   Future<void> stopAdhan() async {
     try {
       await _audioPlayer.stop();
+      _isAdhanPlaying = false;
+      notifyListeners();
       _notifyAdhanStopped();
       print('🛑 Adhan stopped manually');
     } catch (e) {

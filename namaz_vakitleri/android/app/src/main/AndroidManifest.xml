@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+    <!-- Allow app to ignore battery optimization so alarms fire on time -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
     <!-- Do Not Disturb permission -->
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY"/>
     <!-- Wake lock permission for keeping screen on -->

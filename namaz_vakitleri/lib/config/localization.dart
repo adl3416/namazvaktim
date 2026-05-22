@@ -12,7 +12,7 @@ class AppLocalizations {
       'isha': 'Yatsı',
       'settings': 'Ayarlar',
       'location': 'Konum',
-      'qibla': 'Kibe',
+      'qibla': 'Kible',
       'search_city': 'Şehir Ara',
       'nearby_mosques': 'Yakındaki Camiler',
       'prayer_time_label': 'Vaktine',

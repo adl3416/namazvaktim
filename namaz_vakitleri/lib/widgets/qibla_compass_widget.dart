@@ -1,607 +1,379 @@
-import 'package:flutter/material.dart';
-import 'dart:ui' as ui;
-import 'package:flutter_compass/flutter_compass.dart';
 import 'dart:async';
-import 'package:namaz_vakitleri/services/location_service.dart';
-import 'package:namaz_vakitleri/models/prayer_model.dart';
-import 'package:namaz_vakitleri/config/color_system.dart';
-import 'package:namaz_vakitleri/config/localization.dart';
 import 'dart:math' as math;
+
 import 'package:adhan/adhan.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_compass/flutter_compass.dart';
 import 'package:vibration/vibration.dart';
 
-class QiblaCompassWidget extends StatefulWidget {
-  final String locale;
-  final Duration startRotationDelay;
-  final VoidCallback? onTap;
-  final double sensitivity; // degrees margin for alignment
-  final Color? alignmentColor;
-  final GeoLocation? userLocation; // User's location for accurate qibla calculation
-  final Color? backgroundColor; // Main screen background color
+import '../config/localization.dart';
+import '../models/prayer_model.dart';
+import '../services/location_service.dart';
 
+class QiblaTelemetry {
+  const QiblaTelemetry({
+    this.heading,
+    this.qiblaBearing,
+    this.relativeAngle,
+    this.isAligned = false,
+    this.hasCompass = false,
+    this.hasLocation = false,
+  });
+
+  final double? heading;
+  final double? qiblaBearing;
+  final double? relativeAngle;
+  final bool isAligned;
+  final bool hasCompass;
+  final bool hasLocation;
+
+  @override
+  bool operator ==(Object other) {
+    return other is QiblaTelemetry &&
+        other.heading == heading &&
+        other.qiblaBearing == qiblaBearing &&
+        other.relativeAngle == relativeAngle &&
+        other.isAligned == isAligned &&
+        other.hasCompass == hasCompass &&
+        other.hasLocation == hasLocation;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        heading,
+        qiblaBearing,
+        relativeAngle,
+        isAligned,
+        hasCompass,
+        hasLocation,
+      );
+}
+
+class QiblaCompassWidget extends StatefulWidget {
   const QiblaCompassWidget({
     Key? key,
     required this.locale,
-    this.startRotationDelay = const Duration(milliseconds: 700),
+    this.startRotationDelay = const Duration(milliseconds: 150),
     this.onTap,
-    this.sensitivity = 2.0, // 2 degrees sensitivity for alignment
+    this.sensitivity = 3.0,
     this.alignmentColor,
     this.userLocation,
     this.backgroundColor,
+    this.onTelemetry,
   }) : super(key: key);
+
+  final String locale;
+  final Duration startRotationDelay;
+  final VoidCallback? onTap;
+  final double sensitivity;
+  final Color? alignmentColor;
+  final GeoLocation? userLocation;
+  final Color? backgroundColor;
+  final ValueChanged<QiblaTelemetry>? onTelemetry;
 
   @override
   State<QiblaCompassWidget> createState() => _QiblaCompassWidgetState();
 }
 
 class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
-  with TickerProviderStateMixin {
-  late AnimationController _rotationController;
-  late Animation<double> _rotationAnimation;
-  double _heading = 0.0; // radians
-  bool _hasHeading = false;
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _fallbackController;
   StreamSubscription<CompassEvent>? _compassSub;
-  double _displayHeading = 0.0; // smoothed heading used for rendering
-  late AnimationController _needleController;
-  Animation<double>? _needleAnimation;
+
   GeoLocation? _deviceLocation;
-  double? _qiblaBearingRad;
-  bool _lastAligned = false;
-  late AnimationController _scaleController;
-  late Animation<double> _scaleAnimation;
-  
-  // Zoom feature
-  double _currentZoom = 1.0;
+  double? _qiblaBearing;
+  double? _heading;
+  double _needleRadians = 0;
+  bool _hasCompass = false;
+  bool _isAligned = false;
+  bool _vibrationCooldown = false;
 
   @override
   void initState() {
     super.initState();
-    // Rotation controller only; scaling is handled by the Hero expansion
-    _rotationController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
+    _fallbackController = AnimationController(
       vsync: this,
-    );
+      duration: const Duration(seconds: 10),
+    )..repeat();
 
-    _rotationAnimation = Tween<double>(begin: 0.0, end: 2 * math.pi).animate(
-      CurvedAnimation(parent: _rotationController, curve: Curves.easeInOut),
-    );
-
-    _needleController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 420),
-    );
-
-    _scaleController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 220),
-    );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.6).animate(
-      CurvedAnimation(parent: _scaleController, curve: Curves.easeInOutCubic),
-    );
-
-    // Start rotation after the hero/expansion finishes
-    Future.delayed(widget.startRotationDelay, () {
-      // Try to listen to device compass. If there's no valid heading, fallback to animated rotation
-      try {
-        // Use provided userLocation or get current location
-        if (widget.userLocation != null && mounted) {
-          setState(() {
-            _deviceLocation = widget.userLocation;
-            _qiblaBearingRad = _computeQiblaBearing(widget.userLocation!.latitude, widget.userLocation!.longitude);
-          });
-        } else {
-          // Fallback: get device location if not provided
-          LocationService.getCurrentLocation().then((loc) {
-            if (loc != null && mounted) {
-              setState(() {
-                _deviceLocation = loc;
-                _qiblaBearingRad = _computeQiblaBearing(loc.latitude, loc.longitude);
-              });
-            }
-          }).catchError((_) {});
-        }
-
-        _compassSub = FlutterCompass.events?.listen((event) {
-          final hd = event.heading;
-          if (hd != null) {
-            if (mounted) {
-              final headingRad = hd * (math.pi / 180);
-              // Kible needle should point to Qibla direction regardless of device rotation
-              // But we need to compensate for device heading to maintain correct pointing
-              final desired = _qiblaBearingRad != null ? _qiblaBearingRad! - headingRad : 0.0;
-              final normalized = _normalizeAngle(desired);
-
-              // Debug: print heading/bearing info to help verify correctness
-              try {
-                final headingDeg = (headingRad * 180 / math.pi).toStringAsFixed(2);
-                final qiblaDeg = _qiblaBearingRad != null ? (_qiblaBearingRad! * 180 / math.pi).toStringAsFixed(2) : 'null';
-                final desiredDeg = (desired * 180 / math.pi).toStringAsFixed(2);
-                final normDeg = (normalized * 180 / math.pi).toStringAsFixed(2);
-                debugPrint('🧭 Compass: heading=$headingDeg°, qibla=$qiblaDeg°, needle=$normDeg°');
-              } catch (_) {}
-
-              // animate smoothly to normalized target with small-deadzone smoothing
-              if (mounted) {
-                setState(() {
-                  _hasHeading = true;
-                  // Always use the normalized needle angle directly for accurate compass
-                  _displayHeading = normalized;
-                });
-                // ensure fallback spinner stops
-                if (_rotationController.isAnimating) _rotationController.stop();
-              }
-            }
-          }
-        });
-      } catch (e) {
-        // ignore and fallback
-      }
-
-      if (!_hasHeading && mounted) {
-        _rotationController.repeat();
-      }
+    Future.delayed(widget.startRotationDelay, () async {
+      if (!mounted) return;
+      await _loadLocation();
+      _listenCompass();
     });
   }
 
-  // Provide haptic and audio feedback when Qibla is aligned
-  Future<void> _provideAlignmentFeedback() async {
-    try {
-      // Check if vibration is available
-      final hasVibrator = await Vibration.hasVibrator() ?? false;
-      final hasAmplitudeControl = await Vibration.hasAmplitudeControl() ?? false;
-      
-      if (hasVibrator) {
-        if (hasAmplitudeControl) {
-          // Strong vibration pattern for alignment
-          await Vibration.vibrate(
-            pattern: [0, 100, 50, 100, 50, 200],
-            intensities: [0, 128, 0, 255, 0, 128],
-          );
-        } else {
-          // Simple vibration for devices without amplitude control
-          await Vibration.vibrate(duration: 500);
-        }
+  Future<void> _loadLocation() async {
+    GeoLocation? location = widget.userLocation;
+    location ??= await LocationService.getCurrentLocation();
+    if (!mounted) return;
+
+    setState(() {
+      _deviceLocation = location;
+      _qiblaBearing = location == null
+          ? null
+          : _normalizeDegrees(Qibla(Coordinates(
+              location.latitude,
+              location.longitude,
+            )).direction);
+    });
+
+    _emitTelemetry();
+  }
+
+  void _listenCompass() {
+    _compassSub?.cancel();
+    final stream = FlutterCompass.events;
+    if (stream == null) {
+      _emitTelemetry();
+      return;
+    }
+
+    _compassSub = stream.listen((event) {
+      final heading = event.heading;
+      if (heading == null || !mounted) return;
+
+      final qiblaBearing = _qiblaBearing;
+      final relativeAngle =
+          qiblaBearing == null ? null : _normalizeDegrees(qiblaBearing - heading);
+      final aligned =
+          relativeAngle != null && relativeAngle.abs() <= widget.sensitivity;
+
+      setState(() {
+        _hasCompass = true;
+        _heading = heading;
+        _needleRadians = relativeAngle == null ? 0 : _degToRad(relativeAngle);
+        _isAligned = aligned;
+      });
+
+      if (_fallbackController.isAnimating) {
+        _fallbackController.stop();
       }
-      
-      // Note: Audio feedback could be added here if desired
-      // For now, the visual lantern effect provides sufficient feedback
-      
-    } catch (e) {
-      // Silently fail if vibration is not available or fails
-      debugPrint('Haptic feedback not available: $e');
+
+      _emitTelemetry();
+      _vibrateIfNeeded(aligned);
+    });
+  }
+
+  Future<void> _vibrateIfNeeded(bool aligned) async {
+    if (!aligned || _vibrationCooldown) return;
+    _vibrationCooldown = true;
+    try {
+      final hasVibrator = await Vibration.hasVibrator() ?? false;
+      if (hasVibrator) {
+        await Vibration.vibrate(duration: 120);
+      }
+    } catch (_) {
+      // Ignore vibration errors.
+    } finally {
+      Future.delayed(const Duration(milliseconds: 900), () {
+        _vibrationCooldown = false;
+      });
+    }
+  }
+
+  void _emitTelemetry() {
+    widget.onTelemetry?.call(
+      QiblaTelemetry(
+        heading: _heading == null ? null : _round(_heading!),
+        qiblaBearing: _qiblaBearing == null ? null : _round(_qiblaBearing!),
+        relativeAngle: (_heading == null || _qiblaBearing == null)
+            ? null
+            : _round(_normalizeDegrees(_qiblaBearing! - _heading!)),
+        isAligned: _isAligned,
+        hasCompass: _hasCompass,
+        hasLocation: _deviceLocation != null,
+      ),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant QiblaCompassWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userLocation != widget.userLocation) {
+      _loadLocation();
     }
   }
 
   @override
   void dispose() {
-    _rotationController.dispose();
     _compassSub?.cancel();
-    _scaleController.dispose();
+    _fallbackController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isRTL = AppLocalizations.isRTL(widget.locale);
+    final accent = widget.alignmentColor ?? const Color(0xFFD7B56D);
+    final bg = widget.backgroundColor ?? const Color(0xFFF8F3EC);
 
-    // Build a compact compass with a rotating needle
-    final compassSize = 100.0;
+    Widget compass = LayoutBuilder(
+      builder: (context, constraints) {
+        final size = math.min(constraints.maxWidth, constraints.maxHeight);
 
-    return LayoutBuilder(builder: (context, constraints) {
-      // Determine a size that fits the incoming Hero constraints to avoid overflow
-        double maxWidth = constraints.maxWidth.isFinite && constraints.maxWidth > 0
-          ? constraints.maxWidth
-          : compassSize;
-        double maxHeight = constraints.maxHeight.isFinite && constraints.maxHeight > 0
-          ? constraints.maxHeight
-          : compassSize;
-
-        // Choose a square size that fits both width and height constraints.
-        final size = math.min(math.min(maxWidth, maxHeight), compassSize);
-
-        // Show the label only when there's enough vertical space for compass + label.
-        final labelHeightEstimate = 28.0; // spacing + text
-        final showLabel = size >= 120 && (!constraints.maxHeight.isFinite || constraints.maxHeight >= size + labelHeightEstimate);
-
-        // Determine alignment state with HIGHER precision: when needle is very close to zero angle
-        final sensitivityRad = 1.5 * (math.pi / 180.0); // 1.5 degrees - daha tolerant ama daha doğru
-        final aligned = _hasHeading && _qiblaBearingRad != null && (_normalizeAngle(_displayHeading).abs() < sensitivityRad);
-        final alignColor = widget.alignmentColor ?? (isDark ? AppColors.darkAccentMint : AppColors.accentMint);
-        
-        // Check if alignment state changed for haptic feedback
-        if (aligned != _lastAligned && mounted) {
-          setState(() {
-            _lastAligned = aligned;
-          });
-          
-          // Provide haptic feedback when alignment is achieved
-          if (aligned) {
-            _provideAlignmentFeedback();
-            debugPrint('🎯 QIBLA ALIGNED! Perfect direction found.');
-          }
-        }
-        
-        // Debug: Print qibla accuracy info
-        if (_qiblaBearingRad != null && _hasHeading) {
-          final needleDeg = (_displayHeading * 180 / math.pi).toStringAsFixed(1);
-          final qiblaDeg = (_qiblaBearingRad! * 180 / math.pi).toStringAsFixed(1);
-          final normalizedNeedleDeg = (_normalizeAngle(_displayHeading) * 180 / math.pi).toStringAsFixed(1);
-          print('🧭 Kible UI: İğne=${needleDeg}°, Hedef=${qiblaDeg}°, Normalize=${normalizedNeedleDeg}°, Hizalı=${aligned}');
-          
-          // Print location if available
-          if (_deviceLocation != null) {
-            print('📍 Konum: ${_deviceLocation!.latitude.toStringAsFixed(4)}, ${_deviceLocation!.longitude.toStringAsFixed(4)}');
-          }
-        }
-      // Wrap with scale animation when used as a tappable, full-screen element
-      Widget compassContent = Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          SizedBox(
-            width: size,
-            height: size,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Bezel / subtle background gradient
-                Container(
-                  width: size,
-                  height: size,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        Colors.black.withOpacity(0.1),
-                        Colors.black.withOpacity(0.2),
-                      ],
-                      center: Alignment(-0.2, -0.2),
-                      radius: 0.8,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 12,
-                        spreadRadius: 1,
-                      ),
-                    ],
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    bg,
+                    Color.lerp(bg, Colors.black, 0.05) ?? bg,
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.10),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
                   ),
-                ),
-
-                // Static compass marks
-                CustomPaint(
-                  size: Size.square(size),
-                  painter: CompassPainter(isDark: isDark),
-                ),
-
-                // Rotating needle with enhanced alignment effects
-                AnimatedBuilder(
-                  animation: _rotationController,
-                  builder: (context, child) {
-                    // Use smoothed display heading when available, otherwise fallback to spinning animation
-                    final angle = _hasHeading ? _displayHeading : _rotationAnimation.value;
-                    return Transform.rotate(
-                      angle: angle,
-                      child: child,
-                    );
-                  },
-                  child: Stack(
-                    alignment: Alignment.topCenter,
-                    children: [
-                      // Glowing background effect when aligned (lantern effect)
-                      if (aligned)
-                        Container(
-                          width: size * 0.25,
-                          height: size * 0.65,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              colors: [
-                                Colors.black.withOpacity(0.4),
-                                Colors.black.withOpacity(0.2),
-                                Colors.black.withOpacity(0.0),
-                              ],
-                              center: Alignment.topCenter,
-                              radius: 0.8,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.6),
-                                blurRadius: 20,
-                                spreadRadius: 5,
-                              ),
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 40,
-                                spreadRadius: 10,
-                              ),
-                            ],
-                          ),
-                        ),
-                      
-                      // Main needle
-                      SizedBox(
-                        width: size * 0.16,
-                        height: size * 0.56,
-                        child: CustomPaint(
-                          painter: NeedlePainter(
-                            color: Colors.black,
-                            isAligned: aligned,
-                          ),
-                        ),
-                      ),
-                      
-                      // Pulsing light effect at needle tip when aligned
-                      if (aligned)
-                        Positioned(
-                          top: 0,
-                          child: AnimatedBuilder(
-                            animation: _scaleController,
-                            builder: (context, child) {
-                              return Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.black,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.8),
-                                      blurRadius: 15,
-                                      spreadRadius: 3,
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-
-                // Center Kaaba dot (subtle)
-                Container(
-                  width: math.max(12, size * 0.12),
-                  height: math.max(12, size * 0.12),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.black,
-                    border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.28),
-                        blurRadius: 10,
-                      ),
-                    ],
-                  ),
-                ),
-                // Alignment check indicator (top-right)
-                Positioned(
-                  top: math.max(6, size * 0.05),
-                  right: math.max(6, size * 0.05),
-                  child: Icon(
-                    Icons.check_circle,
-                    color: Colors.black,
-                    size: math.max(18, size * 0.12),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          if (showLabel) SizedBox(height: AppSpacing.sm),
-          if (showLabel)
-            Text(
-              AppLocalizations.translate('qibla', widget.locale),
-              style: AppTypography.h3.copyWith(color: AppColors.accentPrimary),
+            CustomPaint(
+              size: Size.square(size),
+              painter: _CompassDialPainter(
+                color: const Color(0xFF2E2924),
+                accentColor: accent,
+                isAligned: _isAligned,
+              ),
             ),
-        ],
-      );
-
-      if (widget.onTap != null) {
-        compassContent = GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () async {
-            // Play shrink animation, animate needle back gently, then call onTap to close (Hero will reverse)
-            try {
-              await _scaleController.forward();
-            } catch (_) {}
-            // animate needle back to neutral (0) so closing feels smooth
-            try {
-              await _animateNeedleToAndWait(0.0, timeout: const Duration(milliseconds: 600));
-            } catch (_) {}
-            widget.onTap?.call();
-            // reset scale for next show
-            _scaleController.reset();
-          },
-          child: AnimatedBuilder(
-            animation: _scaleController,
-            builder: (context, child) {
-              return Transform.scale(scale: _scaleAnimation.value, child: child);
-            },
-            child: compassContent,
-          ),
+            AnimatedBuilder(
+              animation: _fallbackController,
+              builder: (context, child) {
+                final angle = _hasCompass
+                    ? _needleRadians
+                    : _fallbackController.value * 2 * math.pi;
+                return Transform.rotate(angle: angle, child: child);
+              },
+              child: Icon(
+                Icons.navigation_rounded,
+                size: size * 0.42,
+                color: _isAligned ? accent : const Color(0xFF204B43),
+              ),
+            ),
+            Container(
+              width: math.max(16, size * 0.09),
+              height: math.max(16, size * 0.09),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF201A16),
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+            ),
+            Positioned(
+              bottom: size * 0.16,
+              child: Text(
+                _isAligned ? 'Kible' : AppLocalizations.translate('qibla', widget.locale),
+                style: TextStyle(
+                  fontSize: math.max(12, size * 0.06),
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF204B43),
+                ),
+              ),
+            ),
+          ],
         );
-      }
+      },
+    );
 
-      return compassContent;
-    });
-  }
-
-  Future<void> _animateNeedleToAndWait(double target, {Duration? timeout}) async {
-    if (!mounted) return;
-    // Simple implementation - just set the display heading
-    setState(() {
-      _displayHeading = target;
-    });
-  }
-
-  double _normalizeAngle(double angle) {
-    // Normalize to -pi..pi
-    var a = angle % (2 * math.pi);
-    if (a > math.pi) a -= 2 * math.pi;
-    if (a <= -math.pi) a += 2 * math.pi;
-    return a;
-  }
-
-  void _animateNeedleTo(double target) {
-    if (!mounted) return;
-    // Apply smooth transition for better visual experience
-    setState(() {
-      _displayHeading = target;
-    });
-  }
-
-  void _needleListener() {
-    // Not needed anymore
-  }
-
-  // Compute initial bearing from (lat1, lon1) to Kaaba using adhan library for high accuracy
-  double _computeQiblaBearing(double lat1Deg, double lon1Deg) {
-    try {
-      final coordinates = Coordinates(lat1Deg, lon1Deg);
-      final qibla = Qibla(coordinates);
-      
-      // adhan returns direction in degrees (0-360), convert to radians
-      // Adhan's direction is clockwise from North (standard bearing)
-      final bearingDeg = qibla.direction;
-      
-      // Ensure bearing is 0-360
-      final bearingNormalized = ((bearingDeg % 360) + 360) % 360;
-      final bearingRad = bearingNormalized * math.pi / 180.0;
-      
-      // Detailed debug logging
-      debugPrint('═════════════════════════════════════════');
-      debugPrint('✅ QIBLA CALCULATION (Adhan Library)');
-      debugPrint('Location: (${lat1Deg.toStringAsFixed(6)}, ${lon1Deg.toStringAsFixed(6)})');
-      debugPrint('Qibla Direction: ${bearingNormalized.toStringAsFixed(2)}°');
-      debugPrint('Qibla Radians: ${bearingRad.toStringAsFixed(4)} rad');
-      debugPrint('═════════════════════════════════════════');
-      
-      return bearingRad;
-    } catch (e) {
-      // Fallback to manual calculation if adhan fails
-      debugPrint('❌ Adhan Qibla calculation failed: $e');
-      debugPrint('Using fallback haversine formula...');
-      return _computeQiblaBearingFallback(lat1Deg, lon1Deg);
+    if (widget.onTap != null) {
+      compass = GestureDetector(
+        onTap: widget.onTap,
+        behavior: HitTestBehavior.opaque,
+        child: compass,
+      );
     }
+
+    return compass;
   }
 
-  // Fallback manual calculation using accurate haversine formula
-  double _computeQiblaBearingFallback(double lat1Deg, double lon1Deg) {
-    // Kaaba coordinates (Mecca) - verified coordinates
-    const lat2Deg = 21.422487;
-    const lon2Deg = 39.826206;
-
-    final lat1 = lat1Deg * math.pi / 180.0;
-    final lon1 = lon1Deg * math.pi / 180.0;
-    final lat2 = lat2Deg * math.pi / 180.0;
-    final lon2 = lon2Deg * math.pi / 180.0;
-
-    final dLon = lon2 - lon1;
-    
-    // Calculate bearing using atan2
-    final x = math.sin(dLon) * math.cos(lat2);
-    final y = math.cos(lat1) * math.sin(lat2) - 
-              math.sin(lat1) * math.cos(lat2) * math.cos(dLon);
-    
-    final bearing = math.atan2(x, y); // radians (-π to π)
-    
-    // Normalize to 0..2π
-    final bearingNorm = (bearing + 2 * math.pi) % (2 * math.pi);
-    
-    // Also convert to degrees for logging
-    final bearingDeg = bearingNorm * 180 / math.pi;
-    
-    debugPrint('═════════════════════════════════════════');
-    debugPrint('✅ QIBLA CALCULATION (Fallback)');
-    debugPrint('Location: (${lat1Deg.toStringAsFixed(6)}, ${lon1Deg.toStringAsFixed(6)})');
-    debugPrint('Kaaba: (${lat2Deg.toStringAsFixed(6)}, ${lon2Deg.toStringAsFixed(6)})');
-    debugPrint('Qibla Direction: ${bearingDeg.toStringAsFixed(2)}°');
-    debugPrint('Qibla Radians: ${bearingNorm.toStringAsFixed(4)} rad');
-    debugPrint('═════════════════════════════════════════');
-    
-    return bearingNorm;
+  double _normalizeDegrees(double degrees) {
+    var normalized = degrees % 360;
+    if (normalized > 180) normalized -= 360;
+    if (normalized < -180) normalized += 360;
+    return normalized;
   }
+
+  double _degToRad(double degrees) => degrees * math.pi / 180;
+
+  double _round(double value) => double.parse(value.toStringAsFixed(1));
 }
 
-/// Fullscreen wrapper that participates in a Hero shared element
 class QiblaFullScreen extends StatelessWidget {
-  final String locale;
-  final GeoLocation? userLocation;
-
   const QiblaFullScreen({
     Key? key,
     required this.locale,
     this.userLocation,
   }) : super(key: key);
 
+  final String locale;
+  final GeoLocation? userLocation;
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Stack(
-        children: [
-          // No dark backdrop — keep background visible so only compass appears
-          Positioned.fill(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 400),
-              color: Colors.transparent,
-            ),
-          ),
-
-          // Shared element Hero - the icon expands into a compact top-right panel
-          Align(
-            alignment: Alignment.topRight,
-            child: Padding(
-              // moved slightly higher and more to the right
-              padding: const EdgeInsets.only(top: 48.0, right: 12.0),
-              child: Hero(
-                tag: 'qiblaHero',
-                createRectTween: (begin, end) => MaterialRectArcTween(begin: begin, end: end),
-                child: Container(
-                  width: 150,
-                  height: 150,
-                  alignment: Alignment.center,
-                  child: QiblaCompassWidget(
-                    locale: locale,
-                    userLocation: userLocation,
-                    startRotationDelay: const Duration(milliseconds: 420),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                    },
-                  ),
+      backgroundColor: Colors.black.withOpacity(0.10),
+      body: SafeArea(
+        child: Center(
+          child: GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Hero(
+              tag: 'qiblaHero',
+              createRectTween: (begin, end) =>
+                  MaterialRectArcTween(begin: begin, end: end),
+              child: Container(
+                width: 220,
+                height: 220,
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F3EC),
+                  borderRadius: BorderRadius.circular(36),
+                ),
+                child: QiblaCompassWidget(
+                  locale: locale,
+                  userLocation: userLocation,
                 ),
               ),
             ),
           ),
-
-          // No explicit close button — tap the compass to close
-        ],
+        ),
       ),
     );
   }
 }
 
-/// Custom painter for compass marks
-class CompassPainter extends CustomPainter {
-  final bool isDark;
+class _CompassDialPainter extends CustomPainter {
+  _CompassDialPainter({
+    required this.color,
+    required this.accentColor,
+    required this.isAligned,
+  });
 
-  CompassPainter({required this.isDark});
+  final Color color;
+  final Color accentColor;
+  final bool isAligned;
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
 
-    // Draw degree marks
-    for (int i = 0; i < 360; i += 10) {
-      final angle = (i - 90) * math.pi / 180;
-      final startRadius = radius - 20;
-      final endRadius = i % 30 == 0 ? radius - 8 : radius - 12;
+    final ringPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = radius * 0.08
+      ..color = color.withOpacity(0.10);
+    canvas.drawCircle(center, radius - ringPaint.strokeWidth / 2, ringPaint);
+
+    for (int degree = 0; degree < 360; degree += 15) {
+      final angle = (degree - 90) * math.pi / 180;
+      final longMark = degree % 45 == 0;
+      final startRadius = radius * (longMark ? 0.72 : 0.78);
+      final endRadius = radius * 0.90;
 
       final start = Offset(
         center.dx + startRadius * math.cos(angle),
@@ -612,116 +384,60 @@ class CompassPainter extends CustomPainter {
         center.dy + endRadius * math.sin(angle),
       );
 
-      final paint = Paint()
-        ..color = (i % 30 == 0
-                ? Colors.black
-                : Colors.black.withOpacity(0.3))
-        ..strokeWidth = i % 30 == 0 ? 2 : 1;
+      final markPaint = Paint()
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = longMark ? 2.4 : 1.2
+        ..color = degree == 0 && isAligned
+            ? accentColor
+            : color.withOpacity(longMark ? 0.85 : 0.35);
 
-      canvas.drawLine(start, end, paint);
+      canvas.drawLine(start, end, markPaint);
     }
 
-    // Draw decorative circles
-    final circlePaint = Paint()
-      ..color = Colors.black.withOpacity(0.15)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
+    _drawLabel(canvas, center, radius, 'N', -90);
+    _drawLabel(canvas, center, radius, 'E', 0);
+    _drawLabel(canvas, center, radius, 'S', 90);
+    _drawLabel(canvas, center, radius, 'W', 180);
+  }
 
-    canvas.drawCircle(center, radius * 0.7, circlePaint);
-    canvas.drawCircle(center, radius * 0.4, circlePaint);
+  void _drawLabel(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    String label,
+    double degrees,
+  ) {
+    final angle = degrees * math.pi / 180;
+    final position = Offset(
+      center.dx + radius * 0.62 * math.cos(angle),
+      center.dy + radius * 0.62 * math.sin(angle),
+    );
 
-    // Outer bezel / frame
-    final bezelPaint = Paint()
-      ..color = Colors.black.withOpacity(0.14)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = math.max(3.0, radius * 0.06);
-    canvas.drawCircle(center, radius - (bezelPaint.strokeWidth / 2), bezelPaint);
-
-    // Draw 'N' label at top
-    final textPainter = TextPainter(
+    final painter = TextPainter(
       text: TextSpan(
-        text: 'N',
+        text: label,
         style: TextStyle(
-          color: Colors.black,
-          fontSize: math.max(10, radius * 0.12),
-          fontWeight: FontWeight.w700,
+          color: color.withOpacity(0.85),
+          fontWeight: FontWeight.w800,
+          fontSize: math.max(12, radius * 0.16),
         ),
       ),
       textDirection: TextDirection.ltr,
+    )..layout();
+
+    painter.paint(
+      canvas,
+      Offset(
+        position.dx - painter.width / 2,
+        position.dy - painter.height / 2,
+      ),
     );
-    textPainter.layout();
-    final tpOffset = Offset(center.dx - textPainter.width / 2, center.dy - radius + 6);
-    textPainter.paint(canvas, tpOffset);
   }
 
   @override
-  bool shouldRepaint(CompassPainter oldDelegate) => false;
-}
-
-class NeedlePainter extends CustomPainter {
-  final Color color;
-  final bool isAligned;
-
-  NeedlePainter({required this.color, this.isAligned = false});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final centerX = size.width / 2;
-    
-    // Enhanced gradient for aligned state
-    final colors = isAligned 
-      ? [color, color.withOpacity(0.95), color.withOpacity(0.85)]
-      : [color, color.withOpacity(0.85)];
-    
-    final stops = isAligned ? [0.0, 0.7, 1.0] : [0.0, 1.0];
-    
-    final paint = Paint()
-      ..shader = ui.Gradient.linear(
-        Offset(centerX, 0),
-        Offset(centerX, size.height),
-        colors,
-        stops,
-      )
-      ..style = PaintingStyle.fill
-      ..isAntiAlias = true;
-
-    final Path path = Path();
-    // pointed triangle
-    path.moveTo(centerX, 0);
-    path.lineTo(size.width * 0.92, size.height * 0.88);
-    path.lineTo(size.width * 0.08, size.height * 0.88);
-    path.close();
-
-    // Enhanced shadow for aligned state
-    final shadowOpacity = isAligned ? 0.25 : 0.18;
-    final shadowBlur = isAligned ? 8.0 : 6.0;
-    
-    canvas.drawShadow(path, Colors.black.withOpacity(shadowOpacity), shadowBlur, true);
-    canvas.drawPath(path, paint);
-    
-    // Add inner glow effect when aligned
-    if (isAligned) {
-      final glowPaint = Paint()
-        ..color = color.withOpacity(0.3)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0
-        ..maskFilter = MaskFilter.blur(BlurStyle.outer, 3.0);
-      
-      canvas.drawPath(path, glowPaint);
-    }
-
-    // small highlight
-    final highlight = Paint()
-      ..color = Colors.white.withOpacity(0.12)
-      ..style = PaintingStyle.fill;
-    final Path h = Path();
-    h.moveTo(centerX, size.height * 0.06);
-    h.lineTo(size.width * 0.7, size.height * 0.76);
-    h.lineTo(size.width * 0.3, size.height * 0.76);
-    h.close();
-    canvas.drawPath(h, highlight);
+  bool shouldRepaint(covariant _CompassDialPainter oldDelegate) {
+    return oldDelegate.color != color ||
+        oldDelegate.accentColor != accentColor ||
+        oldDelegate.isAligned != isAligned;
   }
-
-  @override
-  bool shouldRepaint(covariant NeedlePainter oldDelegate) => color != oldDelegate.color;
 }

@@ -6,7 +6,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:namaz_vakitleri/config/color_system.dart';
 import 'package:namaz_vakitleri/providers/app_settings.dart';
 import 'package:namaz_vakitleri/providers/prayer_provider.dart';
-import 'package:namaz_vakitleri/screens/home_screen.dart';
+import 'package:namaz_vakitleri/screens/main_navigation_screen.dart';
 import 'package:namaz_vakitleri/services/notification_service.dart';
 import 'package:namaz_vakitleri/services/location_service.dart';
 
@@ -81,6 +81,11 @@ class _MyAppState extends State<MyApp> {
         setState(() {
           _isInitialized = true;
         });
+        // Request critical permissions after UI is ready so dialogs can appear
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          await Future.delayed(const Duration(milliseconds: 800));
+          await NotificationService.checkAndRequestCriticalPermissions();
+        });
       }
       print('🎉 App initialization complete');
     } catch (e) {
@@ -153,7 +158,7 @@ class _MyAppState extends State<MyApp> {
             themeMode: appSettings.isDarkMode
                 ? ThemeMode.dark
                 : ThemeMode.light,
-            home: const HomeScreen(),
+            home: const MainNavigationScreen(),
           );
         },
       ),

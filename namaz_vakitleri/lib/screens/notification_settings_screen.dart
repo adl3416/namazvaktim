@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../config/color_system.dart';
 import '../config/localization.dart';
 import '../providers/app_settings.dart';
+import '../providers/prayer_provider.dart';
+import '../services/notification_service.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -14,6 +16,7 @@ class NotificationSettingsScreen extends StatefulWidget {
 class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
   final Map<String, bool> _azanSoundEnabled = {};
   final Map<String, bool> _notificationEnabled = {};
+  final Map<String, int> _notificationOffset = {}; // 5 or 15 minutes before
 
   @override
   void initState() {
@@ -26,8 +29,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     setState(() {
       _azanSoundEnabled.clear();
       _notificationEnabled.clear();
+      _notificationOffset.clear();
       _azanSoundEnabled.addAll(settings.prayerSounds);
       _notificationEnabled.addAll(settings.prayerNotifications);
+      _notificationOffset.addAll(settings.prayerNotificationOffsets);
     });
   }
 
@@ -38,6 +43,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     });
     _notificationEnabled.forEach((prayer, enabled) {
       settings.setPrayerNotification(prayer, enabled);
+    });
+    _notificationOffset.forEach((prayer, offset) {
+      settings.setPrayerNotificationOffset(prayer, offset);
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -209,6 +217,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
 
             // Prayer list
             ..._buildPrayerList(isDark),
+            const SizedBox(height: 24),
+
+            // Test notification button
+            _buildTestNotificationButton(isDark),
             const SizedBox(height: 30),
           ],
         ),
@@ -216,18 +228,143 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     );
   }
 
+  Widget _buildTestNotificationButton(bool isDark) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+          width: 1,
+        ),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Bildirim Testi',
+            style: AppTypography.bodyMedium.copyWith(
+              color: isDark ? Colors.white : Colors.black87,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Anlık bildirim + 30 sn sonra zamanlanmış bildirim gönderir.',
+            style: AppTypography.bodySmall.copyWith(
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.alarm, size: 18),
+              label: const Text('Test bildirimi gönder'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.indigo.shade600,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              onPressed: () => _runNotificationTest(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _runNotificationTest() async {
+    // Step 1: Check exact alarm permission and show diagnostic info
+    final canSchedule =
+        await NotificationService.canScheduleExactNotifications();
+
+    if (canSchedule == false) {
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('İzin Gerekli'),
+          content: const Text(
+            '"Kesin Alarmlar" izni verilmemiş.\n\n'
+            'Açılacak ekranda "Namaz Vaktim" uygulamasını bulup izni açın, '
+            'sonra geri dönüp tekrar deneyin.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('İptal'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                await NotificationService.requestExactAlarmPermission();
+              },
+              child: const Text('Ayarlara Git'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Step 2: Send immediate notification (verifies channel works)
+    await NotificationService.showTestNotification();
+
+    // Step 3: Schedule one for 10 seconds later (verifies zonedSchedule works)
+    final String scheduleResult =
+        await NotificationService.scheduleTestNotificationIn10Seconds();
+
+    if (!mounted) return;
+
+    // Show full diagnostic info in a dialog
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Test Sonucu'),
+        content: Text(
+          'İzin durumu: ${canSchedule == true ? "✅ İzin var" : "⚠️ Bilinmiyor"}\n\n'
+          'Anlık bildirim: ✅ Gönderildi\n\n'
+          'Zamanlanmış (10 sn) bildirim:\n$scheduleResult\n\n'
+          '10 saniye bekleyin. Bildirim gelirse sistem çalışıyor.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Tamam'),
+          ),
+        ],
+      ),
+    );
+  }
+
   List<Widget> _buildPrayerList(bool isDark) {
+    // Map Turkish names to English prayer names used in settings
+    final Map<String, String> turkishToEnglish = {
+      'İmsak': 'Fajr',
+      'Güneş': 'Sunrise',
+      'Öğle': 'Dhuhr',
+      'İkindi': 'Asr',
+      'Akşam': 'Maghrib',
+      'Yatsı': 'Isha',
+    };
+    
     final prayers = ['İmsak', 'Güneş', 'Öğle', 'İkindi', 'Akşam', 'Yatsı'];
     return List.generate(
       prayers.length,
       (index) => Padding(
         padding: const EdgeInsets.only(bottom: 12.0),
-        child: _buildSimplePrayerRow(prayers[index], isDark),
+        child: _buildSimplePrayerRow(prayers[index], turkishToEnglish[prayers[index]]!, isDark),
       ),
     );
   }
 
-  Widget _buildSimplePrayerRow(String prayerName, bool isDark) {
+  Widget _buildSimplePrayerRow(String displayName, String prayerName, bool isDark) {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
@@ -250,12 +387,12 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: _getPrayerPhaseColor(prayerName),
+                    color: _getPrayerPhaseColor(displayName),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    _getPrayerIcon(prayerName),
-                    color: _getPrayerTextColor(prayerName),
+                    _getPrayerIcon(displayName),
+                    color: _getPrayerTextColor(displayName),
                     size: 20,
                   ),
                 ),
@@ -263,7 +400,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
 
                 // Prayer name
                 Text(
-                  prayerName,
+                  displayName,
                   style: AppTypography.bodyLarge.copyWith(
                     color: isDark ? Colors.white : Colors.black87,
                     fontWeight: FontWeight.w500,
@@ -277,15 +414,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           Expanded(
             flex: 1,
             child: Center(
-              child: _buildIconButton(
+              child: _buildNotificationButton(
                 isDark: isDark,
-                isActive: _notificationEnabled[prayerName] ?? false,
-                icon: Icons.notifications_outlined,
-                onTap: () {
-                  setState(() {
-                    _notificationEnabled[prayerName] = !(_notificationEnabled[prayerName] ?? false);
-                  });
-                },
+                prayerName: prayerName,
               ),
             ),
           ),
@@ -299,14 +430,143 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                 isActive: _azanSoundEnabled[prayerName] ?? false,
                 icon: Icons.volume_up_outlined,
                 onTap: () {
+                  final newValue = !(_azanSoundEnabled[prayerName] ?? false);
                   setState(() {
-                    _azanSoundEnabled[prayerName] = !(_azanSoundEnabled[prayerName] ?? false);
+                    _azanSoundEnabled[prayerName] = newValue;
                   });
+                  // Save immediately
+                  context.read<AppSettings>().setPrayerSound(prayerName, newValue);
+                  // Sound change also affects scheduled notification sound — reschedule
+                  context.read<PrayerProvider>().rescheduleNotifications();
                 },
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationButton({
+    required bool isDark,
+    required String prayerName,
+  }) {
+    final isActive = _notificationEnabled[prayerName] ?? false;
+    final currentOffset = _notificationOffset[prayerName] ?? 5;
+
+    return PopupMenuButton<int>(
+      onSelected: (int selectedOffset) {
+        final willEnable = !(isActive && currentOffset == selectedOffset);
+        final newOffset = selectedOffset;
+        setState(() {
+          if (isActive && currentOffset == selectedOffset) {
+            _notificationEnabled[prayerName] = false;
+          } else {
+            _notificationEnabled[prayerName] = true;
+            _notificationOffset[prayerName] = newOffset;
+          }
+        });
+        // Save immediately so closing the app doesn't lose the change
+        final settings = context.read<AppSettings>();
+        settings.setPrayerNotification(prayerName, willEnable);
+        settings.setPrayerNotificationOffset(prayerName, newOffset);
+        // Reschedule so the new offset takes effect right away
+        context.read<PrayerProvider>().rescheduleNotifications();
+      },
+      color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      itemBuilder: (context) => [
+        PopupMenuItem<int>(
+          value: 5,
+          child: Row(
+            children: [
+              Icon(
+                isActive && currentOffset == 5 ? Icons.check_circle : Icons.radio_button_unchecked,
+                size: 18,
+                color: isActive && currentOffset == 5
+                    ? const Color(0xFF2196F3)
+                    : (isDark ? Colors.grey[400] : Colors.grey[600]),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '5 dk önce',
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
+                  fontWeight: isActive && currentOffset == 5
+                      ? FontWeight.w600
+                      : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem<int>(
+          value: 15,
+          child: Row(
+            children: [
+              Icon(
+                isActive && currentOffset == 15 ? Icons.check_circle : Icons.radio_button_unchecked,
+                size: 18,
+                color: isActive && currentOffset == 15
+                    ? const Color(0xFF2196F3)
+                    : (isDark ? Colors.grey[400] : Colors.grey[600]),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '15 dk önce',
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
+                  fontWeight: isActive && currentOffset == 15
+                      ? FontWeight.w600
+                      : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: isActive
+              ? const Color(0xFF2196F3).withOpacity(0.2)
+              : Colors.grey.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(
+              Icons.notifications_outlined,
+              size: 18,
+              color: isActive
+                  ? const Color(0xFF2196F3)
+                  : (isDark ? Colors.grey[500] : Colors.grey[400]),
+            ),
+            if (isActive)
+              Positioned(
+                right: 4,
+                bottom: 4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2196F3),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '$currentOffset',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 7,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

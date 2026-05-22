@@ -463,20 +463,17 @@ class PrayerProvider extends ChangeNotifier {
 
     print('🔔 Prayer Time Check: ${prayer.name} | Sound: $soundEnabled | Notification: $notificationEnabled');
 
-    // If sound is disabled, skip adhan playback
-    if (!soundEnabled) {
-      print('🔇 Sound disabled for ${prayer.name}, skipping adhan');
-      return;
-    }
-
     // Check if we haven't played adhan for this prayer yet
     if (_lastAdhanPlayedForPrayer != '${prayer.name}_ontime') {
-      print('🔔 Prayer time arrived: ${prayer.name} - Playing adhan');
+      print('🔔 Prayer time arrived: ${prayer.name}');
 
-      // Play adhan regardless of notification setting
-      // Sound and notification are independent
-      print('🎵 Playing adhan sound for ${prayer.name}');
-      await _playAdhanForPrayer(prayer.name);
+      // Sound and notification are independent.
+      if (soundEnabled) {
+        print('🎵 Playing adhan sound for ${prayer.name}');
+        await _playAdhanForPrayer(prayer.name);
+      } else {
+        print('🔇 Sound disabled for ${prayer.name}, skipping adhan');
+      }
 
       // Show notification if enabled (separately from sound)
       if (notificationEnabled) {

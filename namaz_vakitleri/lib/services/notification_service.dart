@@ -408,6 +408,7 @@ class NotificationService {
     try {
       final scheduledTime = DateTime.now().add(const Duration(seconds: 10));
       final tzScheduled = _toScheduledInstant(scheduledTime);
+      final scheduleMode = await _resolveScheduleMode();
 
       await _flutterLocalNotificationsPlugin.zonedSchedule(
         998, // Test scheduled ID
@@ -429,7 +430,7 @@ class NotificationService {
             presentAlert: true,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        androidScheduleMode: scheduleMode,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
@@ -438,7 +439,7 @@ class NotificationService {
       final pending =
           await _flutterLocalNotificationsPlugin.pendingNotificationRequests();
       final pendingIds = pending.map((n) => n.id).toList();
-      print('✅ Test notification scheduled at $tzScheduled. Pending IDs: $pendingIds');
+      print('✅ Test notification scheduled at $tzScheduled with mode $scheduleMode. Pending IDs: $pendingIds');
 
       if (pending.any((n) => n.id == 998)) {
         return '✅ Zamanlandı (${tzScheduled.toLocal()})\n'
@@ -488,6 +489,16 @@ class NotificationService {
   static tz.TZDateTime _toScheduledInstant(DateTime dateTime) {
     final utcTime = dateTime.toUtc();
     return tz.TZDateTime.from(utcTime, tz.UTC);
+  }
+
+  /// Prefer exact alarms when available, but gracefully fall back so
+  /// scheduled notifications still have a chance to fire on stricter devices.
+  static Future<AndroidScheduleMode> _resolveScheduleMode() async {
+    final canScheduleExact = await canScheduleExactNotifications();
+    if (canScheduleExact == true) {
+      return AndroidScheduleMode.exactAllowWhileIdle;
+    }
+    return AndroidScheduleMode.inexactAllowWhileIdle;
   }
 
   /// Schedule a notification for prayer time
@@ -545,6 +556,7 @@ class NotificationService {
       final scheduledTime = prayerTime.subtract(Duration(minutes: offsetMinutes));
       final scheduled = _toScheduledInstant(scheduledTime);
       final now = tz.TZDateTime.now(tz.UTC);
+      final scheduleMode = await _resolveScheduleMode();
       
       // Only schedule notifications for prayer times that haven't passed yet today
       // If the prayer time has already passed, don't schedule a notification
@@ -586,13 +598,13 @@ class NotificationService {
             interruptionLevel: InterruptionLevel.timeSensitive,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        androidScheduleMode: scheduleMode,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
       );
 
       // Acquire screen lock and set volume when notification is scheduled
-      print('✅ Scheduled notification for $prayerName at $scheduled (ID: $id)');
+      print('✅ Scheduled notification for $prayerName at $scheduled (ID: $id, mode: $scheduleMode)');
       
       // NOTE: Removed screen lock duplicate notification to fix 29x notification issue
       // The main notification with fullScreenIntent is sufficient

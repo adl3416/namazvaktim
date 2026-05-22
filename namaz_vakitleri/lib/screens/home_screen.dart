@@ -762,7 +762,7 @@ class _PrayerTile extends StatelessWidget {
                   label,
                   style: TextStyle(
                     color: scheme.textPrimary,
-                      fontSize: 14,
+                      fontSize: 16,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -771,8 +771,8 @@ class _PrayerTile extends StatelessWidget {
                   badgeLabel,
                   style: TextStyle(
                     color: isNext ? scheme.primary : scheme.textSecondary,
-                      fontSize: 9,
-                    fontWeight: FontWeight.w500,
+                      fontSize: 8,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ],

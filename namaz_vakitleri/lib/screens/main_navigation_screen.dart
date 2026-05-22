@@ -29,7 +29,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     return Consumer2<AppSettings, PrayerProvider>(
       builder: (context, settings, prayerProvider, _) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
         final palette = _navPaletteForPrayer(prayerProvider.activePrayer?.name);
         final bottomInset = MediaQuery.of(context).padding.bottom;
 
@@ -49,22 +48,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: isDark
-                      ? <Color>[
-                          palette.primary.withOpacity(0.92),
-                          palette.secondary.withOpacity(0.88),
-                        ]
-                      : <Color>[
-                          palette.primary,
-                          palette.secondary,
-                        ],
+                  colors: <Color>[
+                    palette.primary.withOpacity(0.92),
+                    Color.lerp(
+                      palette.secondary,
+                      palette.tertiary,
+                      0.35,
+                    )!
+                        .withOpacity(0.88),
+                  ],
                 ),
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(22),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: palette.primary.withOpacity(isDark ? 0.34 : 0.22),
+                    color: palette.primary.withOpacity(0.24),
                     blurRadius: 22,
                     offset: const Offset(0, -2),
                   ),
@@ -79,7 +78,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     backgroundColor: Colors.transparent,
                     height: 68,
                     elevation: 0,
-                    indicatorColor: Colors.white.withOpacity(isDark ? 0.18 : 0.22),
+                    indicatorColor: Colors.white.withOpacity(0.20),
                     iconTheme: WidgetStateProperty.resolveWith<IconThemeData>((
                       states,
                     ) {
@@ -148,10 +147,12 @@ class _NavPalette {
   const _NavPalette({
     required this.primary,
     required this.secondary,
+    required this.tertiary,
   });
 
   final Color primary;
   final Color secondary;
+  final Color tertiary;
 }
 
 _NavPalette _navPaletteForPrayer(String? prayerName) {
@@ -161,6 +162,7 @@ _NavPalette _navPaletteForPrayer(String? prayerName) {
     return const _NavPalette(
       primary: Color(0xFF4338CA),
       secondary: Color(0xFF6366F1),
+      tertiary: Color(0xFF818CF8),
     );
   }
 
@@ -168,6 +170,7 @@ _NavPalette _navPaletteForPrayer(String? prayerName) {
     return const _NavPalette(
       primary: Color(0xFFC2410C),
       secondary: Color(0xFFEA580C),
+      tertiary: Color(0xFFFB923C),
     );
   }
 
@@ -175,32 +178,37 @@ _NavPalette _navPaletteForPrayer(String? prayerName) {
     return const _NavPalette(
       primary: Color(0xFF1D4ED8),
       secondary: Color(0xFF3B82F6),
+      tertiary: Color(0xFF60A5FA),
     );
   }
 
   if (normalized.contains('asr') || normalized.contains('ikindi')) {
     return const _NavPalette(
       primary: Color(0xFFB45309),
-      secondary: Color(0xFFF59E0B),
+      secondary: Color(0xFFD97706),
+      tertiary: Color(0xFFF59E0B),
     );
   }
 
   if (normalized.contains('maghrib') || normalized.contains('aksam')) {
     return const _NavPalette(
       primary: Color(0xFF9F1239),
-      secondary: Color(0xFFFB7185),
+      secondary: Color(0xFFE11D48),
+      tertiary: Color(0xFFFB7185),
     );
   }
 
   if (normalized.contains('isha') || normalized.contains('yatsi')) {
     return const _NavPalette(
-      primary: Color(0xFF1F3A8A),
-      secondary: Color(0xFF312E81),
+      primary: Color(0xFF5B21B6),
+      secondary: Color(0xFF7C3AED),
+      tertiary: Color(0xFF8B5CF6),
     );
   }
 
   return const _NavPalette(
-    primary: Color(0xFF166534),
-    secondary: Color(0xFF16A34A),
+    primary: Color(0xFF5B21B6),
+    secondary: Color(0xFF7C3AED),
+    tertiary: Color(0xFF8B5CF6),
   );
 }

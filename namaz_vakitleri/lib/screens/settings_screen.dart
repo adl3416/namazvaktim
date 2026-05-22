@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:namaz_vakitleri/providers/prayer_provider.dart';
-import 'package:namaz_vakitleri/services/notification_service.dart';
-
 import '../config/localization.dart';
 import '../providers/app_settings.dart';
-import 'country_selection_screen.dart';
 import 'language_selection_screen.dart';
 import 'notification_settings_screen.dart';
 import 'theme_selection_screen.dart';
@@ -32,12 +28,9 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<AppSettings, PrayerProvider>(
-      builder: (context, settings, prayerProvider, _) {
+    return Consumer<AppSettings>(
+      builder: (context, settings, _) {
         final locale = settings.language;
-        final locationName =
-            prayerProvider.currentLocation?.city ??
-                _text(locale, tr: 'Konum secilmedi', en: 'Location not selected', ar: 'لم يتم تحديد الموقع');
 
         return Scaffold(
           backgroundColor: const Color(0xFFF6F1E8),
@@ -66,45 +59,17 @@ class SettingsScreen extends StatelessWidget {
                       color: Color(0xFF1E1A16),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _text(
-                      locale,
-                      tr: 'Diyanet tarzi yardimci ayarlar ile uygulamani konum, bildirim ve tema bazinda hizlica sekillendir.',
-                      en: 'Shape the app quickly with helper settings for location, notifications, and theme.',
-                      ar: 'خصص التطبيق بسرعة عبر إعدادات الموقع والإشعارات والمظهر.',
-                    ),
-                    style: TextStyle(
-                      fontSize: 15,
-                      height: 1.45,
-                      color: Colors.black.withOpacity(0.60),
-                    ),
-                  ),
                   const SizedBox(height: 20),
-                  _SettingsHeroCard(
-                    locationName: locationName,
-                    language: settings.language.toUpperCase(),
-                  ),
-                  const SizedBox(height: 18),
-                  _SettingsTile(
-                    icon: Icons.location_on_rounded,
-                    iconColor: const Color(0xFF2563EB),
-                    title: AppLocalizations.translate('location', locale),
-                    subtitle: locationName,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CountrySelectionScreen(),
-                        ),
-                      );
-                    },
-                  ),
                   _SettingsTile(
                     icon: Icons.notifications_active_rounded,
                     iconColor: const Color(0xFFEA580C),
                     title: AppLocalizations.translate('notifications', locale),
-                    subtitle: _text(locale, tr: 'Ezan, hatirlatma ve vakit ayarlarini yonet', en: 'Manage adhan, reminders, and prayer time settings', ar: 'أدر الأذان والتذكيرات وإعدادات أوقات الصلاة'),
+                    subtitle: _text(
+                      locale,
+                      tr: 'Ezan, hatirlatma ve vakit ayarlarini yonet',
+                      en: 'Manage adhan, reminders, and prayer time settings',
+                      ar: 'أدر الأذان والتذكيرات وإعدادات أوقات الصلاة',
+                    ),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -119,7 +84,12 @@ class SettingsScreen extends StatelessWidget {
                     icon: Icons.palette_rounded,
                     iconColor: const Color(0xFF7C3AED),
                     title: AppLocalizations.translate('theme', locale),
-                    subtitle: _text(locale, tr: 'Uygulamanin gorunusunu degistir', en: 'Change the look of the app', ar: 'غيّر مظهر التطبيق'),
+                    subtitle: _text(
+                      locale,
+                      tr: 'Uygulamanin gorunusunu degistir',
+                      en: 'Change the look of the app',
+                      ar: 'غيّر مظهر التطبيق',
+                    ),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -133,7 +103,8 @@ class SettingsScreen extends StatelessWidget {
                     icon: Icons.language_rounded,
                     iconColor: const Color(0xFF15803D),
                     title: AppLocalizations.translate('language', locale),
-                    subtitle: '${_text(locale, tr: 'Su an', en: 'Current', ar: 'الحالية')}: ${settings.language.toUpperCase()}',
+                    subtitle:
+                        '${_text(locale, tr: 'Su an', en: 'Current', ar: 'الحالية')}: ${settings.language.toUpperCase()}',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -145,87 +116,88 @@ class SettingsScreen extends StatelessWidget {
                     },
                   ),
                   _SettingsTile(
-                    icon: Icons.notifications_rounded,
-                    iconColor: const Color(0xFF0891B2),
-                    title: _text(locale, tr: 'Test bildirimi', en: 'Test notification', ar: 'إشعار تجريبي'),
-                    subtitle: _text(locale, tr: 'Aninda test gondererek sistemi kontrol et', en: 'Verify the system with an instant test', ar: 'تحقق من النظام عبر اختبار فوري'),
-                    trailing: const Icon(
-                      Icons.send_rounded,
-                      color: Color(0xFF0891B2),
+                    icon: Icons.info_rounded,
+                    iconColor: const Color(0xFF0F766E),
+                    title: _text(
+                      locale,
+                      tr: 'Uygulama hakkinda ve destek',
+                      en: 'About and support',
+                      ar: 'حول التطبيق والدعم',
                     ),
-                    onTap: () async {
-                      await NotificationService.initialize();
-                      await NotificationService.showTestNotification();
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(_text(locale, tr: 'Test bildirimi gonderildi', en: 'Test notification sent', ar: 'تم إرسال الإشعار التجريبي')),
-                          backgroundColor: Color(0xFF15803D),
-                        ),
-                      );
-                    },
-                  ),
-                  _SettingsTile(
-                    icon: Icons.support_agent_rounded,
-                    iconColor: const Color(0xFFB45309),
-                    title: _text(locale, tr: 'Iletisim ve destek', en: 'Contact and support', ar: 'التواصل والدعم'),
-                    subtitle: _text(locale, tr: 'Geri bildirim ve yardim bolumu', en: 'Feedback and help section', ar: 'قسم الملاحظات والمساعدة'),
+                    subtitle: _text(
+                      locale,
+                      tr: 'Uygulama bilgileri ve destek alani',
+                      en: 'App information and support area',
+                      ar: 'معلومات التطبيق ومنطقة الدعم',
+                    ),
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(_text(locale, tr: 'Destek bolumu yakinda eklenecek', en: 'Support section will be added soon', ar: 'سيتم إضافة قسم الدعم قريباً')),
-                          backgroundColor: Color(0xFF1F4C43),
+                          content: Text(
+                            _text(
+                              locale,
+                              tr: 'Destek alani yakinda eklenecek',
+                              en: 'Support area will be added soon',
+                              ar: 'سيتم إضافة قسم الدعم قريبًا',
+                            ),
+                          ),
+                          backgroundColor: const Color(0xFF0F766E),
                         ),
                       );
                     },
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 10),
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.76),
+                      color: Colors.white.withOpacity(0.78),
                       borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: Colors.white.withOpacity(0.80)),
+                      border: Border.all(color: Colors.white.withOpacity(0.82)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 16,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
                     child: Row(
                       children: [
                         Container(
-                          width: 72,
-                          height: 72,
+                          width: 58,
+                          height: 58,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(22),
+                            borderRadius: BorderRadius.circular(18),
                             image: const DecorationImage(
                               image: AssetImage('assets/images/app_icon.png'),
                               fit: BoxFit.contain,
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        const Expanded(
+                        const SizedBox(width: 14),
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
+                              const Text(
                                 'Namaz Vakitim',
                                 style: TextStyle(
-                                  fontSize: 18,
+                                  fontSize: 17,
                                   fontWeight: FontWeight.w800,
                                   color: Color(0xFF1E1A16),
                                 ),
                               ),
-                              SizedBox(height: 6),
+                              const SizedBox(height: 4),
                               Text(
-                                'v1.0.0 • daha temiz, daha modern ibadet deneyimi',
-                                style: TextStyle(
+                                _text(
+                                  locale,
+                                  tr: 'Surum 1.0.0',
+                                  en: 'Version 1.0.0',
+                                  ar: 'الإصدار 1.0.0',
+                                ),
+                                style: const TextStyle(
                                   color: Color(0xFF655B51),
-                                  height: 1.4,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ],
@@ -240,79 +212,6 @@ class SettingsScreen extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _SettingsHeroCard extends StatelessWidget {
-  const _SettingsHeroCard({
-    required this.locationName,
-    required this.language,
-  });
-
-  final String locationName;
-  final String language;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF3E3128),
-            Color(0xFF655040),
-            Color(0xFF8D745E),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF3E3128).withOpacity(0.24),
-            blurRadius: 24,
-            offset: const Offset(0, 14),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.16),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: const Text(
-              'Hazir profil',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(height: 18),
-          const Text(
-            'Uygulamayi kendine gore ayarla',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 26,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.7,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Konum: $locationName\nDil: $language',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.84),
-              height: 1.5,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

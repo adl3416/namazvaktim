@@ -15,6 +15,7 @@ class QiblaScreen extends StatefulWidget {
 
 class _QiblaScreenState extends State<QiblaScreen> {
   QiblaTelemetry _telemetry = const QiblaTelemetry();
+  bool _vibrationEnabled = true;
 
   @override
   Widget build(BuildContext context) {
@@ -41,27 +42,46 @@ class _QiblaScreenState extends State<QiblaScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
                 children: [
-                  Text(
-                    AppLocalizations.translate('qibla', locale),
-                    style: const TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1,
-                      color: Color(0xFF1E1A16),
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          AppLocalizations.translate('qibla', locale),
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1,
+                            color: Color(0xFF1E1A16),
+                          ),
+                        ),
+                      ),
+                      Material(
+                        color: const Color(0xFF1E3A34).withOpacity(0.10),
+                        borderRadius: BorderRadius.circular(14),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () {
+                            setState(() {
+                              _vibrationEnabled = !_vibrationEnabled;
+                            });
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(10),
+                            child: Icon(
+                              _vibrationEnabled
+                                  ? Icons.vibration_rounded
+                                  : Icons.mobile_off_rounded,
+                              color: const Color(0xFF1E3A34),
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Cihazi duz tut, yavasca kendi etrafinda don ve oku merkezde sabitle.',
-                    style: TextStyle(
-                      fontSize: 15,
-                      height: 1.45,
-                      color: Colors.black.withOpacity(0.62),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 18),
                   Container(
-                    padding: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(32),
                       gradient: const LinearGradient(
@@ -83,23 +103,57 @@ class _QiblaScreenState extends State<QiblaScreen> {
                     ),
                     child: Column(
                       children: [
+                        Row(
+                          children: [
+                            _CompassStatPill(
+                              label: 'QIBLA',
+                              value: _telemetry.qiblaBearing != null
+                                  ? '${_telemetry.qiblaBearing!.round()}°'
+                                  : '--',
+                            ),
+                            const SizedBox(width: 10),
+                            _CompassStatPill(
+                              label: 'SAPMA',
+                              value: _telemetry.relativeAngle != null
+                                  ? '${_telemetry.relativeAngle!.abs().round()}°'
+                                  : '--',
+                              highlighted: _telemetry.isAligned,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
                         AspectRatio(
                           aspectRatio: 1,
-                          child: Container(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 320),
+                            curve: Curves.easeOutCubic,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: const Color(0xFFF8F3EC),
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.24),
-                                width: 10,
+                                color: _telemetry.isAligned
+                                    ? const Color(0xFF34D399)
+                                    : Colors.white.withOpacity(0.24),
+                                width: _telemetry.isAligned ? 12 : 10,
                               ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _telemetry.isAligned
+                                      ? const Color(0xFF22C55E).withOpacity(0.38)
+                                      : Colors.black.withOpacity(0.10),
+                                  blurRadius: _telemetry.isAligned ? 30 : 18,
+                                  spreadRadius: _telemetry.isAligned ? 4 : 0,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
                             ),
-                            padding: const EdgeInsets.all(26),
+                            padding: const EdgeInsets.all(16),
                             child: QiblaCompassWidget(
                               locale: locale,
                               userLocation: prayerProvider.currentLocation,
                               alignmentColor: const Color(0xFFD7B56D),
                               backgroundColor: const Color(0xFFF8F3EC),
+                              vibrationEnabled: _vibrationEnabled,
                               onTelemetry: (telemetry) {
                                 if (!mounted || telemetry == _telemetry) return;
                                 setState(() {
@@ -109,9 +163,9 @@ class _QiblaScreenState extends State<QiblaScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 22),
-                        _StatusBadge(aligned: _telemetry.isAligned),
                         const SizedBox(height: 14),
+                        _StatusBadge(aligned: _telemetry.isAligned),
+                        const SizedBox(height: 16),
                         Text(
                           _headlineForTelemetry(_telemetry),
                           textAlign: TextAlign.center,
@@ -122,77 +176,31 @@ class _QiblaScreenState extends State<QiblaScreen> {
                             letterSpacing: -0.4,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _detailForTelemetry(_telemetry),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.80),
-                            height: 1.45,
-                          ),
-                        ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _MetricCard(
-                          label: 'Kible acisi',
-                          value: _telemetry.qiblaBearing != null
-                              ? '${_telemetry.qiblaBearing!.round()}°'
-                              : '--',
-                          icon: Icons.navigation_rounded,
+                  if (!hasLocation) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.76),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.78),
                         ),
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: _MetricCard(
-                          label: 'Sapma',
-                          value: _telemetry.relativeAngle != null
-                              ? '${_telemetry.relativeAngle!.abs().round()}°'
-                              : '--',
-                          icon: Icons.track_changes_rounded,
+                      child: const Text(
+                        'Konum olmadan kible yonu tam hesaplanamaz.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFF554C43),
+                          fontWeight: FontWeight.w700,
+                          height: 1.4,
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  _MetricCard(
-                    label: 'Konum durumu',
-                    value: hasLocation
-                        ? '${prayerProvider.savedCity.isNotEmpty ? prayerProvider.savedCity : 'Hazir'} • ${prayerProvider.currentLocation!.latitude.toStringAsFixed(2)}, ${prayerProvider.currentLocation!.longitude.toStringAsFixed(2)}'
-                        : 'Konum bekleniyor',
-                    icon: Icons.place_rounded,
-                    fullWidth: true,
-                  ),
-                  const SizedBox(height: 18),
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.74),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: Colors.white.withOpacity(0.7)),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Daha dogru sonuc icin',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF1E1A16),
-                          ),
-                        ),
-                        SizedBox(height: 12),
-                        _TipLine(text: 'Telefonu metal yuzeylerden ve elektronik cihazlardan uzak tut.'),
-                        _TipLine(text: 'Pusula kalibrasyonu icin cihazi sekiz cizerek kisa bir hareketle yeniden dengele.'),
-                        _TipLine(text: 'Altin renkli ibre merkeze geldiginde kible yonunu yakalamis olursun.'),
-                      ],
-                    ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -214,9 +222,14 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: aligned
-            ? const Color(0xFFD7B56D).withOpacity(0.24)
+            ? const Color(0xFF34D399).withOpacity(0.22)
             : Colors.white.withOpacity(0.14),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: aligned
+              ? const Color(0xFF6EE7B7).withOpacity(0.55)
+              : Colors.white.withOpacity(0.10),
+        ),
       ),
       child: Text(
         aligned ? 'Kible hizalandi' : 'Yon araniyor',
@@ -229,103 +242,56 @@ class _StatusBadge extends StatelessWidget {
   }
 }
 
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({
+class _CompassStatPill extends StatelessWidget {
+  const _CompassStatPill({
     required this.label,
     required this.value,
-    required this.icon,
-    this.fullWidth = false,
+    this.highlighted = false,
   });
 
   final String label;
   final String value;
-  final IconData icon;
-  final bool fullWidth;
+  final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: fullWidth ? double.infinity : null,
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.78),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.8)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: const Color(0xFF204B43).withOpacity(0.08),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(icon, color: const Color(0xFF204B43)),
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: highlighted
+              ? const Color(0xFF34D399).withOpacity(0.18)
+              : Colors.white.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: highlighted
+                ? const Color(0xFF6EE7B7).withOpacity(0.55)
+                : Colors.white.withOpacity(0.14),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: Colors.black.withOpacity(0.56),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: Color(0xFF1E1A16),
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TipLine extends StatelessWidget {
-  const _TipLine({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 5),
-            child: Icon(
-              Icons.circle,
-              size: 8,
-              color: Color(0xFF204B43),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: Color(0xFF554C43),
-                height: 1.45,
+        ),
+        child: Column(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.66),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -339,21 +305,4 @@ String _headlineForTelemetry(QiblaTelemetry telemetry) {
   return telemetry.relativeAngle! > 0
       ? 'Biraz saga don'
       : 'Biraz sola don';
-}
-
-String _detailForTelemetry(QiblaTelemetry telemetry) {
-  if (!telemetry.hasLocation) {
-    return 'Konum izni olmadan dogru kible acisi hesaplanamaz.';
-  }
-  if (!telemetry.hasCompass) {
-    return 'Cihazindan pusula verisi gelmiyor. Sensoru destekleyen bir cihazda tekrar dene.';
-  }
-  if (telemetry.isAligned) {
-    return 'Telefonu bu hizada tutarak namaz yonunu guvenle takip edebilirsin.';
-  }
-  final offset = telemetry.relativeAngle?.abs().round();
-  if (offset == null) {
-    return 'Yon bilgisi guncellenirken kisa bir an bekle.';
-  }
-  return '$offset derece fark kaldi. Cihazi yavasca dondurmeye devam et.';
 }

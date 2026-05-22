@@ -60,6 +60,7 @@ class QiblaCompassWidget extends StatefulWidget {
     this.userLocation,
     this.backgroundColor,
     this.onTelemetry,
+    this.vibrationEnabled = true,
   }) : super(key: key);
 
   final String locale;
@@ -70,6 +71,7 @@ class QiblaCompassWidget extends StatefulWidget {
   final GeoLocation? userLocation;
   final Color? backgroundColor;
   final ValueChanged<QiblaTelemetry>? onTelemetry;
+  final bool vibrationEnabled;
 
   @override
   State<QiblaCompassWidget> createState() => _QiblaCompassWidgetState();
@@ -156,7 +158,7 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
   }
 
   Future<void> _vibrateIfNeeded(bool aligned) async {
-    if (!aligned || _vibrationCooldown) return;
+    if (!widget.vibrationEnabled || !aligned || _vibrationCooldown) return;
     _vibrationCooldown = true;
     try {
       final hasVibrator = await Vibration.hasVibrator() ?? false;
@@ -242,6 +244,26 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
                 isAligned: _isAligned,
               ),
             ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 260),
+              width: size * 0.20,
+              height: size * 0.20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _isAligned
+                    ? accent.withOpacity(0.14)
+                    : Colors.transparent,
+                boxShadow: _isAligned
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF22C55E).withOpacity(0.26),
+                          blurRadius: 26,
+                          spreadRadius: 4,
+                        ),
+                      ]
+                    : const [],
+              ),
+            ),
             AnimatedBuilder(
               animation: _fallbackController,
               builder: (context, child) {
@@ -266,13 +288,56 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
               ),
             ),
             Positioned(
-              bottom: size * 0.16,
-              child: Text(
-                _isAligned ? 'Kible' : AppLocalizations.translate('qibla', widget.locale),
-                style: TextStyle(
-                  fontSize: math.max(12, size * 0.06),
-                  fontWeight: FontWeight.w800,
-                  color: const Color(0xFF204B43),
+              bottom: size * 0.12,
+              child: Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: math.max(12, size * 0.05),
+                  vertical: math.max(7, size * 0.025),
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.86),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: _isAligned
+                        ? const Color(0xFF6EE7B7).withOpacity(0.75)
+                        : const Color(0xFF204B43).withOpacity(0.10),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _isAligned
+                          ? Icons.check_circle_rounded
+                          : Icons.explore_rounded,
+                      size: math.max(12, size * 0.05),
+                      color: _isAligned
+                          ? const Color(0xFF16A34A)
+                          : const Color(0xFF204B43),
+                    ),
+                    SizedBox(width: math.max(5, size * 0.018)),
+                    Text(
+                      _isAligned
+                          ? 'KIBLE'
+                          : AppLocalizations.translate('qibla', widget.locale)
+                              .toUpperCase(),
+                      style: TextStyle(
+                        fontSize: math.max(10, size * 0.045),
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.1,
+                        color: _isAligned
+                            ? const Color(0xFF166534)
+                            : const Color(0xFF204B43),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -369,6 +434,13 @@ class _CompassDialPainter extends CustomPainter {
       ..color = color.withOpacity(0.10);
     canvas.drawCircle(center, radius - ringPaint.strokeWidth / 2, ringPaint);
 
+    final guideRingPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = radius * 0.012
+      ..color = color.withOpacity(0.12);
+    canvas.drawCircle(center, radius * 0.68, guideRingPaint);
+    canvas.drawCircle(center, radius * 0.82, guideRingPaint);
+
     for (int degree = 0; degree < 360; degree += 15) {
       final angle = (degree - 90) * math.pi / 180;
       final longMark = degree % 45 == 0;
@@ -394,10 +466,47 @@ class _CompassDialPainter extends CustomPainter {
       canvas.drawLine(start, end, markPaint);
     }
 
+    for (int degree = 0; degree < 360; degree += 30) {
+      _drawDegreeLabel(canvas, center, radius, degree);
+    }
+
     _drawLabel(canvas, center, radius, 'N', -90);
     _drawLabel(canvas, center, radius, 'E', 0);
     _drawLabel(canvas, center, radius, 'S', 90);
     _drawLabel(canvas, center, radius, 'W', 180);
+  }
+
+  void _drawDegreeLabel(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    int degree,
+  ) {
+    final angle = (degree - 90) * math.pi / 180;
+    final position = Offset(
+      center.dx + radius * 0.80 * math.cos(angle),
+      center.dy + radius * 0.80 * math.sin(angle),
+    );
+
+    final painter = TextPainter(
+      text: TextSpan(
+        text: degree.toString(),
+        style: TextStyle(
+          color: color.withOpacity(0.52),
+          fontWeight: FontWeight.w700,
+          fontSize: math.max(8, radius * 0.07),
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    painter.paint(
+      canvas,
+      Offset(
+        position.dx - painter.width / 2,
+        position.dy - painter.height / 2,
+      ),
+    );
   }
 
   void _drawLabel(
@@ -417,9 +526,14 @@ class _CompassDialPainter extends CustomPainter {
       text: TextSpan(
         text: label,
         style: TextStyle(
-          color: color.withOpacity(0.85),
-          fontWeight: FontWeight.w800,
-          fontSize: math.max(12, radius * 0.16),
+          color: label == 'N'
+              ? (isAligned ? accentColor : const Color(0xFF204B43))
+              : color.withOpacity(0.62),
+          fontWeight: label == 'N' ? FontWeight.w900 : FontWeight.w700,
+          fontSize: label == 'N'
+              ? math.max(12, radius * 0.17)
+              : math.max(10, radius * 0.12),
+          letterSpacing: label == 'N' ? 0.5 : 0.2,
         ),
       ),
       textDirection: TextDirection.ltr,

@@ -240,7 +240,7 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
       final prayerProvider = context.read<PrayerProvider>();
 
       // Update prayer times for new location
-      await prayerProvider.setLocation(city, widget.countryCode);
+      await prayerProvider.setManualLocation(city, widget.countryName);
 
       // Go back to home screen
       Navigator.of(context).popUntil((route) => route.isFirst);

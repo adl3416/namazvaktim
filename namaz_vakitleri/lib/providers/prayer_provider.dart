@@ -32,6 +32,7 @@ class PrayerProvider extends ChangeNotifier {
   GeoLocation? _currentLocation;
   String _savedCity = '';
   String _savedCountry = '';
+  bool _useAutomaticLocation = true;
 
   // Countdown
   DateTime? _lastCountdownUpdate;
@@ -60,6 +61,7 @@ class PrayerProvider extends ChangeNotifier {
   GeoLocation? get currentLocation => _currentLocation;
   String get savedCity => _savedCity;
   String get savedCountry => _savedCountry;
+  bool get useAutomaticLocation => _useAutomaticLocation;
   Duration? get countdownDuration => _countdownDuration;
   bool get isAdhanPlaying => _isAdhanPlaying;
   double get currentAdhanVolume => _currentAdhanVolume;
@@ -74,11 +76,15 @@ class PrayerProvider extends ChangeNotifier {
 
       _savedCity = _prefs.getString('city') ?? '';
       _savedCountry = _prefs.getString('country') ?? '';
+      _useAutomaticLocation = _prefs.getBool('use_automatic_location') ?? true;
 
       print('📱 PrayerProvider initializing...');
 
-      // Always try to get current location first
-      await _loadCurrentLocation();
+      if (_useAutomaticLocation) {
+        await _loadCurrentLocation();
+      } else {
+        _loadLocationFromCache();
+      }
 
       // If current location failed, load from cache as backup
       if (_currentLocation == null) {
@@ -97,10 +103,12 @@ class PrayerProvider extends ChangeNotifier {
         );
         _savedCity = 'Istanbul';
         _savedCountry = 'Turkey';
+        _useAutomaticLocation = false;
         await _prefs.setString('city', 'Istanbul');
         await _prefs.setString('country', 'Turkey');
         await _prefs.setDouble('latitude', 41.0082);
         await _prefs.setDouble('longitude', 28.9784);
+        await _prefs.setBool('use_automatic_location', false);
       }
 
       print(
@@ -169,13 +177,17 @@ class PrayerProvider extends ChangeNotifier {
       if (location != null) {
         print('✅ Got location: ${location.city}, ${location.country}');
         _currentLocation = location;
+        _useAutomaticLocation = true;
         await _prefs.setString('city', location.city);
         await _prefs.setString('country', location.country);
+        await _prefs.setBool('use_automatic_location', true);
         await _prefs.setDouble('latitude', location.latitude);
         await _prefs.setDouble('longitude', location.longitude);
 
         _savedCity = location.city;
         _savedCountry = location.country;
+        _useAutomaticLocation = true;
+        await _prefs.setBool('use_automatic_location', true);
       } else {
         print('⚠️ getCurrentLocation returned null');
       }
@@ -292,20 +304,27 @@ class PrayerProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> setLocation(String city, String country) async {
+  Future<void> setManualLocation(String city, String country) async {
     try {
-      final locations = await LocationService.searchLocation(city);
+      final locations = await LocationService.searchLocation('$city, $country');
       if (locations.isNotEmpty) {
-        _currentLocation = locations.first;
+        final normalizedCountry = country.toLowerCase();
+        _currentLocation = locations.firstWhere(
+          (location) => location.country.toLowerCase().contains(normalizedCountry),
+          orElse: () => locations.first,
+        );
         _savedCity = city;
         _savedCountry = country;
+        _useAutomaticLocation = false;
 
         await _prefs.setString('city', city);
         await _prefs.setString('country', country);
+        await _prefs.setBool('use_automatic_location', false);
         await _prefs.setDouble('latitude', _currentLocation!.latitude);
         await _prefs.setDouble('longitude', _currentLocation!.longitude);
 
         await fetchPrayerTimes();
+        notifyListeners();
       }
     } catch (e) {
       _errorMessage = 'Error setting location: $e';

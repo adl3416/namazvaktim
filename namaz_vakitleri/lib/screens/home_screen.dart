@@ -56,7 +56,7 @@ class HomeScreen extends StatelessWidget {
               SafeArea(
                 child: RefreshIndicator(
                   color: scheme.primary,
-                  onRefresh: prayerProvider.refreshLocation,
+                  onRefresh: prayerProvider.fetchPrayerTimes,
                   child: CustomScrollView(
                     physics: const BouncingScrollPhysics(
                       parent: AlwaysScrollableScrollPhysics(),

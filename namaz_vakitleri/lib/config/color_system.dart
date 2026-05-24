@@ -11,8 +11,8 @@ class AppColors {
   ); // Ana renk (ör: öğle-ikindi arası)
 
   // Dark mode backgrounds
-  static const Color darkBg = Color(0xFF2A2633);
-  static const Color darkBgSecondary = Color(0xFF3D3645);
+  static const Color darkBg = Color(0xFF0F172A);
+  static const Color darkBgSecondary = Color(0xFF1E293B);
 
   // Prayer time backgrounds (dark mode) - Sadece ana rengin koyu tonu
   static const Color darkBaseBg = Color(
@@ -69,22 +69,22 @@ class AppColors {
     dynamicAccent = Color.lerp(base, Colors.black, 0.16);
   }
 
-  // Text colors (all black per user requirement)
-  static const Color textPrimary = Color(0xFF000000);
-  static const Color textSecondary = Color(0xFF000000);
-  static const Color textLight = Color(0xFF000000);
-  static const Color darkTextPrimary = Color(0xFF000000);
-  static const Color darkTextSecondary = Color(0xFF000000);
-  static const Color darkTextLight = Color(0xFF000000);
+  // Text colors
+  static const Color textPrimary = Color(0xFF111827);
+  static const Color textSecondary = Color(0xFF374151);
+  static const Color textLight = Color(0xFF6B7280);
+  static const Color darkTextPrimary = Color(0xFFF8FAFC);
+  static const Color darkTextSecondary = Color(0xFFCBD5E1);
+  static const Color darkTextLight = Color(0xFF94A3B8);
 
   // UI elements
   static const Color accentMint = Color(0xFFBEECD5);
-  static const Color darkAccentMint = Color(0xFF8B9FA3);
+  static const Color darkAccentMint = Color(0xFF7DD3C7);
   // Defaults for accents
   static const Color _accentPrimaryDefault = Color(0xFF5DADE2);
-  static const Color _darkAccentPrimaryDefault = Color(0xFF3B80C0);
+  static const Color _darkAccentPrimaryDefault = Color(0xFF38BDF8);
   static const Color _accentSecondaryDefault = Color(0xFF85C1E2);
-  static const Color _darkAccentSecondaryDefault = Color(0xFF6AACDB);
+  static const Color _darkAccentSecondaryDefault = Color(0xFF7DD3FC);
 
   // Dynamic overrides (can be set at runtime to tint the UI per vakit interval)
   static Color? dynamicBase;
@@ -99,13 +99,13 @@ class AppColors {
 
   // Dividers
   static const Color divider = Color(0xFFE0E0E0);
-  static const Color darkDivider = Color(0xFF4A4359);
+  static const Color darkDivider = Color(0xFF334155);
   static const Color lightDivider = Color(0xFFE0E0E0);
 
   // Status colors
   static const Color success = Color(0xFFB5D4A8);
-  static const Color error = Color(0xFFD4A8A8);
-  static const Color warning = Color(0xFFD4C4A8);
+  static const Color error = Color(0xFFDC2626);
+  static const Color warning = Color(0xFFD97706);
 
   // Theme-aware getters
   static Color getTextPrimary(bool isDark) =>

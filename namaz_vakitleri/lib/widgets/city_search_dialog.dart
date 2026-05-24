@@ -174,7 +174,7 @@ class _CitySearchDialogState extends State<CitySearchDialog> {
     });
 
     try {
-      await widget.prayerProvider.setLocation(city, 'TR');
+      await widget.prayerProvider.setManualLocation(city, 'Türkiye');
       if (mounted) {
         Navigator.pop(context);
       }

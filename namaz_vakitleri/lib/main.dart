@@ -164,10 +164,23 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   ThemeData _buildLightTheme() {
+    final colorScheme = ColorScheme.light(
+      primary: AppColors.accentPrimary,
+      secondary: AppColors.accentSecondary,
+      surface: AppColors.lightBgSecondary,
+      background: AppColors.lightBg,
+      error: AppColors.error,
+      onPrimary: Colors.white,
+      onSecondary: AppColors.textPrimary,
+      onSurface: AppColors.textPrimary,
+      onBackground: AppColors.textPrimary,
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
       scaffoldBackgroundColor: AppColors.lightBg,
+      colorScheme: colorScheme,
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.lightBg,
         elevation: 0,
@@ -227,21 +240,65 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           return AppColors.textLight.withOpacity(0.3);
         }),
       ),
-      colorScheme: ColorScheme.light(
-        primary: AppColors.accentPrimary,
-        secondary: AppColors.accentSecondary,
-        surface: AppColors.lightBgSecondary,
-        background: AppColors.lightBg,
-        error: AppColors.error,
+      cardTheme: CardThemeData(
+        color: AppColors.lightBgSecondary,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+      ),
+      dividerColor: AppColors.divider,
+      iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.textPrimary,
+          side: BorderSide(color: AppColors.textLight.withOpacity(0.25)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: colorScheme.primary,
+        ),
       ),
     );
   }
 
   ThemeData _buildDarkTheme() {
+    final colorScheme = ColorScheme.dark(
+      primary: AppColors.darkAccentPrimary,
+      secondary: AppColors.darkAccentSecondary,
+      surface: AppColors.darkBgSecondary,
+      background: AppColors.darkBg,
+      error: AppColors.error,
+      onPrimary: AppColors.darkBg,
+      onSecondary: AppColors.darkBg,
+      onSurface: AppColors.darkTextPrimary,
+      onBackground: AppColors.darkTextPrimary,
+    );
+
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       scaffoldBackgroundColor: AppColors.darkBg,
+      colorScheme: colorScheme,
       appBarTheme: AppBarTheme(
         backgroundColor: AppColors.darkBg,
         elevation: 0,
@@ -311,12 +368,52 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           return AppColors.darkTextLight.withOpacity(0.3);
         }),
       ),
-      colorScheme: ColorScheme.dark(
-        primary: AppColors.darkAccentPrimary,
-        secondary: AppColors.darkAccentSecondary,
-        surface: AppColors.darkBgSecondary,
-        background: AppColors.darkBg,
-        error: AppColors.error,
+      cardTheme: CardThemeData(
+        color: AppColors.darkBgSecondary,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+      ),
+      dividerColor: AppColors.darkDivider,
+      iconTheme: const IconThemeData(color: AppColors.darkTextPrimary),
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.darkBgSecondary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.darkBgSecondary,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: colorScheme.primary,
+          foregroundColor: colorScheme.onPrimary,
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.darkTextPrimary,
+          side: BorderSide(color: AppColors.darkTextLight.withOpacity(0.24)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: colorScheme.primary,
+        ),
       ),
     );
   }

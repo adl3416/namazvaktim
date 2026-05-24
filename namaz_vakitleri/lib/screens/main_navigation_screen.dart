@@ -29,7 +29,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     return Consumer2<AppSettings, PrayerProvider>(
       builder: (context, settings, prayerProvider, _) {
-        final palette = _navPaletteForPrayer(prayerProvider.activePrayer?.name);
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final palette = _navPaletteForPrayer(
+          prayerProvider.activePrayer?.name,
+          isDark,
+        );
         final bottomInset = MediaQuery.of(context).padding.bottom;
 
         return PopScope(
@@ -78,7 +82,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     backgroundColor: Colors.transparent,
                     height: 68,
                     elevation: 0,
-                    indicatorColor: Colors.white.withOpacity(0.20),
+                    indicatorColor: isDark
+                        ? Colors.white.withOpacity(0.14)
+                        : Colors.white.withOpacity(0.20),
                     iconTheme: WidgetStateProperty.resolveWith<IconThemeData>((
                       states,
                     ) {
@@ -155,60 +161,91 @@ class _NavPalette {
   final Color tertiary;
 }
 
-_NavPalette _navPaletteForPrayer(String? prayerName) {
+_NavPalette _navPaletteForPrayer(String? prayerName, bool isDark) {
   final normalized = prayerName?.toLowerCase() ?? '';
 
   if (normalized.contains('fajr') || normalized.contains('imsak')) {
-    return const _NavPalette(
-      primary: Color(0xFF4338CA),
-      secondary: Color(0xFF6366F1),
-      tertiary: Color(0xFF818CF8),
+    return _shadePalette(
+      const _NavPalette(
+        primary: Color(0xFF4338CA),
+        secondary: Color(0xFF6366F1),
+        tertiary: Color(0xFF818CF8),
+      ),
+      isDark,
     );
   }
 
   if (normalized.contains('sunrise') || normalized.contains('gunes')) {
-    return const _NavPalette(
-      primary: Color(0xFFC2410C),
-      secondary: Color(0xFFEA580C),
-      tertiary: Color(0xFFFB923C),
+    return _shadePalette(
+      const _NavPalette(
+        primary: Color(0xFFC2410C),
+        secondary: Color(0xFFEA580C),
+        tertiary: Color(0xFFFB923C),
+      ),
+      isDark,
     );
   }
 
   if (normalized.contains('dhuhr') || normalized.contains('ogle')) {
-    return const _NavPalette(
-      primary: Color(0xFF1D4ED8),
-      secondary: Color(0xFF3B82F6),
-      tertiary: Color(0xFF60A5FA),
+    return _shadePalette(
+      const _NavPalette(
+        primary: Color(0xFF1D4ED8),
+        secondary: Color(0xFF3B82F6),
+        tertiary: Color(0xFF60A5FA),
+      ),
+      isDark,
     );
   }
 
   if (normalized.contains('asr') || normalized.contains('ikindi')) {
-    return const _NavPalette(
-      primary: Color(0xFFB45309),
-      secondary: Color(0xFFD97706),
-      tertiary: Color(0xFFF59E0B),
+    return _shadePalette(
+      const _NavPalette(
+        primary: Color(0xFFB45309),
+        secondary: Color(0xFFD97706),
+        tertiary: Color(0xFFF59E0B),
+      ),
+      isDark,
     );
   }
 
   if (normalized.contains('maghrib') || normalized.contains('aksam')) {
-    return const _NavPalette(
-      primary: Color(0xFF9F1239),
-      secondary: Color(0xFFE11D48),
-      tertiary: Color(0xFFFB7185),
+    return _shadePalette(
+      const _NavPalette(
+        primary: Color(0xFF9F1239),
+        secondary: Color(0xFFE11D48),
+        tertiary: Color(0xFFFB7185),
+      ),
+      isDark,
     );
   }
 
   if (normalized.contains('isha') || normalized.contains('yatsi')) {
-    return const _NavPalette(
-      primary: Color(0xFF5B21B6),
-      secondary: Color(0xFF7C3AED),
-      tertiary: Color(0xFF8B5CF6),
+    return _shadePalette(
+      const _NavPalette(
+        primary: Color(0xFF5B21B6),
+        secondary: Color(0xFF7C3AED),
+        tertiary: Color(0xFF8B5CF6),
+      ),
+      isDark,
     );
   }
 
-  return const _NavPalette(
-    primary: Color(0xFF5B21B6),
-    secondary: Color(0xFF7C3AED),
-    tertiary: Color(0xFF8B5CF6),
+  return _shadePalette(
+    const _NavPalette(
+      primary: Color(0xFF5B21B6),
+      secondary: Color(0xFF7C3AED),
+      tertiary: Color(0xFF8B5CF6),
+    ),
+    isDark,
+  );
+}
+
+_NavPalette _shadePalette(_NavPalette palette, bool isDark) {
+  if (!isDark) return palette;
+
+  return _NavPalette(
+    primary: Color.lerp(palette.primary, const Color(0xFF0F172A), 0.48)!,
+    secondary: Color.lerp(palette.secondary, const Color(0xFF111827), 0.42)!,
+    tertiary: Color.lerp(palette.tertiary, const Color(0xFF1E293B), 0.35)!,
   );
 }

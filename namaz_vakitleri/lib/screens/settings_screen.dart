@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../config/localization.dart';
 import '../providers/app_settings.dart';
+import '../providers/prayer_provider.dart';
+import 'country_selection_screen.dart';
 import 'language_selection_screen.dart';
 import 'notification_settings_screen.dart';
 import 'theme_selection_screen.dart';
@@ -28,9 +30,28 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AppSettings>(
-      builder: (context, settings, _) {
+    return Consumer2<AppSettings, PrayerProvider>(
+      builder: (context, settings, prayerProvider, _) {
         final locale = settings.language;
+        final currentCity = prayerProvider.savedCity.isNotEmpty
+            ? prayerProvider.savedCity
+            : 'Istanbul';
+        final currentCountry = prayerProvider.savedCountry.isNotEmpty
+            ? prayerProvider.savedCountry
+            : 'Turkey';
+        final locationModeText = prayerProvider.useAutomaticLocation
+            ? _text(
+                locale,
+                tr: 'Otomatik konum acik',
+                en: 'Automatic location is on',
+                ar: 'الموقع التلقائي مفعل',
+              )
+            : _text(
+                locale,
+                tr: 'Manuel sehir secili',
+                en: 'Manual city selected',
+                ar: 'تم اختيار مدينة يدويا',
+              );
 
         return Scaffold(
           backgroundColor: const Color(0xFFF6F1E8),
@@ -54,6 +75,25 @@ class SettingsScreen extends StatelessWidget {
                     title: AppLocalizations.translate('settings', locale),
                   ),
                   const SizedBox(height: 22),
+                  _SettingsTile(
+                    icon: Icons.location_on_rounded,
+                    iconColor: const Color(0xFF2563EB),
+                    title: _text(
+                      locale,
+                      tr: 'Mevcut konum',
+                      en: 'Current location',
+                      ar: 'الموقع الحالي',
+                    ),
+                    subtitle: '$currentCity, $currentCountry • $locationModeText',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CountrySelectionScreen(),
+                        ),
+                      );
+                    },
+                  ),
                   _SettingsTile(
                     icon: Icons.notifications_active_rounded,
                     iconColor: const Color(0xFFEA580C),
@@ -238,7 +278,7 @@ class _SettingsTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(30),
           onTap: onTap,
           child: Container(
-            height: 78,
+            constraints: const BoxConstraints(minHeight: 78),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(30),
@@ -270,7 +310,7 @@ class _SettingsTile extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 16,

@@ -51,9 +51,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _isInitialized) {
-      _prayerProvider.resumeActivePrayerAdhanIfNeeded();
-    }
+    // Keep the current audio session untouched when the app is reopened.
+    // Restarting adhan here causes the sound to begin from the start.
   }
 
   void _setupMethodChannels() {

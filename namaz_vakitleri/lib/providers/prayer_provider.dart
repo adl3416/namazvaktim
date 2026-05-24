@@ -42,6 +42,7 @@ class PrayerProvider extends ChangeNotifier {
   bool _isAdhanPlaying = false;
   double _currentAdhanVolume = 1.0;
   String? _lastAdhanPlayedForPrayer;
+  String? _manuallyDismissedAdhanPrayerKey;
   final Duration _adhanThreshold = const Duration(minutes: 15);
   
   // Track audio player listeners to avoid duplicates
@@ -258,8 +259,6 @@ class PrayerProvider extends ChangeNotifier {
 
         // If the app is opened while a prayer alert is actively sounding,
         // continue playback inside the app so opening it doesn't silence the adhan.
-        await resumeActivePrayerAdhanIfNeeded();
-
         print(
           '✅ Prayer Times Loaded: ${prayerTimes.prayerTimesList.length} prayers',
         );
@@ -406,6 +405,7 @@ class PrayerProvider extends ChangeNotifier {
     // This function now only resets the tracking state for the next cycle.
     if (remaining > _adhanThreshold) {
       _lastAdhanPlayedForPrayer = null;
+      _manuallyDismissedAdhanPrayerKey = null;
     }
   }
 
@@ -433,6 +433,12 @@ class PrayerProvider extends ChangeNotifier {
       return;
     }
 
+    final prayerKey = _buildPrayerPlaybackKey(prayer);
+    if (_manuallyDismissedAdhanPrayerKey == prayerKey) {
+      print('ℹ️ Adhan was manually dismissed for ${prayer.name}, skipping resume');
+      return;
+    }
+
     // Check if we haven't played adhan for this active prayer yet
     if (_lastAdhanPlayedForPrayer != '${prayer.name}_active') {
       print('🔔 Active prayer detected: ${prayer.name} - Playing adhan');
@@ -445,7 +451,9 @@ class PrayerProvider extends ChangeNotifier {
 
   /// Play adhan when prayer time arrives
   Future<void> _checkAndPlayAdhanOnTime(PrayerTime prayer) async {
-    // Only play adhan if sound is enabled for this prayer
+    // Notification and adhan settings are independent:
+    // notification decides whether a scheduled alert exists,
+    // sound decides whether the adhan audio should play in-app.
     final soundEnabled = _appSettings.prayerSounds[prayer.name] ?? true;
     final notificationEnabled = _appSettings.prayerNotifications[prayer.name] ?? true;
 
@@ -455,15 +463,17 @@ class PrayerProvider extends ChangeNotifier {
     if (_lastAdhanPlayedForPrayer != '${prayer.name}_ontime') {
       print('🔔 Prayer time arrived: ${prayer.name}');
 
-      // If a scheduled notification is enabled, let that exact-time system alert
-      // handle the visible notification and any configured sound to avoid duplicates.
-      if (notificationEnabled) {
-        print('📢 Scheduled exact notification will handle ${prayer.name}; skipping in-app fallback');
-      } else if (soundEnabled) {
+      if (soundEnabled) {
         print('🎵 Playing adhan sound for ${prayer.name}');
         await _playAdhanForPrayer(prayer.name);
       } else {
-        print('🔇 Sound disabled for ${prayer.name}, skipping adhan');
+        print('🔇 Sound disabled for ${prayer.name}, skipping in-app adhan');
+      }
+
+      if (notificationEnabled) {
+        print('📢 Scheduled notification remains enabled for ${prayer.name}');
+      } else {
+        print('🔕 Scheduled notification disabled for ${prayer.name}');
       }
 
       _lastAdhanPlayedForPrayer = '${prayer.name}_ontime';
@@ -474,6 +484,9 @@ class PrayerProvider extends ChangeNotifier {
     final activePrayer = _activePrayer;
     if (activePrayer == null) return;
     if (_isAdhanPlaying) return;
+    if (_manuallyDismissedAdhanPrayerKey == _buildPrayerPlaybackKey(activePrayer)) {
+      return;
+    }
     await _checkAndPlayAdhanForActivePrayer(activePrayer);
   }
 
@@ -570,6 +583,8 @@ class PrayerProvider extends ChangeNotifier {
       if (soundFile != null) {
         print('🎵 Playing adhan for $prayerName: $soundFile');
         
+        _manuallyDismissedAdhanPrayerKey = null;
+
         // Set audio source and play
         await _audioPlayer.setSource(AssetSource('sounds/$soundFile'));
         await _audioPlayer.setVolume(_currentAdhanVolume);
@@ -676,15 +691,20 @@ class PrayerProvider extends ChangeNotifier {
   /// Stop currently playing adhan
   Future<void> stopAdhan() async {
     try {
+      final activePrayer = _activePrayer;
+      if (activePrayer != null) {
+        _manuallyDismissedAdhanPrayerKey = _buildPrayerPlaybackKey(activePrayer);
+      }
       await _audioPlayer.stop();
-      _isAdhanPlaying = false;
-      _currentAdhanVolume = 1.0;
-      notifyListeners();
-      _notifyAdhanStopped();
+      await _notifyAdhanStopped();
       print('🛑 Adhan stopped manually');
     } catch (e) {
       print('❌ Error stopping adhan: $e');
     }
+  }
+
+  String _buildPrayerPlaybackKey(PrayerTime prayer) {
+    return '${prayer.name}_${prayer.time.toIso8601String()}';
   }
 
   Future<void> lowerAdhanVolume() async {

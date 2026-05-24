@@ -601,6 +601,16 @@ class NotificationService {
     return enableSound && _hasDedicatedSound(prayerName);
   }
 
+  static AndroidNotificationSound? _androidSoundForExactPrayerAlert(
+    String? soundFile,
+  ) {
+    if (soundFile == null || soundFile.isEmpty) {
+      return null;
+    }
+    final resourceName = soundFile.replaceAll('.mp3', '');
+    return RawResourceAndroidNotificationSound(resourceName);
+  }
+
   @visibleForTesting
   static String exactChannelIdForPrayer({
     required String prayerName,
@@ -708,6 +718,9 @@ class NotificationService {
           : (shouldPlaySound
               ? _channelNameForPrayer(prayerName)
               : 'Prayer Notifications (Silent)');
+      final androidSound = shouldPlaySound
+          ? _androidSoundForExactPrayerAlert(soundFile)
+          : null;
       final notificationBody = _buildReminderBody(
         prayerLabel: label,
         language: language,
@@ -774,6 +787,7 @@ class NotificationService {
             importance: isReminderNotification ? Importance.high : Importance.max,
             priority: isReminderNotification ? Priority.high : Priority.max,
             playSound: shouldPlaySound,
+            sound: androidSound,
             enableVibration: true,
             fullScreenIntent: !isReminderNotification && shouldPlaySound,
             autoCancel: isReminderNotification,

@@ -7,10 +7,11 @@ import '../providers/prayer_provider.dart';
 import 'country_selection_screen.dart';
 import 'language_selection_screen.dart';
 import 'notification_settings_screen.dart';
+import 'support_legal_screen.dart';
 import 'theme_selection_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  const SettingsScreen({super.key});
 
   String _text(
     String language, {
@@ -33,24 +34,23 @@ class SettingsScreen extends StatelessWidget {
     return Consumer2<AppSettings, PrayerProvider>(
       builder: (context, settings, prayerProvider, _) {
         final locale = settings.language;
-        final currentCity = prayerProvider.savedCity.isNotEmpty
-            ? prayerProvider.savedCity
-            : 'Istanbul';
+        final currentCity =
+            prayerProvider.savedCity.isNotEmpty ? prayerProvider.savedCity : 'Istanbul';
         final currentCountry = prayerProvider.savedCountry.isNotEmpty
             ? prayerProvider.savedCountry
             : 'Turkey';
         final locationModeText = prayerProvider.useAutomaticLocation
             ? _text(
                 locale,
-                tr: 'Otomatik konum acik',
+                tr: 'Otomatik konum açık',
                 en: 'Automatic location is on',
                 ar: 'الموقع التلقائي مفعل',
               )
             : _text(
                 locale,
-                tr: 'Manuel sehir secili',
+                tr: 'Manuel şehir seçili',
                 en: 'Manual city selected',
-                ar: 'تم اختيار مدينة يدويا',
+                ar: 'تم اختيار مدينة يدويًا',
               );
 
         return Scaffold(
@@ -100,7 +100,7 @@ class SettingsScreen extends StatelessWidget {
                     title: AppLocalizations.translate('notifications', locale),
                     subtitle: _text(
                       locale,
-                      tr: 'Ezan, hatirlatma ve vakit ayarlarini yonet',
+                      tr: 'Ezan, hatırlatma ve vakit ayarlarını yönet',
                       en: 'Manage adhan, reminders, and prayer time settings',
                       ar: 'أدر الأذان والتذكيرات وإعدادات أوقات الصلاة',
                     ),
@@ -120,7 +120,7 @@ class SettingsScreen extends StatelessWidget {
                     title: AppLocalizations.translate('theme', locale),
                     subtitle: _text(
                       locale,
-                      tr: 'Uygulamanin gorunusunu degistir',
+                      tr: 'Uygulamanın görünüşünü değiştir',
                       en: 'Change the look of the app',
                       ar: 'غيّر مظهر التطبيق',
                     ),
@@ -138,7 +138,7 @@ class SettingsScreen extends StatelessWidget {
                     iconColor: const Color(0xFF15803D),
                     title: AppLocalizations.translate('language', locale),
                     subtitle:
-                        '${_text(locale, tr: 'Su an', en: 'Current', ar: 'الحالية')}: ${settings.language.toUpperCase()}',
+                        '${_text(locale, tr: 'Şu an', en: 'Current', ar: 'الحالية')}: ${settings.language.toUpperCase()}',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -154,28 +154,22 @@ class SettingsScreen extends StatelessWidget {
                     iconColor: const Color(0xFF0F766E),
                     title: _text(
                       locale,
-                      tr: 'Uygulama hakkinda ve destek',
+                      tr: 'Uygulama hakkında ve destek',
                       en: 'About and support',
                       ar: 'حول التطبيق والدعم',
                     ),
                     subtitle: _text(
                       locale,
-                      tr: 'Uygulama bilgileri ve destek alani',
-                      en: 'App information and support area',
-                      ar: 'معلومات التطبيق ومنطقة الدعم',
+                      tr: 'Gizlilik, yasal bilgi ve destek alanı',
+                      en: 'Privacy, legal information, and support area',
+                      ar: 'الخصوصية والمعلومات القانونية والدعم',
                     ),
                     onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            _text(
-                              locale,
-                              tr: 'Destek alani yakinda eklenecek',
-                              en: 'Support area will be added soon',
-                              ar: 'سيتم إضافة قسم الدعم قريبًا',
-                            ),
-                          ),
-                          backgroundColor: const Color(0xFF0F766E),
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              SupportLegalScreen(language: locale),
                         ),
                       );
                     },
@@ -225,7 +219,7 @@ class SettingsScreen extends StatelessWidget {
                               Text(
                                 _text(
                                   locale,
-                                  tr: 'Surum 1.0.0',
+                                  tr: 'Sürüm 1.0.0',
                                   en: 'Version 1.0.0',
                                   ar: 'الإصدار 1.0.0',
                                 ),
@@ -321,7 +315,7 @@ class _SettingsTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Color(0xFF655B51),

@@ -103,6 +103,10 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.prayer_times_widget)
             views.setTextViewText(R.id.widget_header_city, city)
             views.setTextViewText(R.id.widget_header_date, dateLabel)
+            views.setViewVisibility(
+                R.id.widget_header_date,
+                if (isCompact) View.GONE else View.VISIBLE
+            )
             views.setInt(
                 R.id.widget_header_container,
                 "setBackgroundColor",
@@ -229,7 +233,8 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
 
         private fun isCompactWidget(options: Bundle): Boolean {
             val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
-            return minWidth in 1..229
+            val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
+            return minHeight in 1..140 || minWidth in 1..260
         }
 
         private fun formatRemaining(remainingMillis: Long): String {

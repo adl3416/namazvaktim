@@ -1,49 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../config/color_system.dart';
-import '../config/localization.dart';
 import '../providers/app_settings.dart';
 
-class ThemeSelectionScreen extends StatefulWidget {
+class ThemeSelectionScreen extends StatelessWidget {
   const ThemeSelectionScreen({super.key});
 
-  @override
-  State<ThemeSelectionScreen> createState() => _ThemeSelectionScreenState();
-}
-
-class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
   Color _getTimeBasedScaffoldColor(bool isDark) {
     final now = DateTime.now();
     final hour = now.hour;
 
     if (isDark) {
-      if (hour >= 5 && hour < 11) {
-        return const Color(0xFF4A3A4A);
-      } else if (hour >= 11 && hour < 15) {
-        return const Color(0xFF4A4A2A);
-      } else if (hour >= 15 && hour < 19) {
-        return const Color(0xFF4A2A2A);
-      } else {
-        return const Color(0xFF2A2A4A);
-      }
-    } else {
-      if (hour >= 5 && hour < 11) {
-        return const Color(0xFFF8E8E8);
-      } else if (hour >= 11 && hour < 15) {
-        return const Color(0xFFFFF8E1);
-      } else if (hour >= 15 && hour < 19) {
-        return const Color(0xFFFFE8E1);
-      } else {
-        return const Color(0xFFE8E8F8);
-      }
+      if (hour >= 5 && hour < 11) return const Color(0xFF4A3A4A);
+      if (hour >= 11 && hour < 15) return const Color(0xFF4A4A2A);
+      if (hour >= 15 && hour < 19) return const Color(0xFF4A2A2A);
+      return const Color(0xFF2A2A4A);
+    }
+
+    if (hour >= 5 && hour < 11) return const Color(0xFFF8E8E8);
+    if (hour >= 11 && hour < 15) return const Color(0xFFFFF8E1);
+    if (hour >= 15 && hour < 19) return const Color(0xFFFFE8E1);
+    return const Color(0xFFE8E8F8);
+  }
+
+  String _text(
+    String locale, {
+    required String tr,
+    required String en,
+    required String ar,
+  }) {
+    switch (locale) {
+      case 'tr':
+        return tr;
+      case 'ar':
+        return ar;
+      default:
+        return en;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final locale = context.read<AppSettings>().language;
     final settings = context.watch<AppSettings>();
+    final locale = settings.language;
 
     return Scaffold(
       backgroundColor: _getTimeBasedScaffoldColor(isDark),
@@ -58,7 +59,12 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Tema Seçimi',
+          _text(
+            locale,
+            tr: 'Tema Seçimi',
+            en: 'Theme Selection',
+            ar: 'اختيار المظهر',
+          ),
           style: AppTypography.h3.copyWith(
             color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
           ),
@@ -69,19 +75,26 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Text(
-              'Uygulama Teması',
+              _text(
+                locale,
+                tr: 'Uygulama Teması',
+                en: 'App Theme',
+                ar: 'مظهر التطبيق',
+              ),
               style: AppTypography.h2.copyWith(
-                color: isDark
-                    ? AppColors.darkTextPrimary
-                    : AppColors.textPrimary,
+                color:
+                    isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
               ),
             ),
             SizedBox(height: AppSpacing.md),
-
             Text(
-              'Uygulamanın görünümünü istediğiniz gibi özelleştirin.',
+              _text(
+                locale,
+                tr: 'Uygulamanın görünümünü istediğiniz gibi özelleştirin.',
+                en: 'Customize the app appearance the way you want.',
+                ar: 'خصّص مظهر التطبيق بالطريقة التي تريدها.',
+              ),
               style: AppTypography.bodyMedium.copyWith(
                 color: isDark
                     ? AppColors.darkTextSecondary
@@ -89,70 +102,99 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
               ),
             ),
             SizedBox(height: AppSpacing.xl),
-
-            // Theme Mode Selection
             Text(
-              'Tema Modu',
+              _text(
+                locale,
+                tr: 'Tema Modu',
+                en: 'Theme Mode',
+                ar: 'وضع المظهر',
+              ),
               style: AppTypography.h3.copyWith(
-                color: isDark
-                    ? AppColors.darkTextPrimary
-                    : AppColors.textPrimary,
+                color:
+                    isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
               ),
             ),
             SizedBox(height: AppSpacing.lg),
-
-            // Light Mode
-            _buildThemeModeOption(
-              title: 'Açık Tema',
-              subtitle: 'Her zaman açık tema kullan',
+            _ThemeModeOption(
+              title: _text(
+                locale,
+                tr: 'Açık Tema',
+                en: 'Light Theme',
+                ar: 'المظهر الفاتح',
+              ),
+              subtitle: _text(
+                locale,
+                tr: 'Her zaman açık tema kullan',
+                en: 'Always use the light theme',
+                ar: 'استخدم المظهر الفاتح دائمًا',
+              ),
               icon: Icons.light_mode,
               isSelected: settings.themeMode == ThemeMode.light,
               onTap: () => settings.setThemeMode(ThemeMode.light),
               isDark: isDark,
             ),
-
             SizedBox(height: AppSpacing.md),
-
-            // Dark Mode
-            _buildThemeModeOption(
-              title: 'Koyu Tema',
-              subtitle: 'Her zaman koyu tema kullan',
+            _ThemeModeOption(
+              title: _text(
+                locale,
+                tr: 'Koyu Tema',
+                en: 'Dark Theme',
+                ar: 'المظهر الداكن',
+              ),
+              subtitle: _text(
+                locale,
+                tr: 'Her zaman koyu tema kullan',
+                en: 'Always use the dark theme',
+                ar: 'استخدم المظهر الداكن دائمًا',
+              ),
               icon: Icons.dark_mode,
               isSelected: settings.themeMode == ThemeMode.dark,
               onTap: () => settings.setThemeMode(ThemeMode.dark),
               isDark: isDark,
             ),
-
             SizedBox(height: AppSpacing.md),
-
-            // System Mode
-            _buildThemeModeOption(
-              title: 'Sistem Teması',
-              subtitle: 'Cihaz ayarlarını takip et',
+            _ThemeModeOption(
+              title: _text(
+                locale,
+                tr: 'Sistem Teması',
+                en: 'System Theme',
+                ar: 'مظهر النظام',
+              ),
+              subtitle: _text(
+                locale,
+                tr: 'Cihaz ayarlarını takip et',
+                en: 'Follow device settings',
+                ar: 'اتبع إعدادات الجهاز',
+              ),
               icon: Icons.settings_system_daydream,
               isSelected: settings.themeMode == ThemeMode.system,
               onTap: () => settings.setThemeMode(ThemeMode.system),
               isDark: isDark,
             ),
-
             SizedBox(height: AppSpacing.xxxl),
-
-            // Color Palettes Section
             Text(
-              'Renk Paletleri',
+              _text(
+                locale,
+                tr: 'Renk Paletleri',
+                en: 'Color Palettes',
+                ar: 'لوحات الألوان',
+              ),
               style: AppTypography.h3.copyWith(
-                color: isDark
-                    ? AppColors.darkTextPrimary
-                    : AppColors.textPrimary,
+                color:
+                    isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
               ),
             ),
             SizedBox(height: AppSpacing.lg),
-
             Expanded(
               child: settings.palettes.isEmpty
                   ? Center(
                       child: Text(
-                        'Henüz kaydedilmiş palet yok',
+                        _text(
+                          locale,
+                          tr: 'Henüz kaydedilmiş palet yok',
+                          en: 'No saved palettes yet',
+                          ar: 'لا توجد لوحات محفوظة بعد',
+                        ),
                         style: AppTypography.bodyMedium.copyWith(
                           color: isDark
                               ? AppColors.darkTextSecondary
@@ -163,8 +205,10 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
                   : ListView.builder(
                       itemCount: settings.palettes.length,
                       itemBuilder: (context, index) {
-                        final paletteName = settings.palettes.keys.elementAt(index);
-                        final isActive = settings.activePaletteName == paletteName;
+                        final paletteName =
+                            settings.palettes.keys.elementAt(index);
+                        final isActive =
+                            settings.activePaletteName == paletteName;
 
                         return Container(
                           margin: EdgeInsets.only(bottom: AppSpacing.md),
@@ -173,13 +217,16 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
                             color: isDark
                                 ? AppColors.darkBgSecondary
                                 : AppColors.lightBgSecondary,
-                            borderRadius: BorderRadius.circular(AppRadius.md),
+                            borderRadius:
+                                BorderRadius.circular(AppRadius.md),
                             border: Border.all(
                               color: isActive
                                   ? (isDark
                                       ? AppColors.darkAccentPrimary
                                       : AppColors.accentPrimary)
-                                  : (isDark ? AppColors.darkDivider : AppColors.divider),
+                                  : (isDark
+                                      ? AppColors.darkDivider
+                                      : AppColors.divider),
                               width: isActive ? 2 : 0.5,
                             ),
                           ),
@@ -191,12 +238,19 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
                                 color: isDark
                                     ? AppColors.darkTextPrimary
                                     : AppColors.textPrimary,
-                                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                                fontWeight: isActive
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                             ),
                             subtitle: isActive
                                 ? Text(
-                                    'Aktif',
+                                    _text(
+                                      locale,
+                                      tr: 'Aktif',
+                                      en: 'Active',
+                                      ar: 'نشط',
+                                    ),
                                     style: AppTypography.bodySmall.copyWith(
                                       color: isDark
                                           ? AppColors.darkAccentPrimary
@@ -207,15 +261,20 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                // Color preview
                                 Container(
                                   width: 24,
                                   height: 24,
                                   decoration: BoxDecoration(
-                                    color: Color(settings.palettes[paletteName]!['sayim'] ?? 0xFFFFE7BF),
-                                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                                    color: Color(
+                                      settings.palettes[paletteName]!['sayim'] ??
+                                          0xFFFFE7BF,
+                                    ),
+                                    borderRadius:
+                                        BorderRadius.circular(AppRadius.sm),
                                     border: Border.all(
-                                      color: isDark ? AppColors.darkDivider : AppColors.divider,
+                                      color: isDark
+                                          ? AppColors.darkDivider
+                                          : AppColors.divider,
                                       width: 0.5,
                                     ),
                                   ),
@@ -229,7 +288,8 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
                                           ? AppColors.darkTextSecondary
                                           : AppColors.textSecondary,
                                     ),
-                                    onPressed: () => settings.applyPalette(paletteName),
+                                    onPressed: () =>
+                                        settings.applyPalette(paletteName),
                                   ),
                               ],
                             ),
@@ -244,23 +304,33 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
       ),
     );
   }
+}
 
-  Widget _buildThemeModeOption({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required bool isDark,
-  }) {
+class _ThemeModeOption extends StatelessWidget {
+  const _ThemeModeOption({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+    required this.isDark,
+  });
+
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.darkBgSecondary
-              : AppColors.lightBgSecondary,
+          color: isDark ? AppColors.darkBgSecondary : AppColors.lightBgSecondary,
           borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(
             color: isSelected
@@ -286,9 +356,7 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
                   Text(
                     title,
                     style: AppTypography.bodyMedium.copyWith(
-                      color: isDark
-                          ? AppColors.darkTextPrimary
-                          : AppColors.textPrimary,
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),

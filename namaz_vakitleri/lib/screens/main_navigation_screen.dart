@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/localization.dart';
 import '../providers/app_settings.dart';
 import '../providers/prayer_provider.dart';
 import 'home_screen.dart';
@@ -32,6 +33,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return Consumer2<AppSettings, PrayerProvider>(
       builder: (context, settings, prayerProvider, _) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
+        final locale = settings.language;
         final palette = _navPaletteForPrayer(
           prayerProvider.activePrayer?.name,
           isDark,
@@ -118,31 +120,46 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         _selectedIndex = index;
                       });
                     },
-                    destinations: const [
+                    destinations: [
                       NavigationDestination(
-                        icon: Icon(Icons.access_time_rounded),
-                        selectedIcon: Icon(Icons.access_time_filled_rounded),
-                        label: 'Vakitler',
+                        icon: const Icon(Icons.access_time_rounded),
+                        selectedIcon: const Icon(Icons.access_time_filled_rounded),
+                        label: _text(
+                          locale,
+                          tr: 'Vakitler',
+                          en: 'Times',
+                          ar: 'الأوقات',
+                        ),
                       ),
                       NavigationDestination(
-                        icon: Icon(Icons.explore_outlined),
-                        selectedIcon: Icon(Icons.explore_rounded),
-                        label: 'Kible',
+                        icon: const Icon(Icons.explore_outlined),
+                        selectedIcon: const Icon(Icons.explore_rounded),
+                        label: AppLocalizations.translate('qibla', locale),
                       ),
                       NavigationDestination(
-                        icon: Icon(Icons.mosque_outlined),
-                        selectedIcon: Icon(Icons.mosque_rounded),
-                        label: 'Camiler',
+                        icon: const Icon(Icons.mosque_outlined),
+                        selectedIcon: const Icon(Icons.mosque_rounded),
+                        label: _text(
+                          locale,
+                          tr: 'Camiler',
+                          en: 'Mosques',
+                          ar: 'المساجد',
+                        ),
                       ),
                       NavigationDestination(
-                        icon: Icon(Icons.touch_app_outlined),
-                        selectedIcon: Icon(Icons.touch_app_rounded),
-                        label: 'Zikir',
+                        icon: const Icon(Icons.touch_app_outlined),
+                        selectedIcon: const Icon(Icons.touch_app_rounded),
+                        label: _text(
+                          locale,
+                          tr: 'Zikir',
+                          en: 'Dhikr',
+                          ar: 'الذكر',
+                        ),
                       ),
                       NavigationDestination(
-                        icon: Icon(Icons.settings_outlined),
-                        selectedIcon: Icon(Icons.settings_rounded),
-                        label: 'Ayarlar',
+                        icon: const Icon(Icons.settings_outlined),
+                        selectedIcon: const Icon(Icons.settings_rounded),
+                        label: AppLocalizations.translate('settings', locale),
                       ),
                     ],
                   ),
@@ -153,6 +170,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         );
       },
     );
+  }
+}
+
+String _text(
+  String locale, {
+  required String tr,
+  required String en,
+  required String ar,
+}) {
+  switch (locale) {
+    case 'tr':
+      return tr;
+    case 'ar':
+      return ar;
+    default:
+      return en;
   }
 }
 

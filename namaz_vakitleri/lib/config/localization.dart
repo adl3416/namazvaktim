@@ -1,6 +1,8 @@
 import 'package:intl/intl.dart';
 
 class AppLocalizations {
+  static const supportedLanguages = <String>['tr', 'en', 'ar'];
+
   static const Map<String, Map<String, String>> translations = {
     'tr': {
       'app_title': 'Namaz Vakitleri',
@@ -12,8 +14,9 @@ class AppLocalizations {
       'isha': 'Yatsı',
       'settings': 'Ayarlar',
       'location': 'Konum',
-      'qibla': 'Kible',
+      'qibla': 'Kıble',
       'search_city': 'Şehir Ara',
+      'select_country': 'Ülke Seç',
       'nearby_mosques': 'Yakındaki Camiler',
       'prayer_time_label': 'Vaktine',
       'iftar_time': 'İftar vaktine',
@@ -25,9 +28,9 @@ class AppLocalizations {
       'system': 'Sistem',
       'light': 'Açık',
       'dark': 'Koyu',
-      'hour': 'sa',
-      'minute': 'dk',
-      'second': 'sn',
+      'hour': 'SA',
+      'minute': 'DK',
+      'second': 'SN',
       'cancel': 'İptal',
       'search': 'Ara',
       'loading': 'Yükleniyor...',
@@ -45,7 +48,8 @@ class AppLocalizations {
       'notification_disabled': 'Bildirim Kapalı',
       'notification_settings': 'Bildirim Ayarları',
       'dnd_permission_title': 'Rahatsız Etme İzni',
-      'dnd_permission_message': 'Namaz bildirimlerinin Rahatsız Etme modunda çalışması için izin vermeniz gerekiyor. Ayarlara giderek "Rahatsız Etme erişimi" iznini etkinleştirin.',
+      'dnd_permission_message':
+          'Namaz bildirimlerinin Rahatsız Etme modunda çalışması için izin vermeniz gerekiyor. Ayarlara giderek "Rahatsız Etme erişimi" iznini etkinleştirin.',
       'later': 'Sonra',
       'go_to_settings': 'Ayarlara Git',
     },
@@ -61,8 +65,9 @@ class AppLocalizations {
       'location': 'Location',
       'qibla': 'Qibla',
       'search_city': 'Search City',
+      'select_country': 'Select Country',
       'nearby_mosques': 'Nearby Mosques',
-      'prayer_time_label': 'Prayer Time',
+      'prayer_time_label': 'Until prayer',
       'iftar_time': 'Time to Iftar',
       'theme': 'Theme',
       'language': 'Language',
@@ -72,9 +77,9 @@ class AppLocalizations {
       'system': 'System',
       'light': 'Light',
       'dark': 'Dark',
-      'hour': 'hr',
-      'minute': 'min',
-      'second': 'sec',
+      'hour': 'HR',
+      'minute': 'MIN',
+      'second': 'SEC',
       'cancel': 'Cancel',
       'search': 'Search',
       'loading': 'Loading...',
@@ -92,14 +97,15 @@ class AppLocalizations {
       'notification_disabled': 'Notifications Disabled',
       'notification_settings': 'Notification Settings',
       'dnd_permission_title': 'Do Not Disturb Permission',
-      'dnd_permission_message': 'To allow prayer notifications to work in Do Not Disturb mode, you need to grant permission. Go to settings and enable "Do Not Disturb access".',
+      'dnd_permission_message':
+          'To allow prayer notifications to work in Do Not Disturb mode, you need to grant permission. Go to settings and enable "Do Not Disturb access".',
       'later': 'Later',
       'go_to_settings': 'Go to Settings',
     },
     'ar': {
       'app_title': 'مواقيت الصلاة',
       'fajr': 'الفجر',
-      'sunrise': 'شروق الشمس',
+      'sunrise': 'الشروق',
       'dhuhr': 'الظهر',
       'asr': 'العصر',
       'maghrib': 'المغرب',
@@ -107,80 +113,100 @@ class AppLocalizations {
       'settings': 'الإعدادات',
       'location': 'الموقع',
       'qibla': 'القبلة',
-      'search_city': 'البحث عن المدينة',
+      'search_city': 'ابحث عن مدينة',
+      'select_country': 'اختر الدولة',
       'nearby_mosques': 'المساجد القريبة',
-      'prayer_time_label': 'وقت الصلاة',
-      'iftar_time': 'وقت الإفطار',
+      'prayer_time_label': 'حتى الصلاة',
+      'iftar_time': 'حتى الإفطار',
       'theme': 'المظهر',
       'language': 'اللغة',
-      'notifications': 'الإخطارات',
+      'notifications': 'الإشعارات',
       'enable_adhan': 'تفعيل صوت الأذان',
-      'prayer_notifications': 'إخطارات وقت الصلاة',
+      'prayer_notifications': 'إشعارات الصلاة',
       'system': 'النظام',
       'light': 'فاتح',
       'dark': 'داكن',
-      'hour': 'ساعة',
-      'minute': 'دقيقة',
-      'second': 'ثانية',
+      'hour': 'سا',
+      'minute': 'د',
+      'second': 'ث',
       'cancel': 'إلغاء',
       'search': 'بحث',
-      'loading': 'جاري التحميل...',
+      'loading': 'جارٍ التحميل...',
       'allow': 'السماح',
       'open_settings': 'افتح الإعدادات',
       'notification_imsak': 'حان وقت صلاة الفجر',
-      'notification_sunrise': 'وقت شروق الشمس',
+      'notification_sunrise': 'وقت الشروق',
       'notification_noon': 'حان وقت صلاة الظهر',
       'notification_afternoon': 'حان وقت صلاة العصر',
       'notification_sunset': 'حان وقت صلاة المغرب',
       'notification_night': 'حان وقت صلاة العشاء',
-      'adhan_enabled': 'صوت الأذان مفعل',
-      'adhan_disabled': 'صوت الأذان معطل',
-      'notification_enabled': 'الإخطارات مفعلة',
-      'notification_disabled': 'الإخطارات معطلة',
-      'notification_settings': 'إعدادات الإخطارات',
+      'adhan_enabled': 'صوت الأذان مفعّل',
+      'adhan_disabled': 'صوت الأذان معطّل',
+      'notification_enabled': 'الإشعارات مفعّلة',
+      'notification_disabled': 'الإشعارات معطّلة',
+      'notification_settings': 'إعدادات الإشعارات',
       'dnd_permission_title': 'إذن عدم الإزعاج',
-      'dnd_permission_message': 'للسماح لإخطارات الصلاة بالعمل في وضع عدم الإزعاج، تحتاج إلى منح الإذن. انتقل إلى الإعدادات وقم بتفعيل "الوصول إلى عدم الإزعاج".',
-      'later': 'لاحقاً',
+      'dnd_permission_message':
+          'حتى تعمل إشعارات الصلاة في وضع عدم الإزعاج، يجب منح الإذن. انتقل إلى الإعدادات وفعّل "الوصول إلى عدم الإزعاج".',
+      'later': 'لاحقًا',
       'go_to_settings': 'الذهاب إلى الإعدادات',
     },
   };
 
   static String translate(String key, String locale) {
-    return translations[locale]?[key] ?? translations['en']?[key] ?? key;
+    final normalized = normalizeLocale(locale);
+    return translations[normalized]?[key] ?? translations['en']?[key] ?? key;
   }
 
-  static String getLocale(String? preferredLanguage) {
-    if (preferredLanguage != null && translations.containsKey(preferredLanguage)) {
-      return preferredLanguage;
-    }
-
-    final String systemLocale = Intl.systemLocale.split('_')[0].toLowerCase();
-    if (translations.containsKey(systemLocale)) {
-      return systemLocale;
-    }
-
+  static String normalizeLocale(String? locale) {
+    final value = locale?.toLowerCase() ?? '';
+    if (supportedLanguages.contains(value)) return value;
     return 'en';
   }
 
-  static bool isRTL(String locale) => locale == 'ar';
+  static String getLocale(String? preferredLanguage) {
+    final normalized = normalizeLocale(preferredLanguage);
+    if (supportedLanguages.contains(normalized) && normalized.isNotEmpty) {
+      return normalized;
+    }
+
+    final systemLocale = Intl.systemLocale.split('_')[0].toLowerCase();
+    return supportedLanguages.contains(systemLocale) ? systemLocale : 'en';
+  }
+
+  static bool isRTL(String locale) => normalizeLocale(locale) == 'ar';
 
   static String prayerName(String prayerKey, String locale) {
-    switch (prayerKey) {
-      case 'Fajr':
-        return translate('fajr', locale);
-      case 'Sunrise':
-        return translate('sunrise', locale);
-      case 'Dhuhr':
-        return translate('dhuhr', locale);
-      case 'Asr':
-        return translate('asr', locale);
-      case 'Maghrib':
-        return translate('maghrib', locale);
-      case 'Isha':
-        return translate('isha', locale);
-      default:
-        return prayerKey;
+    final normalizedPrayer = prayerKey.toLowerCase();
+    if (normalizedPrayer.contains('fajr') || normalizedPrayer.contains('imsak')) {
+      return translate('fajr', locale);
     }
+    if (normalizedPrayer.contains('sunrise') ||
+        normalizedPrayer.contains('gunes') ||
+        normalizedPrayer.contains('güneş')) {
+      return translate('sunrise', locale);
+    }
+    if (normalizedPrayer.contains('dhuhr') ||
+        normalizedPrayer.contains('ogle') ||
+        normalizedPrayer.contains('öğle') ||
+        normalizedPrayer.contains('zuhr')) {
+      return translate('dhuhr', locale);
+    }
+    if (normalizedPrayer.contains('asr') ||
+        normalizedPrayer.contains('ikindi')) {
+      return translate('asr', locale);
+    }
+    if (normalizedPrayer.contains('maghrib') ||
+        normalizedPrayer.contains('aksam') ||
+        normalizedPrayer.contains('akşam')) {
+      return translate('maghrib', locale);
+    }
+    if (normalizedPrayer.contains('isha') ||
+        normalizedPrayer.contains('yatsi') ||
+        normalizedPrayer.contains('yatsı')) {
+      return translate('isha', locale);
+    }
+    return prayerKey;
   }
 
   static String template(
@@ -189,9 +215,9 @@ class AppLocalizations {
     Map<String, String> values = const {},
   }) {
     var value = fallback;
-    values.forEach((key, replacement) {
-      value = value.replaceAll('{$key}', replacement);
-    });
+    for (final entry in values.entries) {
+      value = value.replaceAll('{${entry.key}}', entry.value);
+    }
     return value;
   }
 }

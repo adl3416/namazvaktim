@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/localization.dart';
 import '../models/prayer_model.dart';
 import '../providers/app_settings.dart';
 import '../providers/prayer_provider.dart';
@@ -12,6 +13,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer2<AppSettings, PrayerProvider>(
       builder: (context, settings, prayerProvider, _) {
+        final locale = settings.language;
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final scheme = _paletteForPrayer(
           prayerProvider.activePrayer?.name,
@@ -74,7 +76,7 @@ class HomeScreen extends StatelessWidget {
                               ? prayerProvider.savedCity
                               : 'Istanbul',
                           onRefreshLocation: () =>
-                              _refreshLocation(context, prayerProvider),
+                              _refreshLocationLocalized(context, prayerProvider),
                         ),
                       ),
                       SliverToBoxAdapter(
@@ -86,6 +88,7 @@ class HomeScreen extends StatelessWidget {
                               _HeroCountdownCard(
                                 scheme: scheme,
                                 isDark: isDark,
+                                locale: locale,
                                 nextPrayer: nextPrayer,
                                 countdown: countdown,
                                 errorMessage: prayerProvider.errorMessage,
@@ -111,9 +114,13 @@ class HomeScreen extends StatelessWidget {
                                 prayerProvider.nextPrayer?.name == prayer.name;
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 14),
-                              child: _PrayerTile(
+                              child: _LocalizedPrayerTile(
                                 prayer: prayer,
-                                label: _prayerNameTr(prayer.name),
+                                label: AppLocalizations.prayerName(
+                                  prayer.name,
+                                  locale,
+                                ),
+                                locale: locale,
                                 scheme: scheme,
                                 isActive: isActive,
                                 isNext: isNext,
@@ -133,8 +140,9 @@ class HomeScreen extends StatelessWidget {
                   left: 24,
                   right: 24,
                   bottom: MediaQuery.of(context).padding.bottom + 110,
-                  child: _AdhanStopBar(
+                  child: _LocalizedAdhanStopBar(
                     scheme: scheme,
+                    locale: locale,
                     onLower: () => prayerProvider.lowerAdhanVolume(),
                     onMute: () => prayerProvider.muteAdhan(),
                     onStop: () => prayerProvider.stopAdhan(),
@@ -175,6 +183,61 @@ class HomeScreen extends StatelessWidget {
         const SnackBar(
           content: Text('Konum alinamadi'),
           backgroundColor: Color(0xFFB42318),
+        ),
+      );
+    }
+  }
+
+  Future<void> _refreshLocationLocalized(
+    BuildContext context,
+    PrayerProvider prayerProvider,
+  ) async {
+    final locale = context.read<AppSettings>().language;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          _homeText(
+            locale,
+            tr: 'Konum yenileniyor...',
+            en: 'Refreshing location...',
+            ar: 'جارٍ تحديث الموقع...',
+          ),
+        ),
+      ),
+    );
+
+    try {
+      await prayerProvider.refreshLocation();
+      if (!context.mounted) return;
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            _homeText(
+              locale,
+              tr: 'Konum güncellendi: ${prayerProvider.savedCity.isNotEmpty ? prayerProvider.savedCity : 'Bilinmiyor'}',
+              en: 'Location updated: ${prayerProvider.savedCity.isNotEmpty ? prayerProvider.savedCity : 'Unknown'}',
+              ar: 'تم تحديث الموقع: ${prayerProvider.savedCity.isNotEmpty ? prayerProvider.savedCity : 'غير معروف'}',
+            ),
+          ),
+          backgroundColor: const Color(0xFF0F766E),
+        ),
+      );
+    } catch (_) {
+      if (!context.mounted) return;
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            _homeText(
+              locale,
+              tr: 'Konum alınamadı',
+              en: 'Location could not be fetched',
+              ar: 'تعذر الحصول على الموقع',
+            ),
+          ),
+          backgroundColor: const Color(0xFFB42318),
         ),
       );
     }
@@ -311,6 +374,7 @@ class _HeroCountdownCard extends StatelessWidget {
   const _HeroCountdownCard({
     required this.scheme,
     required this.isDark,
+    required this.locale,
     required this.nextPrayer,
     required this.countdown,
     required this.errorMessage,
@@ -323,6 +387,7 @@ class _HeroCountdownCard extends StatelessWidget {
 
   final _HomePalette scheme;
   final bool isDark;
+  final String locale;
   final PrayerTime? nextPrayer;
   final Duration? countdown;
   final String errorMessage;
@@ -366,8 +431,13 @@ class _HeroCountdownCard extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final title = nextPrayer != null
-                  ? '${_prayerNameTr(nextPrayer!.name)} Vaktine'
-                  : 'Vakit Bilgisi Bekleniyor';
+                  ? '${AppLocalizations.prayerName(nextPrayer!.name, locale)} ${AppLocalizations.translate('prayer_time_label', locale)}'
+                  : _homeText(
+                      locale,
+                      tr: 'Vakit Bilgisi Bekleniyor',
+                      en: 'Waiting for prayer info',
+                      ar: 'بانتظار معلومات الوقت',
+                    );
               final isShortTitle = title.length <= 16;
               final fontSize = isShortTitle ? 20.0 : 16.0;
 
@@ -417,7 +487,12 @@ class _HeroCountdownCard extends StatelessWidget {
               ),
             )
           else ...[
-            _CountdownDisplay(hours: hours, minutes: minutes, seconds: seconds),
+            _LocalizedCountdownDisplay(
+              locale: locale,
+              hours: hours,
+              minutes: minutes,
+              seconds: seconds,
+            ),
             const SizedBox(height: 6),
             if (nextPrayer != null)
               Text(
@@ -449,7 +524,7 @@ class _HeroCountdownCard extends StatelessWidget {
               Flexible(
                 child: _DateBadge(
                   icon: Icons.calendar_today_rounded,
-                  label: _miladiDate(),
+                  label: _localizedMiladiDate(locale),
                   scheme: scheme,
                   useLightStyle: !isDark,
                   alignment: Alignment.centerLeft,
@@ -459,7 +534,7 @@ class _HeroCountdownCard extends StatelessWidget {
               Flexible(
                 child: _DateBadge(
                   icon: Icons.brightness_3_rounded,
-                  label: _hijriDate(),
+                  label: _localizedHijriDate(locale),
                   scheme: scheme,
                   useLightStyle: !isDark,
                   alignment: Alignment.centerRight,
@@ -790,6 +865,150 @@ class _AdhanStopBar extends StatelessWidget {
   }
 }
 
+class _LocalizedAdhanStopBar extends StatelessWidget {
+  const _LocalizedAdhanStopBar({
+    required this.scheme,
+    required this.locale,
+    required this.onLower,
+    required this.onMute,
+    required this.onStop,
+  });
+
+  final _HomePalette scheme;
+  final String locale;
+  final VoidCallback onLower;
+  final VoidCallback onMute;
+  final VoidCallback onStop;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 430;
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            decoration: BoxDecoration(
+              color: scheme.primary,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: scheme.primary.withOpacity(0.45),
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.graphic_eq_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _homeText(
+                          locale,
+                          tr: 'Ezan okunuyor...',
+                          en: 'Adhan is playing...',
+                          ar: 'يتم تشغيل الأذان...',
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: compact ? 10 : 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _localizedActionButton(
+                      icon: Icons.volume_down_rounded,
+                      label: _homeText(
+                        locale,
+                        tr: 'Kıs',
+                        en: 'Lower',
+                        ar: 'اخفض',
+                      ),
+                      onTap: onLower,
+                    ),
+                    _localizedActionButton(
+                      icon: Icons.volume_off_rounded,
+                      label: _homeText(
+                        locale,
+                        tr: 'Sessiz',
+                        en: 'Mute',
+                        ar: 'صامت',
+                      ),
+                      onTap: onMute,
+                    ),
+                    _localizedActionButton(
+                      icon: Icons.stop_rounded,
+                      label: _homeText(
+                        locale,
+                        tr: 'Durdur',
+                        en: 'Stop',
+                        ar: 'إيقاف',
+                      ),
+                      onTap: onStop,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _localizedActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.25),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _PrayerTile extends StatelessWidget {
   const _PrayerTile({
     required this.prayer,
@@ -922,6 +1141,145 @@ class _PrayerTile extends StatelessWidget {
   }
 }
 
+class _LocalizedPrayerTile extends StatelessWidget {
+  const _LocalizedPrayerTile({
+    required this.prayer,
+    required this.label,
+    required this.locale,
+    required this.scheme,
+    required this.isActive,
+    required this.isNext,
+    required this.isCompleted,
+  });
+
+  final PrayerTime prayer;
+  final String label;
+  final String locale;
+  final _HomePalette scheme;
+  final bool isActive;
+  final bool isNext;
+  final bool isCompleted;
+
+  @override
+  Widget build(BuildContext context) {
+    final badgeLabel = isActive
+        ? _homeText(locale, tr: 'Şu an', en: 'Now', ar: 'الآن')
+        : isNext
+            ? _homeText(locale, tr: 'Sıradaki', en: 'Next', ar: 'التالي')
+            : isCompleted
+                ? _homeText(
+                    locale,
+                    tr: 'Tamamlandı',
+                    en: 'Completed',
+                    ar: 'اكتمل',
+                  )
+                : _localizedSlotLabel(prayer.time, locale);
+
+    return Container(
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: isActive
+            ? scheme.surfaceStrong
+            : Colors.white.withOpacity(isCompleted ? 0.58 : 0.76),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isActive
+              ? scheme.primary.withOpacity(0.55)
+              : Colors.white.withOpacity(0.62),
+          width: isActive ? 1.4 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: scheme.shadow.withOpacity(isActive ? 0.26 : 0.10),
+            blurRadius: isActive ? 18 : 13,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: isActive
+                  ? scheme.primary
+                  : isCompleted
+                      ? scheme.textSecondary.withOpacity(0.10)
+                      : scheme.primary.withOpacity(0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              _iconForPrayer(prayer.name),
+              color: isActive
+                  ? Colors.white
+                  : isCompleted
+                      ? scheme.textSecondary
+                      : scheme.primary,
+              size: 19,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: scheme.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  badgeLabel,
+                  style: TextStyle(
+                    color: isNext ? scheme.primary : scheme.textSecondary,
+                    fontSize: 8,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isActive
+                  ? scheme.primary
+                  : isNext
+                      ? scheme.secondary
+                      : isCompleted
+                          ? scheme.textSecondary.withOpacity(0.35)
+                          : Colors.white,
+              border: Border.all(
+                color: isCompleted
+                    ? scheme.textSecondary.withOpacity(0.25)
+                    : scheme.primary.withOpacity(0.22),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            _formatTime(prayer.time),
+            style: TextStyle(
+              color: scheme.textPrimary,
+              fontSize: 19,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.8,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DailyProgressBar extends StatelessWidget {
   const _DailyProgressBar({
     required this.progress,
@@ -996,6 +1354,44 @@ class _CountdownDisplay extends StatelessWidget {
         _TimeUnit(value: minutes, label: 'DK'),
         const _Separator(),
         _TimeUnit(value: seconds, label: 'SN'),
+      ],
+    );
+  }
+}
+
+class _LocalizedCountdownDisplay extends StatelessWidget {
+  const _LocalizedCountdownDisplay({
+    required this.locale,
+    required this.hours,
+    required this.minutes,
+    required this.seconds,
+  });
+
+  final String locale;
+  final int hours;
+  final int minutes;
+  final int seconds;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _TimeUnit(
+          value: hours,
+          label: AppLocalizations.translate('hour', locale),
+        ),
+        const _Separator(),
+        _TimeUnit(
+          value: minutes,
+          label: AppLocalizations.translate('minute', locale),
+        ),
+        const _Separator(),
+        _TimeUnit(
+          value: seconds,
+          label: AppLocalizations.translate('second', locale),
+        ),
       ],
     );
   }
@@ -1315,4 +1711,112 @@ String _prayerNameTr(String name) {
   if (normalized.contains('maghrib') || normalized.contains('aksam')) return 'Akşam';
   if (normalized.contains('isha') || normalized.contains('yatsi')) return 'Yatsı';
   return name;
+}
+
+String _localizedMiladiDate(String locale) {
+  const monthsTr = [
+    'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık',
+  ];
+  const monthsEn = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+  const monthsAr = [
+    'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+    'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+  ];
+  final months = locale == 'ar'
+      ? monthsAr
+      : locale == 'tr'
+          ? monthsTr
+          : monthsEn;
+  final now = DateTime.now();
+  return '${now.day} ${months[now.month - 1]} ${now.year}';
+}
+
+String _localizedHijriDate(String locale) {
+  final now = DateTime.now();
+  int y = now.year, m = now.month, d = now.day;
+  if (m <= 2) {
+    y--;
+    m += 12;
+  }
+  final a = y ~/ 100;
+  final b = 2 - a + a ~/ 4;
+  final jd = (365.25 * (y + 4716)).floor() +
+      (30.6001 * (m + 1)).floor() +
+      d +
+      b -
+      1524;
+  final l = jd - 1948440 + 10632;
+  final n = (l - 1) ~/ 10631;
+  final l2 = l - 10631 * n + 354;
+  final j = ((10985 - l2) ~/ 5316) * ((50 * l2) ~/ 17719) +
+      (l2 ~/ 5670) * ((43 * l2) ~/ 15238);
+  final l3 = l2 -
+      ((30 - j) ~/ 15) * ((17719 * j) ~/ 50) -
+      (j ~/ 16) * ((15238 * j) ~/ 43) +
+      29;
+  final hMonth = (24 * l3) ~/ 709;
+  final hDay = l3 - (709 * hMonth) ~/ 24;
+  final hYear = 30 * n + j - 30;
+  const hijriMonthsTr = [
+    'Muharrem', 'Safer', 'Rebiülevvel', 'Rebiülahir',
+    'Cemaziyelevvel', 'Cemaziyelahir', 'Recep', 'Şaban',
+    'Ramazan', 'Şevval', 'Zilkade', 'Zilhicce',
+  ];
+  const hijriMonthsEn = [
+    'Muharram', 'Safar', 'Rabi al-Awwal', 'Rabi al-Thani',
+    'Jumada al-Awwal', 'Jumada al-Thani', 'Rajab', 'Shaban',
+    'Ramadan', 'Shawwal', 'Dhul Qadah', 'Dhul Hijjah',
+  ];
+  const hijriMonthsAr = [
+    'محرم', 'صفر', 'ربيع الأول', 'ربيع الآخر',
+    'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان',
+    'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة',
+  ];
+  final hijriMonths = locale == 'ar'
+      ? hijriMonthsAr
+      : locale == 'tr'
+          ? hijriMonthsTr
+          : hijriMonthsEn;
+  return '$hDay ${hijriMonths[(hMonth - 1).clamp(0, 11)]} $hYear';
+}
+
+String _localizedSlotLabel(DateTime time, String locale) {
+  if (time.hour < 8) {
+    return _homeText(locale, tr: 'Sabah', en: 'Morning', ar: 'الصباح');
+  }
+  if (time.hour < 12) {
+    return _homeText(locale, tr: 'Gündüz', en: 'Daytime', ar: 'النهار');
+  }
+  if (time.hour < 17) {
+    return _homeText(
+      locale,
+      tr: 'Öğleden Sonra',
+      en: 'Afternoon',
+      ar: 'بعد الظهر',
+    );
+  }
+  if (time.hour < 21) {
+    return _homeText(locale, tr: 'Akşam', en: 'Evening', ar: 'المساء');
+  }
+  return _homeText(locale, tr: 'Gece', en: 'Night', ar: 'الليل');
+}
+
+String _homeText(
+  String locale, {
+  required String tr,
+  required String en,
+  required String ar,
+}) {
+  switch (locale) {
+    case 'tr':
+      return tr;
+    case 'ar':
+      return ar;
+    default:
+      return en;
+  }
 }

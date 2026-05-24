@@ -163,9 +163,9 @@ class AppSettings extends ChangeNotifier {
   }
 
   Future<void> setLanguage(String language) async {
-    _language = language;
+    _language = AppLocalizations.getLocale(language);
     if (_initialized) {
-      await _prefs.setString('language', language);
+      await _prefs.setString('language', _language);
     }
     notifyListeners();
   }

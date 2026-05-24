@@ -138,6 +138,22 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen> {
         .toList();
   }
 
+  String _text(
+    String locale, {
+    required String tr,
+    required String en,
+    required String ar,
+  }) {
+    switch (locale) {
+      case 'tr':
+        return tr;
+      case 'ar':
+        return ar;
+      default:
+        return en;
+    }
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -177,7 +193,12 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen> {
               controller: _searchController,
               autofocus: true,
               decoration: InputDecoration(
-                hintText: 'Ülke ara...',
+                hintText: _text(
+                  locale,
+                  tr: 'Ülke ara...',
+                  en: 'Search country...',
+                  ar: 'ابحث عن دولة...',
+                ),
                 hintStyle: TextStyle(
                   color: isDark ? AppColors.darkTextLight : AppColors.textLight,
                 ),

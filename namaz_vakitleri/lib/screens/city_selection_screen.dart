@@ -231,6 +231,22 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
         .toList();
   }
 
+  String _text(
+    String locale, {
+    required String tr,
+    required String en,
+    required String ar,
+  }) {
+    switch (locale) {
+      case 'tr':
+        return tr;
+      case 'ar':
+        return ar;
+      default:
+        return en;
+    }
+  }
+
   Future<void> _selectCity(String city) async {
     setState(() {
       _isLoading = true;
@@ -245,9 +261,17 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
       // Go back to home screen
       Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
+      final locale = context.read<AppSettings>().language;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Şehir güncellenirken hata oluştu: $e'),
+          content: Text(
+            _text(
+              locale,
+              tr: 'Şehir güncellenirken hata oluştu: $e',
+              en: 'An error occurred while updating the city: $e',
+              ar: 'حدث خطأ أثناء تحديث المدينة: $e',
+            ),
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -297,7 +321,12 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
               controller: _searchController,
               autofocus: true,
               decoration: InputDecoration(
-                hintText: '${widget.countryName} şehrini ara...',
+                hintText: _text(
+                  locale,
+                  tr: '${widget.countryName} şehrini ara...',
+                  en: 'Search a city in ${widget.countryName}...',
+                  ar: 'ابحث عن مدينة في ${widget.countryName}...',
+                ),
                 hintStyle: TextStyle(
                   color: isDark ? AppColors.darkTextLight : AppColors.textLight,
                 ),

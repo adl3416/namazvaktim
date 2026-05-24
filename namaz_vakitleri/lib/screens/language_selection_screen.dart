@@ -1,41 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../config/color_system.dart';
-import '../config/localization.dart';
 import '../providers/app_settings.dart';
 
-class LanguageSelectionScreen extends StatefulWidget {
+class LanguageSelectionScreen extends StatelessWidget {
   const LanguageSelectionScreen({super.key});
 
-  @override
-  State<LanguageSelectionScreen> createState() => _LanguageSelectionScreenState();
-}
-
-class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
   Color _getTimeBasedScaffoldColor(bool isDark) {
     final now = DateTime.now();
     final hour = now.hour;
 
     if (isDark) {
-      if (hour >= 5 && hour < 11) {
-        return const Color(0xFF4A3A4A);
-      } else if (hour >= 11 && hour < 15) {
-        return const Color(0xFF4A4A2A);
-      } else if (hour >= 15 && hour < 19) {
-        return const Color(0xFF4A2A2A);
-      } else {
-        return const Color(0xFF2A2A4A);
-      }
-    } else {
-      if (hour >= 5 && hour < 11) {
-        return const Color(0xFFF8E8E8);
-      } else if (hour >= 11 && hour < 15) {
-        return const Color(0xFFFFF8E1);
-      } else if (hour >= 15 && hour < 19) {
-        return const Color(0xFFFFE8E1);
-      } else {
-        return const Color(0xFFE8E8F8);
-      }
+      if (hour >= 5 && hour < 11) return const Color(0xFF4A3A4A);
+      if (hour >= 11 && hour < 15) return const Color(0xFF4A4A2A);
+      if (hour >= 15 && hour < 19) return const Color(0xFF4A2A2A);
+      return const Color(0xFF2A2A4A);
+    }
+
+    if (hour >= 5 && hour < 11) return const Color(0xFFF8E8E8);
+    if (hour >= 11 && hour < 15) return const Color(0xFFFFF8E1);
+    if (hour >= 15 && hour < 19) return const Color(0xFFFFE8E1);
+    return const Color(0xFFE8E8F8);
+  }
+
+  String _text(
+    String locale, {
+    required String tr,
+    required String en,
+    required String ar,
+  }) {
+    switch (locale) {
+      case 'tr':
+        return tr;
+      case 'ar':
+        return ar;
+      default:
+        return en;
     }
   }
 
@@ -43,46 +44,12 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final settings = context.watch<AppSettings>();
+    final locale = settings.language;
 
-    final languages = {
-      'tr': {'name': 'Türkçe', 'native': 'Türkçe', 'flag': '🇹🇷'},
-      'en': {'name': 'English', 'native': 'English', 'flag': '🇺🇸'},
-      'ar': {'name': 'العربية', 'native': 'العربية', 'flag': '🇸🇦'},
-      'de': {'name': 'Deutsch', 'native': 'Deutsch', 'flag': '🇩🇪'},
-      'fr': {'name': 'Français', 'native': 'Français', 'flag': '🇫🇷'},
-      'es': {'name': 'Español', 'native': 'Español', 'flag': '🇪🇸'},
-      'it': {'name': 'Italiano', 'native': 'Italiano', 'flag': '🇮🇹'},
-      'pt': {'name': 'Português', 'native': 'Português', 'flag': '🇵🇹'},
-      'ru': {'name': 'Русский', 'native': 'Русский', 'flag': '🇷🇺'},
-      'zh': {'name': '中文', 'native': '中文', 'flag': '🇨🇳'},
-      'ja': {'name': '日本語', 'native': '日本語', 'flag': '🇯🇵'},
-      'ko': {'name': '한국어', 'native': '한국어', 'flag': '🇰🇷'},
-      'hi': {'name': 'हिन्दी', 'native': 'हिन्दी', 'flag': '🇮🇳'},
-      'ur': {'name': 'اردو', 'native': 'اردو', 'flag': '🇵🇰'},
-      'fa': {'name': 'فارسی', 'native': 'فارسی', 'flag': '🇮🇷'},
-      'nl': {'name': 'Nederlands', 'native': 'Nederlands', 'flag': '🇳🇱'},
-      'sv': {'name': 'Svenska', 'native': 'Svenska', 'flag': '🇸🇪'},
-      'da': {'name': 'Dansk', 'native': 'Dansk', 'flag': '🇩🇰'},
-      'no': {'name': 'Norsk', 'native': 'Norsk', 'flag': '🇳🇴'},
-      'fi': {'name': 'Suomi', 'native': 'Suomi', 'flag': '🇫🇮'},
-      'pl': {'name': 'Polski', 'native': 'Polski', 'flag': '🇵🇱'},
-      'cs': {'name': 'Čeština', 'native': 'Čeština', 'flag': '🇨🇿'},
-      'sk': {'name': 'Slovenčina', 'native': 'Slovenčina', 'flag': '🇸🇰'},
-      'hu': {'name': 'Magyar', 'native': 'Magyar', 'flag': '🇭🇺'},
-      'ro': {'name': 'Română', 'native': 'Română', 'flag': '🇷🇴'},
-      'bg': {'name': 'Български', 'native': 'Български', 'flag': '🇧🇬'},
-      'hr': {'name': 'Hrvatski', 'native': 'Hrvatski', 'flag': '🇭🇷'},
-      'sl': {'name': 'Slovenščina', 'native': 'Slovenščina', 'flag': '🇸🇮'},
-      'et': {'name': 'Eesti', 'native': 'Eesti', 'flag': '🇪🇪'},
-      'lv': {'name': 'Latviešu', 'native': 'Latviešu', 'flag': '🇱🇻'},
-      'lt': {'name': 'Lietuvių', 'native': 'Lietuvių', 'flag': '🇱🇹'},
-      'el': {'name': 'Ελληνικά', 'native': 'Ελληνικά', 'flag': '🇬🇷'},
-      'he': {'name': 'עברית', 'native': 'עברית', 'flag': '🇮🇱'},
-      'th': {'name': 'ไทย', 'native': 'ไทย', 'flag': '🇹🇭'},
-      'vi': {'name': 'Tiếng Việt', 'native': 'Tiếng Việt', 'flag': '🇻🇳'},
-      'id': {'name': 'Bahasa Indonesia', 'native': 'Bahasa Indonesia', 'flag': '🇮🇩'},
-      'ms': {'name': 'Bahasa Melayu', 'native': 'Bahasa Melayu', 'flag': '🇲🇾'},
-      'tl': {'name': 'Filipino', 'native': 'Filipino', 'flag': '🇵🇭'},
+    const languages = {
+      'tr': {'name': 'Türkçe', 'native': 'Türkçe', 'flag': 'TR'},
+      'en': {'name': 'English', 'native': 'English', 'flag': 'EN'},
+      'ar': {'name': 'العربية', 'native': 'العربية', 'flag': 'AR'},
     };
 
     return Scaffold(
@@ -98,7 +65,12 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Dil Seçimi',
+          _text(
+            locale,
+            tr: 'Dil Seçimi',
+            en: 'Language Selection',
+            ar: 'اختيار اللغة',
+          ),
           style: AppTypography.h3.copyWith(
             color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
           ),
@@ -109,19 +81,26 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Text(
-              'Uygulama Dili',
+              _text(
+                locale,
+                tr: 'Uygulama Dili',
+                en: 'App Language',
+                ar: 'لغة التطبيق',
+              ),
               style: AppTypography.h2.copyWith(
-                color: isDark
-                    ? AppColors.darkTextPrimary
-                    : AppColors.textPrimary,
+                color:
+                    isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
               ),
             ),
             SizedBox(height: AppSpacing.md),
-
             Text(
-              'Uygulamanın dilini seçin. Değişiklikler anında uygulanacaktır.',
+              _text(
+                locale,
+                tr: 'Dil değişikliği anında tüm görünür alanlara uygulanır.',
+                en: 'Language changes are applied immediately across the app.',
+                ar: 'يتم تطبيق تغيير اللغة فورًا على كل الأجزاء الظاهرة في التطبيق.',
+              ),
               style: AppTypography.bodyMedium.copyWith(
                 color: isDark
                     ? AppColors.darkTextSecondary
@@ -129,8 +108,6 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
               ),
             ),
             SizedBox(height: AppSpacing.xl),
-
-            // Languages List
             Expanded(
               child: ListView.builder(
                 itemCount: languages.length,
@@ -148,16 +125,25 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                       borderRadius: BorderRadius.circular(AppRadius.md),
                       border: Border.all(
                         color: isSelected
-                            ? (isDark ? AppColors.darkAccentPrimary : AppColors.accentPrimary)
-                            : (isDark ? AppColors.darkDivider : AppColors.divider),
+                            ? (isDark
+                                ? AppColors.darkAccentPrimary
+                                : AppColors.accentPrimary)
+                            : (isDark
+                                ? AppColors.darkDivider
+                                : AppColors.divider),
                         width: isSelected ? 2 : 0.5,
                       ),
                     ),
                     child: ListTile(
                       contentPadding: EdgeInsets.all(AppSpacing.md),
-                      leading: Text(
-                        langData['flag']!,
-                        style: const TextStyle(fontSize: 24),
+                      leading: CircleAvatar(
+                        backgroundColor: isDark
+                            ? Colors.white.withOpacity(0.08)
+                            : Colors.black.withOpacity(0.04),
+                        child: Text(
+                          langData['flag']!,
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
                       ),
                       title: Text(
                         langData['name']!,
@@ -165,7 +151,9 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                           color: isDark
                               ? AppColors.darkTextPrimary
                               : AppColors.textPrimary,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                         ),
                       ),
                       subtitle: Text(
@@ -184,11 +172,19 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                                   : AppColors.accentPrimary,
                             )
                           : null,
-                      onTap: () {
-                        settings.setLanguage(langCode);
+                      onTap: () async {
+                        await settings.setLanguage(langCode);
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('${langData['name']} dili seçildi'),
+                            content: Text(
+                              _text(
+                                langCode,
+                                tr: 'Türkçe seçildi',
+                                en: 'English selected',
+                                ar: 'تم اختيار العربية',
+                              ),
+                            ),
                             duration: const Duration(seconds: 2),
                           ),
                         );

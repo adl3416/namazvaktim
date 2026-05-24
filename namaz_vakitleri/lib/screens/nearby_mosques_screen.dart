@@ -23,6 +23,22 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
   Future<List<Mosque>>? _nearbyMosquesFuture;
   double _searchRadius = 5.0;
 
+  String _text(
+    String locale, {
+    required String tr,
+    required String en,
+    required String ar,
+  }) {
+    switch (locale) {
+      case 'tr':
+        return tr;
+      case 'ar':
+        return ar;
+      default:
+        return en;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -100,6 +116,7 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
     return Consumer2<AppSettings, PrayerProvider>(
       builder: (context, settings, prayerProvider, _) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
+        final locale = settings.language;
         final location = prayerProvider.currentLocation;
 
         if (location != null && _nearbyMosquesFuture == null) {
@@ -150,7 +167,12 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                                         Row(
                                           children: [
                                             Text(
-                                              'Yakındaki Camiler',
+                                              _text(
+                                                locale,
+                                                tr: 'Yakındaki Camiler',
+                                                en: 'Nearby Mosques',
+                                                ar: 'المساجد القريبة',
+                                              ),
                                               style: TextStyle(
                                                 fontSize: 18,
                                                 fontWeight: FontWeight.w800,
@@ -186,7 +208,12 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                                         ),
                                         if (location != null)
                                           Text(
-                                            '${location.city} çevresinde',
+                                            _text(
+                                              locale,
+                                              tr: '${location.city} çevresinde',
+                                              en: 'Around ${location.city}',
+                                              ar: 'حول ${location.city}',
+                                            ),
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: isDark
@@ -205,6 +232,7 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                                 radius: _searchRadius,
                                 onChanged: _updateRadius,
                                 isDark: isDark,
+                                locale: locale,
                               ),
                             ],
                           ),
@@ -215,10 +243,20 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                           hasScrollBody: false,
                           child: _EmptyMosqueState(
                             isDark: isDark,
+                            locale: locale,
                             icon: Icons.location_off_rounded,
-                            title: 'Konum gerekli',
-                            message:
-                                'Yakindaki camileri gorebilmek icin uygulamanin konum iznine ihtiyaci var.',
+                            title: _text(
+                              locale,
+                              tr: 'Konum gerekli',
+                              en: 'Location required',
+                              ar: 'الموقع مطلوب',
+                            ),
+                            message: _text(
+                              locale,
+                              tr: 'Yakındaki camileri görebilmek için uygulamanın konum iznine ihtiyacı var.',
+                              en: 'The app needs location permission to show nearby mosques.',
+                              ar: 'يحتاج التطبيق إلى إذن الموقع لعرض المساجد القريبة.',
+                            ),
                           ),
                         )
                       else if (snapshot.connectionState == ConnectionState.waiting)
@@ -235,8 +273,14 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                           hasScrollBody: false,
                           child: _EmptyMosqueState(
                             isDark: isDark,
+                            locale: locale,
                             icon: Icons.error_outline_rounded,
-                            title: 'Liste yüklenemedi',
+                            title: _text(
+                              locale,
+                              tr: 'Liste yüklenemedi',
+                              en: 'List could not load',
+                              ar: 'تعذر تحميل القائمة',
+                            ),
                             message: 'Hata: ${snapshot.error}',
                           ),
                         )
@@ -245,10 +289,20 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                           hasScrollBody: false,
                           child: _EmptyMosqueState(
                             isDark: isDark,
+                            locale: locale,
                             icon: Icons.travel_explore_rounded,
-                            title: 'Bu alanda sonuç yok',
-                            message:
-                                'Arama yarıçapını genişleterek daha fazla cami görebilirsin.',
+                            title: _text(
+                              locale,
+                              tr: 'Bu alanda sonuç yok',
+                              en: 'No results in this area',
+                              ar: 'لا توجد نتائج في هذه المنطقة',
+                            ),
+                            message: _text(
+                              locale,
+                              tr: 'Arama yarıçapını genişleterek daha fazla cami görebilirsin.',
+                              en: 'You can widen the search radius to see more mosques.',
+                              ar: 'يمكنك توسيع نطاق البحث لرؤية المزيد من المساجد.',
+                            ),
                           ),
                         )
                       else ...[
@@ -335,7 +389,12 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                           child: Padding(
                             padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
                             child: Text(
-                              'En yakından sıralandı',
+                              _text(
+                                locale,
+                                tr: 'En yakından sıralandı',
+                                en: 'Sorted by nearest',
+                                ar: 'مرتبة حسب الأقرب',
+                              ),
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
@@ -356,6 +415,7 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                                 padding: const EdgeInsets.only(bottom: 12),
                                 child: _MosqueListTile(
                                   isDark: isDark,
+                                  locale: locale,
                                   mosque: mosque,
                                   rank: index + 1,
                                   onNavigate: () => _openNavigation(mosque),
@@ -385,11 +445,13 @@ class _CompactRadiusCard extends StatelessWidget {
     required this.radius,
     required this.onChanged,
     required this.isDark,
+    required this.locale,
   });
 
   final double radius;
   final ValueChanged<double> onChanged;
   final bool isDark;
+  final String locale;
 
   @override
   Widget build(BuildContext context) {
@@ -411,7 +473,11 @@ class _CompactRadiusCard extends StatelessWidget {
           const Icon(Icons.radar_rounded, color: Color(0xFF1F4C43), size: 15),
           const SizedBox(width: 4),
           Text(
-            'Yarıçap',
+            locale == 'tr'
+                ? 'Yarıçap'
+                : locale == 'ar'
+                    ? 'النطاق'
+                    : 'Radius',
             style: TextStyle(
               fontWeight: FontWeight.w600,
               color: isDark
@@ -460,6 +526,7 @@ class _CompactRadiusCard extends StatelessWidget {
 class _MosqueListTile extends StatelessWidget {
   const _MosqueListTile({
     required this.isDark,
+    required this.locale,
     required this.mosque,
     required this.rank,
     required this.onNavigate,
@@ -467,6 +534,7 @@ class _MosqueListTile extends StatelessWidget {
   });
 
   final bool isDark;
+  final String locale;
   final Mosque mosque;
   final int rank;
   final VoidCallback onNavigate;
@@ -476,8 +544,16 @@ class _MosqueListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final distKm = mosque.distance ?? 0.0;
     final distText = distKm < 1.0
-        ? '${(distKm * 1000).round()} m uzaklıkta'
-        : '${distKm.toStringAsFixed(1)} km uzaklıkta';
+        ? locale == 'tr'
+            ? '${(distKm * 1000).round()} m uzaklıkta'
+            : locale == 'ar'
+                ? 'يبعد ${(distKm * 1000).round()} م'
+                : '${(distKm * 1000).round()} m away'
+        : locale == 'tr'
+            ? '${distKm.toStringAsFixed(1)} km uzaklıkta'
+            : locale == 'ar'
+                ? 'يبعد ${distKm.toStringAsFixed(1)} كم'
+                : '${distKm.toStringAsFixed(1)} km away';
 
     return Material(
       color: isDark
@@ -580,12 +656,14 @@ class _MosqueListTile extends StatelessWidget {
 class _EmptyMosqueState extends StatelessWidget {
   const _EmptyMosqueState({
     required this.isDark,
+    required this.locale,
     required this.icon,
     required this.title,
     required this.message,
   });
 
   final bool isDark;
+  final String locale;
   final IconData icon;
   final String title;
   final String message;

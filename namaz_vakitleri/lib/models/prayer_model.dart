@@ -63,9 +63,42 @@ class PrayerTimes {
     print('🔍 Raw timings from JSON: ${timings.keys.toList()}');
     print('🔍 Timings count: ${timings.length}');
     
+    DateTime resolvePrayerDate() {
+      final rawDate = json['date'];
+      if (rawDate is Map<String, dynamic>) {
+        final gregorian = rawDate['gregorian'];
+        if (gregorian is Map<String, dynamic>) {
+          final gregorianDate = gregorian['date'];
+          if (gregorianDate is String) {
+            final parts = gregorianDate.split('-');
+            if (parts.length == 3) {
+              final day = int.tryParse(parts[0]);
+              final month = int.tryParse(parts[1]);
+              final year = int.tryParse(parts[2]);
+              if (day != null && month != null && year != null) {
+                return DateTime(year, month, day);
+              }
+            }
+          }
+        }
+      }
+
+      final explicitDate = json['resolvedDate'];
+      if (explicitDate is String) {
+        final parsed = DateTime.tryParse(explicitDate);
+        if (parsed != null) {
+          return DateTime(parsed.year, parsed.month, parsed.day);
+        }
+      }
+
+      final now = DateTime.now();
+      return DateTime(now.year, now.month, now.day);
+    }
+
+    final prayerDate = resolvePrayerDate();
+
     // Parse times and remove seconds
     final Map<String, DateTime> parsedTimes = {};
-    final today = DateTime.now();
     
     timings.forEach((key, value) {
       print('🔍 Processing timing key: $key = $value (type: ${value.runtimeType})');
@@ -77,9 +110,9 @@ class PrayerTimes {
             final hour = int.parse(parts[0]);
             final minute = int.parse(parts[1]);
             final dateTime = DateTime(
-              today.year,
-              today.month,
-              today.day,
+              prayerDate.year,
+              prayerDate.month,
+              prayerDate.day,
               hour,
               minute,
             );
@@ -102,17 +135,17 @@ class PrayerTimes {
     if (parsedTimes.isEmpty) {
       print('⚠️ WARNING: No prayer times were parsed! Using default times for debugging.');
       // Add default times for debugging if parsing failed
-      parsedTimes['fajr'] = DateTime(today.year, today.month, today.day, 5, 30);
-      parsedTimes['dhuhr'] = DateTime(today.year, today.month, today.day, 12, 30);
-      parsedTimes['asr'] = DateTime(today.year, today.month, today.day, 15, 30);
-      parsedTimes['maghrib'] = DateTime(today.year, today.month, today.day, 18, 30);
-      parsedTimes['isha'] = DateTime(today.year, today.month, today.day, 20, 30);
+      parsedTimes['fajr'] = DateTime(prayerDate.year, prayerDate.month, prayerDate.day, 5, 30);
+      parsedTimes['dhuhr'] = DateTime(prayerDate.year, prayerDate.month, prayerDate.day, 12, 30);
+      parsedTimes['asr'] = DateTime(prayerDate.year, prayerDate.month, prayerDate.day, 15, 30);
+      parsedTimes['maghrib'] = DateTime(prayerDate.year, prayerDate.month, prayerDate.day, 18, 30);
+      parsedTimes['isha'] = DateTime(prayerDate.year, prayerDate.month, prayerDate.day, 20, 30);
     }
 
     print('📊 Final parsed times: ${parsedTimes.toString().substring(0, 200)}...');
 
     return PrayerTimes(
-      date: DateTime.now(),
+      date: prayerDate,
       latitude: json['latitude'] as double? ?? 0.0,
       longitude: json['longitude'] as double? ?? 0.0,
       city: json['city'] as String? ?? 'Unknown',

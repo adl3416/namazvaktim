@@ -52,6 +52,7 @@ class AlAdhanService {
           'country': country,
           'latitude': latitude,
           'longitude': longitude,
+          'resolvedDate': targetDate.toIso8601String(),
         });
 
         print('✅ Parsed Prayer Times: ${prayerTimes.prayerTimesList.length} prayers');

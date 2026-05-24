@@ -18,14 +18,6 @@ void main() async {
 
   tz.initializeTimeZones();
 
-  print('Initializing notifications...');
-  await NotificationService.initialize();
-  print('Notifications initialized');
-
-  print('Requesting location permission...');
-  await LocationService.requestLocationPermission();
-  print('Location permission requested');
-
   runApp(const MyApp());
 }
 
@@ -67,6 +59,22 @@ class _MyAppState extends State<MyApp> {
       print('Initializing app settings...');
       await _appSettings.initialize();
       print('App settings initialized');
+      await _finishBackgroundInitialization();
+    } catch (e) {
+      print('Error initializing app: $e');
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+    }
+  }
+
+  Future<void> _finishBackgroundInitialization() async {
+    try {
+      print('Initializing notifications...');
+      await NotificationService.initialize();
+      print('Notifications initialized');
 
       print('Initializing prayer provider...');
       await _prayerProvider.initialize();
@@ -85,12 +93,7 @@ class _MyAppState extends State<MyApp> {
 
       print('App initialization complete');
     } catch (e) {
-      print('Error initializing app: $e');
-      if (mounted) {
-        setState(() {
-          _isInitialized = true;
-        });
-      }
+      print('Error during background initialization: $e');
     }
   }
 

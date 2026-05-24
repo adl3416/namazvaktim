@@ -5,6 +5,8 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+import org.gradle.api.tasks.Copy
+
 android {
     namespace = "com.vakit.app.namaz_vakitleri"
     compileSdk = flutter.compileSdkVersion
@@ -38,6 +40,16 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+}
+
+val syncAdhanSounds by tasks.registering(Copy::class) {
+    from(File(projectDir, "../../assets/sounds"))
+    include("*.mp3")
+    into(File(projectDir, "src/main/res/raw"))
+}
+
+tasks.named("preBuild") {
+    dependsOn(syncAdhanSounds)
 }
 
 dependencies {

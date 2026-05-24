@@ -20,6 +20,7 @@ class NotificationService {
   // Notification action IDs
   static const String _dismissAction = 'DISMISS_NOTIFICATION';
   static const String _snoozeAction = 'SNOOZE_NOTIFICATION';
+  static const String _silentExactChannelId = 'prayer_exact_silent';
 
   static String _channelNameForLocale(String language, {required bool reminder}) {
     switch (language) {
@@ -66,7 +67,7 @@ class NotificationService {
 
   static Future<void> initialize() async {
     const AndroidInitializationSettings androidInitializationSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/launcher_icon');
 
     const DarwinInitializationSettings iosInitializationSettings =
         DarwinInitializationSettings(
@@ -129,6 +130,18 @@ class NotificationService {
       ledColor: Colors.blue,
     );
     await androidPlugin?.createNotificationChannel(reminderChannel);
+
+    const silentExactChannel = AndroidNotificationChannel(
+      _silentExactChannelId,
+      'Prayer Notifications (Silent)',
+      description: 'Prayer notifications without adhan sound',
+      importance: Importance.max,
+      playSound: false,
+      enableVibration: true,
+      showBadge: true,
+      ledColor: Colors.blue,
+    );
+    await androidPlugin?.createNotificationChannel(silentExactChannel);
 
     print('🔔 Per-prayer notification channels created');
 
@@ -528,7 +541,7 @@ class NotificationService {
       case 'Asr':     return 'prayer_asr';
       case 'Maghrib': return 'prayer_maghrib';
       case 'Isha':    return 'prayer_isha';
-      default:        return 'prayer_fajr';
+      default:        return _silentExactChannelId;
     }
   }
 
@@ -539,8 +552,67 @@ class NotificationService {
       case 'Asr':     return 'Asr Prayer';
       case 'Maghrib': return 'Maghrib Prayer';
       case 'Isha':    return 'Isha Prayer';
-      default:        return 'Fajr Prayer';
+      default:        return 'Prayer Notification';
     }
+  }
+
+  static bool _hasDedicatedSound(String prayerName) {
+    switch (prayerName) {
+      case 'Fajr':
+      case 'Dhuhr':
+      case 'Asr':
+      case 'Maghrib':
+      case 'Isha':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  @visibleForTesting
+  static bool shouldScheduleExactPrayerAlert({
+    required bool enableNotification,
+    required bool enableSound,
+  }) {
+    return enableNotification || enableSound;
+  }
+
+  @visibleForTesting
+  static bool shouldScheduleReminder({
+    required bool enableNotification,
+    required int offsetMinutes,
+  }) {
+    return enableNotification && offsetMinutes > 0;
+  }
+
+  @visibleForTesting
+  static DateTime reminderScheduledTime({
+    required DateTime prayerTime,
+    required int offsetMinutes,
+  }) {
+    return prayerTime.subtract(Duration(minutes: offsetMinutes));
+  }
+
+  @visibleForTesting
+  static bool shouldPlaySoundForExactPrayerAlert({
+    required String prayerName,
+    required bool enableSound,
+  }) {
+    return enableSound && _hasDedicatedSound(prayerName);
+  }
+
+  @visibleForTesting
+  static String exactChannelIdForPrayer({
+    required String prayerName,
+    required bool enableSound,
+  }) {
+    if (!shouldPlaySoundForExactPrayerAlert(
+      prayerName: prayerName,
+      enableSound: enableSound,
+    )) {
+      return _silentExactChannelId;
+    }
+    return _channelIdForPrayer(prayerName);
   }
 
   /// Convert a device-local [DateTime] into a fixed absolute instant for scheduling.
@@ -558,7 +630,7 @@ class NotificationService {
   static Future<AndroidScheduleMode> _resolveScheduleMode() async {
     final canScheduleExact = await canScheduleExactNotifications();
     if (canScheduleExact == true) {
-      return AndroidScheduleMode.alarmClock;
+      return AndroidScheduleMode.exactAllowWhileIdle;
     }
     return AndroidScheduleMode.inexactAllowWhileIdle;
   }
@@ -620,6 +692,22 @@ class NotificationService {
       final localizedPrayerName = AppLocalizations.prayerName(prayerName, language);
       final label = getNotificationLabel(prayerName, language);
       final isReminderNotification = offsetMinutes > 0;
+      final shouldPlaySound = !isReminderNotification &&
+          shouldPlaySoundForExactPrayerAlert(
+            prayerName: prayerName,
+            enableSound: enableSound,
+          );
+      final channelId = isReminderNotification
+          ? 'prayer_reminders'
+          : exactChannelIdForPrayer(
+              prayerName: prayerName,
+              enableSound: enableSound,
+            );
+      final channelName = isReminderNotification
+          ? _channelNameForLocale(language, reminder: true)
+          : (shouldPlaySound
+              ? _channelNameForPrayer(prayerName)
+              : 'Prayer Notifications (Silent)');
       final notificationBody = _buildReminderBody(
         prayerLabel: label,
         language: language,
@@ -673,23 +761,21 @@ class NotificationService {
         id,
         notificationTitle,
         notificationBody,
-        scheduled,
-        NotificationDetails(
+          scheduled,
+          NotificationDetails(
           android: AndroidNotificationDetails(
-            isReminderNotification
-                ? 'prayer_reminders'
-                : _channelIdForPrayer(prayerName),
-            isReminderNotification
-                ? _channelNameForLocale(language, reminder: true)
-                : _channelNameForPrayer(prayerName),
+            channelId,
+            channelName,
             channelDescription: isReminderNotification
                 ? _channelDescriptionForLocale(language, reminder: true)
-                : _channelDescriptionForLocale(language, reminder: false),
+                : shouldPlaySound
+                    ? _channelDescriptionForLocale(language, reminder: false)
+                    : 'Prayer notifications without adhan sound',
             importance: isReminderNotification ? Importance.high : Importance.max,
             priority: isReminderNotification ? Priority.high : Priority.max,
-            playSound: isReminderNotification ? false : enableSound,
+            playSound: shouldPlaySound,
             enableVibration: true,
-            fullScreenIntent: !isReminderNotification,
+            fullScreenIntent: !isReminderNotification && shouldPlaySound,
             autoCancel: isReminderNotification,
             onlyAlertOnce: false,
             actions: [
@@ -702,7 +788,7 @@ class NotificationService {
             ticker: label,
           ),
           iOS: DarwinNotificationDetails(
-            presentSound: isReminderNotification ? false : enableSound,
+            presentSound: shouldPlaySound,
             presentBadge: true,
             presentAlert: true,
             interruptionLevel: isReminderNotification
@@ -732,6 +818,7 @@ class NotificationService {
     required Map<String, bool> notificationSettings,
     required Map<String, bool> soundSettings,
     Map<String, int>? offsetSettings,
+    int idOffset = 0,
   }) async {
     // Do NOT cancel all notifications - only schedule for enabled prayers
     // This prevents duplicate notification scheduling
@@ -756,10 +843,13 @@ class NotificationService {
       final soundFile = soundFiles[prayer.name];
       final offsetMinutes = offsetSettings?[prayer.name] ?? 5;
 
-      if (enableNotification && offsetMinutes > 0) {
+      if (shouldScheduleReminder(
+        enableNotification: enableNotification,
+        offsetMinutes: offsetMinutes,
+      )) {
         print('🔔 Scheduling reminder for ${prayer.name} at ${prayer.time} (${offsetMinutes}m before)');
         await schedulePrayerNotification(
-          id: 100 + i,
+          id: idOffset + 100 + i,
           prayerName: prayer.name,
           prayerTime: prayer.time,
           language: language,
@@ -774,10 +864,13 @@ class NotificationService {
         skippedCount++;
       }
 
-      if (enableNotification || enableSound) {
+      if (shouldScheduleExactPrayerAlert(
+        enableNotification: enableNotification,
+        enableSound: enableSound,
+      )) {
         print('🔔 Scheduling exact prayer alert for ${prayer.name} at ${prayer.time} with sound: $enableSound');
         await schedulePrayerNotification(
-          id: 1000 + i,
+          id: idOffset + 1000 + i,
           prayerName: prayer.name,
           prayerTime: prayer.time,
           language: language,

@@ -263,29 +263,7 @@ class PrayerProvider extends ChangeNotifier {
           '⏭️ Next Prayer: ${_nextPrayer?.name} at ${_nextPrayer?.time.hour}:${_nextPrayer?.time.minute.toString().padLeft(2, '0')}',
         );
 
-        // Schedule notifications - ONLY ONCE PER DAY to prevent duplicates
-        final today = DateTime.now().toString().split(' ')[0];
-        final todayKey = '${today}_${_appSettings.language}';
-        
-        // Clear old notifications first if we're scheduling for new day
-        if (!_scheduledNotifications.contains(todayKey)) {
-          print('📢 Clearing old notifications and scheduling for ($today)...');
-          await NotificationService.cancelAllNotifications();
-          
-          await NotificationService.scheduleAllPrayerNotificationsWithSettings(
-            prayers: prayerTimes.prayerTimesList,
-            language: _appSettings.language,
-            notificationSettings: _appSettings.prayerNotifications,
-            soundSettings: _appSettings.prayerSounds,
-            offsetSettings: _appSettings.prayerNotificationOffsets,
-          );
-          
-          // Clear old entries and add today
-          _scheduledNotifications.clear();
-          _scheduledNotifications.add(todayKey);
-        } else {
-          print('⏭️ Notifications already scheduled for today ($todayKey), skipping');
-        }
+        await _scheduleNotificationsForCurrentAndNextDay(prayerTimes);
 
         _errorMessage = '';
       } else {
@@ -485,6 +463,66 @@ class PrayerProvider extends ChangeNotifier {
 
       _lastAdhanPlayedForPrayer = '${prayer.name}_ontime';
     }
+  }
+
+  Future<void> _scheduleNotificationsForCurrentAndNextDay(
+    PrayerTimes todayPrayerTimes,
+  ) async {
+    final scheduleAnchor = DateTime.now();
+    final dayKey =
+        '${scheduleAnchor.year}-${scheduleAnchor.month.toString().padLeft(2, '0')}-${scheduleAnchor.day.toString().padLeft(2, '0')}';
+    final cityKey = _currentLocation?.city ?? _savedCity;
+    final scheduleKey = '${dayKey}_${_appSettings.language}_$cityKey';
+
+    if (_scheduledNotifications.contains(scheduleKey)) {
+      print('⏭️ Notifications already scheduled for horizon ($scheduleKey), skipping');
+      return;
+    }
+
+    print('📢 Clearing old notifications and scheduling current + next day ($scheduleKey)...');
+    await NotificationService.cancelAllNotifications();
+
+    await NotificationService.scheduleAllPrayerNotificationsWithSettings(
+      prayers: todayPrayerTimes.prayerTimesList,
+      language: _appSettings.language,
+      notificationSettings: _appSettings.prayerNotifications,
+      soundSettings: _appSettings.prayerSounds,
+      offsetSettings: _appSettings.prayerNotificationOffsets,
+      idOffset: 0,
+    );
+
+    try {
+      if (_currentLocation != null) {
+        final tomorrowPrayerTimes = await AlAdhanService.getPrayerTimes(
+          latitude: _currentLocation!.latitude,
+          longitude: _currentLocation!.longitude,
+          city: _currentLocation!.city,
+          country: _currentLocation!.country,
+          date: DateTime.now().add(const Duration(days: 1)),
+        );
+
+        if (tomorrowPrayerTimes != null &&
+            tomorrowPrayerTimes.prayerTimesList.isNotEmpty) {
+          await NotificationService.scheduleAllPrayerNotificationsWithSettings(
+            prayers: tomorrowPrayerTimes.prayerTimesList,
+            language: _appSettings.language,
+            notificationSettings: _appSettings.prayerNotifications,
+            soundSettings: _appSettings.prayerSounds,
+            offsetSettings: _appSettings.prayerNotificationOffsets,
+            idOffset: 10000,
+          );
+          print('✅ Tomorrow notifications scheduled');
+        } else {
+          print('⚠️ Tomorrow prayer times unavailable, only current day scheduled');
+        }
+      }
+    } catch (e) {
+      print('⚠️ Error scheduling tomorrow notifications: $e');
+    }
+
+    _scheduledNotifications
+      ..clear()
+      ..add(scheduleKey);
   }
 
   /// Play adhan sound for a specific prayer

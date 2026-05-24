@@ -448,15 +448,15 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                 isDark: isDark,
                 isActive: _azanSoundEnabled[prayerName] ?? false,
                 icon: Icons.volume_up_outlined,
-                onTap: () {
+                onTap: () async {
                   final newValue = !(_azanSoundEnabled[prayerName] ?? false);
                   setState(() {
                     _azanSoundEnabled[prayerName] = newValue;
                   });
-                  // Save immediately
-                  context.read<AppSettings>().setPrayerSound(prayerName, newValue);
-                  // Sound change also affects scheduled notification sound — reschedule
-                  context.read<PrayerProvider>().rescheduleNotifications();
+                  final settings = context.read<AppSettings>();
+                  final prayerProvider = context.read<PrayerProvider>();
+                  await settings.setPrayerSound(prayerName, newValue);
+                  await prayerProvider.rescheduleNotifications();
                 },
               ),
             ),
@@ -474,7 +474,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     final currentOffset = _notificationOffset[prayerName] ?? 5;
 
     return PopupMenuButton<int>(
-      onSelected: (int selectedOffset) {
+      onSelected: (int selectedOffset) async {
         setState(() {
           if (selectedOffset == 0) {
             _notificationEnabled[prayerName] = false;
@@ -485,12 +485,12 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         });
         // Save immediately so closing the app doesn't lose the change
         final settings = context.read<AppSettings>();
-        settings.setPrayerNotification(prayerName, selectedOffset != 0);
+        await settings.setPrayerNotification(prayerName, selectedOffset != 0);
         if (selectedOffset != 0) {
-          settings.setPrayerNotificationOffset(prayerName, selectedOffset);
+          await settings.setPrayerNotificationOffset(prayerName, selectedOffset);
         }
         // Reschedule so the new offset takes effect right away
-        context.read<PrayerProvider>().rescheduleNotifications();
+        await context.read<PrayerProvider>().rescheduleNotifications();
       },
       color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
       elevation: 4,

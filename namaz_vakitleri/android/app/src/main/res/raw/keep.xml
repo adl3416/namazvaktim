@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@mipmap/ic_launcher,@mipmap/launcher_icon,@raw/sabah_ezan,@raw/ogle_ezan,@raw/ikindi_ezan,@raw/aksam_ezan,@raw/yatsi_ezan" />

@@ -12,7 +12,11 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer2<AppSettings, PrayerProvider>(
       builder: (context, settings, prayerProvider, _) {
-        final scheme = _paletteForPrayer(prayerProvider.activePrayer?.name);
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final scheme = _paletteForPrayer(
+          prayerProvider.activePrayer?.name,
+          isDark,
+        );
         final nextPrayer = prayerProvider.nextPrayer;
         final countdown = prayerProvider.countdownDuration;
         final prayerTimes =
@@ -81,6 +85,7 @@ class HomeScreen extends StatelessWidget {
                             children: [
                               _HeroCountdownCard(
                                 scheme: scheme,
+                                isDark: isDark,
                                 nextPrayer: nextPrayer,
                                 countdown: countdown,
                                 errorMessage: prayerProvider.errorMessage,
@@ -305,6 +310,7 @@ class _StickyTopHeaderDelegate extends SliverPersistentHeaderDelegate {
 class _HeroCountdownCard extends StatelessWidget {
   const _HeroCountdownCard({
     required this.scheme,
+    required this.isDark,
     required this.nextPrayer,
     required this.countdown,
     required this.errorMessage,
@@ -316,6 +322,7 @@ class _HeroCountdownCard extends StatelessWidget {
   });
 
   final _HomePalette scheme;
+  final bool isDark;
   final PrayerTime? nextPrayer;
   final Duration? countdown;
   final String errorMessage;
@@ -444,7 +451,7 @@ class _HeroCountdownCard extends StatelessWidget {
                   icon: Icons.calendar_today_rounded,
                   label: _miladiDate(),
                   scheme: scheme,
-                  useLightStyle: true,
+                  useLightStyle: !isDark,
                   alignment: Alignment.centerLeft,
                 ),
               ),
@@ -454,7 +461,7 @@ class _HeroCountdownCard extends StatelessWidget {
                   icon: Icons.brightness_3_rounded,
                   label: _hijriDate(),
                   scheme: scheme,
-                  useLightStyle: true,
+                  useLightStyle: !isDark,
                   alignment: Alignment.centerRight,
                 ),
               ),
@@ -1088,12 +1095,12 @@ class _HomePalette {
   final Color shadow;
 }
 
-_HomePalette _paletteForPrayer(String? prayerName) {
+_HomePalette _paletteForPrayer(String? prayerName, bool isDark) {
   final normalized = prayerName?.toLowerCase() ?? '';
 
   // İmsak / Fajr — derin lacivert-indigo (gece sonu)
   if (normalized.contains('fajr') || normalized.contains('imsak')) {
-    return const _HomePalette(
+    return _shadeHomePalette(const _HomePalette(
       background: Color(0xFFEEF2FF),
       backgroundAccent: Color(0xFFE0E7FF),
       backgroundSoft: Color(0xFFF8F9FF),
@@ -1104,12 +1111,12 @@ _HomePalette _paletteForPrayer(String? prayerName) {
       textPrimary: Color(0xFF1E1B4B),
       textSecondary: Color(0xFF6B72A8),
       shadow: Color(0xFF4338CA),
-    );
+    ), isDark);
   }
 
   // Güneş / Sunrise — turuncu-altın (şafak)
   if (normalized.contains('sunrise') || normalized.contains('gunes')) {
-    return const _HomePalette(
+    return _shadeHomePalette(const _HomePalette(
       background: Color(0xFFFFF7ED),
       backgroundAccent: Color(0xFFFFEDD5),
       backgroundSoft: Color(0xFFFFFBF5),
@@ -1120,12 +1127,12 @@ _HomePalette _paletteForPrayer(String? prayerName) {
       textPrimary: Color(0xFF431407),
       textSecondary: Color(0xFF9A4A25),
       shadow: Color(0xFFC2410C),
-    );
+    ), isDark);
   }
 
   // Öğle / Dhuhr — gökyüzü mavisi (öğlen)
   if (normalized.contains('dhuhr') || normalized.contains('ogle')) {
-    return const _HomePalette(
+    return _shadeHomePalette(const _HomePalette(
       background: Color(0xFFEFF6FF),
       backgroundAccent: Color(0xFFDCEEFB),
       backgroundSoft: Color(0xFFF5FAFF),
@@ -1136,12 +1143,12 @@ _HomePalette _paletteForPrayer(String? prayerName) {
       textPrimary: Color(0xFF1E3A5F),
       textSecondary: Color(0xFF4A7AA8),
       shadow: Color(0xFF1D4ED8),
-    );
+    ), isDark);
   }
 
   // İkindi / Asr — kehribar-amber (ikindi güneşi)
   if (normalized.contains('asr') || normalized.contains('ikindi')) {
-    return const _HomePalette(
+    return _shadeHomePalette(const _HomePalette(
       background: Color(0xFFFFFBEB),
       backgroundAccent: Color(0xFFFEF3C7),
       backgroundSoft: Color(0xFFFFFDF5),
@@ -1152,12 +1159,12 @@ _HomePalette _paletteForPrayer(String? prayerName) {
       textPrimary: Color(0xFF451A03),
       textSecondary: Color(0xFF92520A),
       shadow: Color(0xFFB45309),
-    );
+    ), isDark);
   }
 
   // Akşam / Maghrib — kızıl-pembe (gün batımı)
   if (normalized.contains('maghrib') || normalized.contains('aksam')) {
-    return const _HomePalette(
+    return _shadeHomePalette(const _HomePalette(
       background: Color(0xFFFFF1F2),
       backgroundAccent: Color(0xFFFFE4E6),
       backgroundSoft: Color(0xFFFFF8F9),
@@ -1168,11 +1175,11 @@ _HomePalette _paletteForPrayer(String? prayerName) {
       textPrimary: Color(0xFF4C0519),
       textSecondary: Color(0xFFAD5162),
       shadow: Color(0xFF9F1239),
-    );
+    ), isDark);
   }
 
   // Yatsı / Isha — mor-violet (gece)
-  return const _HomePalette(
+  return _shadeHomePalette(const _HomePalette(
     background: Color(0xFFF5F3FF),
     backgroundAccent: Color(0xFFEDE9FE),
     backgroundSoft: Color(0xFFFAF9FF),
@@ -1183,6 +1190,25 @@ _HomePalette _paletteForPrayer(String? prayerName) {
     textPrimary: Color(0xFF2E1065),
     textSecondary: Color(0xFF7C5AC3),
     shadow: Color(0xFF5B21B6),
+  ), isDark);
+}
+
+_HomePalette _shadeHomePalette(_HomePalette palette, bool isDark) {
+  if (!isDark) return palette;
+  return _HomePalette(
+    background: Color.lerp(palette.background, const Color(0xFF0F172A), 0.86)!,
+    backgroundAccent:
+        Color.lerp(palette.backgroundAccent, const Color(0xFF111827), 0.80)!,
+    backgroundSoft:
+        Color.lerp(palette.backgroundSoft, const Color(0xFF1E293B), 0.72)!,
+    primary: palette.primary,
+    secondary: palette.secondary,
+    tertiary: palette.tertiary,
+    surfaceStrong:
+        Color.lerp(palette.surfaceStrong, const Color(0xFF1E293B), 0.72)!,
+    textPrimary: const Color(0xFFF8FAFC),
+    textSecondary: const Color(0xFFCBD5E1),
+    shadow: Color.lerp(palette.shadow, Colors.black, 0.25)!,
   );
 }
 

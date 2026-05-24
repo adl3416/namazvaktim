@@ -153,9 +153,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             ],
             theme: _buildLightTheme(),
             darkTheme: _buildDarkTheme(),
-            themeMode: appSettings.isDarkMode
-                ? ThemeMode.dark
-                : ThemeMode.light,
+            themeMode: appSettings.themeMode,
             home: const MainNavigationScreen(),
           );
         },

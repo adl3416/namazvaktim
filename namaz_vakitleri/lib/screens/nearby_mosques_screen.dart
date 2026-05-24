@@ -6,13 +6,14 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../config/color_system.dart';
 import '../models/mosque_model.dart';
 import '../providers/app_settings.dart';
 import '../providers/prayer_provider.dart';
 import '../services/mosque_service.dart';
 
 class NearbyMosquesScreen extends StatefulWidget {
-  const NearbyMosquesScreen({Key? key}) : super(key: key);
+  const NearbyMosquesScreen({super.key});
 
   @override
   State<NearbyMosquesScreen> createState() => _NearbyMosquesScreenState();
@@ -25,7 +26,6 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
   @override
   void initState() {
     super.initState();
-    // Try loading after first frame (location may already be available)
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryLoadMosques());
   }
 
@@ -99,27 +99,31 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
   Widget build(BuildContext context) {
     return Consumer2<AppSettings, PrayerProvider>(
       builder: (context, settings, prayerProvider, _) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         final location = prayerProvider.currentLocation;
 
-        // Auto-load when location becomes available but future hasn't started
         if (location != null && _nearbyMosquesFuture == null) {
-          WidgetsBinding.instance.addPostFrameCallback(
-            (_) => _tryLoadMosques(),
-          );
+          WidgetsBinding.instance.addPostFrameCallback((_) => _tryLoadMosques());
         }
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF4F0E8),
+          backgroundColor: isDark ? AppColors.darkBg : const Color(0xFFF4F0E8),
           body: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFF5F0E7),
-                  Color(0xFFE8DDD0),
-                  Color(0xFFF8F5EF),
-                ],
+                colors: isDark
+                    ? const [
+                        Color(0xFF0F172A),
+                        Color(0xFF111827),
+                        Color(0xFF172033),
+                      ]
+                    : const [
+                        Color(0xFFF5F0E7),
+                        Color(0xFFE8DDD0),
+                        Color(0xFFF8F5EF),
+                      ],
               ),
             ),
             child: SafeArea(
@@ -138,38 +142,35 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Row(
                                           children: [
-                                            const Text(
+                                            Text(
                                               'Yakındaki Camiler',
                                               style: TextStyle(
                                                 fontSize: 18,
                                                 fontWeight: FontWeight.w800,
                                                 letterSpacing: -0.4,
-                                                color: Color(0xFF1F1A16),
+                                                color: isDark
+                                                    ? AppColors.darkTextPrimary
+                                                    : const Color(0xFF1F1A16),
                                               ),
                                             ),
                                             if (mosques.isNotEmpty) ...[
                                               const SizedBox(width: 8),
                                               Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
+                                                padding: const EdgeInsets.symmetric(
                                                   horizontal: 10,
                                                   vertical: 3,
                                                 ),
                                                 decoration: BoxDecoration(
-                                                  color:
-                                                      const Color(0xFF1F4C43),
+                                                  color: const Color(0xFF1F4C43),
                                                   borderRadius:
-                                                      BorderRadius.circular(
-                                                          999),
+                                                      BorderRadius.circular(999),
                                                 ),
                                                 child: Text(
                                                   '${mosques.length} cami',
@@ -188,8 +189,9 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                                             '${location.city} çevresinde',
                                             style: TextStyle(
                                               fontSize: 12,
-                                              color: Colors.black
-                                                  .withOpacity(0.45),
+                                              color: isDark
+                                                  ? AppColors.darkTextLight
+                                                  : Colors.black.withOpacity(0.45),
                                               fontWeight: FontWeight.w500,
                                             ),
                                           ),
@@ -202,15 +204,17 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                               _CompactRadiusCard(
                                 radius: _searchRadius,
                                 onChanged: _updateRadius,
+                                isDark: isDark,
                               ),
                             ],
                           ),
                         ),
                       ),
                       if (location == null)
-                        const SliverFillRemaining(
+                        SliverFillRemaining(
                           hasScrollBody: false,
                           child: _EmptyMosqueState(
+                            isDark: isDark,
                             icon: Icons.location_off_rounded,
                             title: 'Konum gerekli',
                             message:
@@ -230,23 +234,24 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                         SliverFillRemaining(
                           hasScrollBody: false,
                           child: _EmptyMosqueState(
+                            isDark: isDark,
                             icon: Icons.error_outline_rounded,
-                            title: 'Liste yuklenemedi',
+                            title: 'Liste yüklenemedi',
                             message: 'Hata: ${snapshot.error}',
                           ),
                         )
                       else if (mosques.isEmpty)
-                        const SliverFillRemaining(
+                        SliverFillRemaining(
                           hasScrollBody: false,
                           child: _EmptyMosqueState(
+                            isDark: isDark,
                             icon: Icons.travel_explore_rounded,
-                            title: 'Bu alanda sonuc yok',
+                            title: 'Bu alanda sonuç yok',
                             message:
-                                'Arama yaricapini genisleterek daha fazla cami gorebilirsin.',
+                                'Arama yarıçapını genişleterek daha fazla cami görebilirsin.',
                           ),
                         )
                       else ...[
-                        // Map
                         SliverToBoxAdapter(
                           child: Padding(
                             padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
@@ -257,12 +262,11 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                                 child: FlutterMap(
                                   options: MapOptions(
                                     initialCenter: LatLng(
-                                      location!.latitude,
+                                      location.latitude,
                                       location.longitude,
                                     ),
                                     initialZoom: 14.0,
-                                    interactionOptions:
-                                        const InteractionOptions(
+                                    interactionOptions: const InteractionOptions(
                                       flags: InteractiveFlag.all,
                                     ),
                                   ),
@@ -275,7 +279,6 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                                     ),
                                     MarkerLayer(
                                       markers: [
-                                        // User location
                                         Marker(
                                           point: LatLng(
                                             location.latitude,
@@ -302,16 +305,16 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                                             ),
                                           ),
                                         ),
-                                        // Mosque markers
                                         ...mosques.map(
-                                          (m) => Marker(
+                                          (mosque) => Marker(
                                             point: LatLng(
-                                                m.latitude, m.longitude),
+                                              mosque.latitude,
+                                              mosque.longitude,
+                                            ),
                                             width: 36,
                                             height: 36,
                                             child: GestureDetector(
-                                              onTap: () =>
-                                                  _openNavigation(m),
+                                              onTap: () => _openNavigation(mosque),
                                               child: const Icon(
                                                 Icons.mosque_rounded,
                                                 color: Color(0xFFD97706),
@@ -336,7 +339,9 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black.withOpacity(0.45),
+                                color: isDark
+                                    ? AppColors.darkTextLight
+                                    : Colors.black.withOpacity(0.45),
                                 letterSpacing: 0.2,
                               ),
                             ),
@@ -350,6 +355,7 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 12),
                                 child: _MosqueListTile(
+                                  isDark: isDark,
                                   mosque: mosque,
                                   rank: index + 1,
                                   onNavigate: () => _openNavigation(mosque),
@@ -378,32 +384,39 @@ class _CompactRadiusCard extends StatelessWidget {
   const _CompactRadiusCard({
     required this.radius,
     required this.onChanged,
+    required this.isDark,
   });
 
   final double radius;
   final ValueChanged<double> onChanged;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F4C43).withOpacity(0.07),
+        color: isDark
+            ? AppColors.darkBgSecondary.withOpacity(0.92)
+            : const Color(0xFF1F4C43).withOpacity(0.07),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFF1F4C43).withOpacity(0.12),
+          color: isDark
+              ? Colors.white.withOpacity(0.08)
+              : const Color(0xFF1F4C43).withOpacity(0.12),
         ),
       ),
       child: Row(
         children: [
-          const Icon(Icons.radar_rounded,
-              color: Color(0xFF1F4C43), size: 15),
+          const Icon(Icons.radar_rounded, color: Color(0xFF1F4C43), size: 15),
           const SizedBox(width: 4),
-          const Text(
+          Text(
             'Yarıçap',
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1F4C43),
+              color: isDark
+                  ? AppColors.darkTextPrimary
+                  : const Color(0xFF1F4C43),
               fontSize: 12,
             ),
           ),
@@ -411,14 +424,11 @@ class _CompactRadiusCard extends StatelessWidget {
             child: SliderTheme(
               data: SliderTheme.of(context).copyWith(
                 activeTrackColor: const Color(0xFF1F4C43),
-                inactiveTrackColor:
-                    const Color(0xFF1F4C43).withOpacity(0.20),
+                inactiveTrackColor: const Color(0xFF1F4C43).withOpacity(0.20),
                 thumbColor: const Color(0xFF1F4C43),
-                overlayColor:
-                    const Color(0xFF1F4C43).withOpacity(0.10),
+                overlayColor: const Color(0xFF1F4C43).withOpacity(0.10),
                 trackHeight: 2,
-                thumbShape: const RoundSliderThumbShape(
-                    enabledThumbRadius: 7),
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
                 overlayShape:
                     const RoundSliderOverlayShape(overlayRadius: 14),
               ),
@@ -433,9 +443,11 @@ class _CompactRadiusCard extends StatelessWidget {
           ),
           Text(
             '${radius.toStringAsFixed(0)} km',
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w800,
-              color: Color(0xFF1F4C43),
+              color: isDark
+                  ? AppColors.darkTextPrimary
+                  : const Color(0xFF1F4C43),
               fontSize: 13,
             ),
           ),
@@ -447,12 +459,14 @@ class _CompactRadiusCard extends StatelessWidget {
 
 class _MosqueListTile extends StatelessWidget {
   const _MosqueListTile({
+    required this.isDark,
     required this.mosque,
     required this.rank,
     required this.onNavigate,
     this.onOpenWebsite,
   });
 
+  final bool isDark;
   final Mosque mosque;
   final int rank;
   final VoidCallback onNavigate;
@@ -466,7 +480,9 @@ class _MosqueListTile extends StatelessWidget {
         : '${distKm.toStringAsFixed(1)} km uzaklıkta';
 
     return Material(
-      color: Colors.white,
+      color: isDark
+          ? AppColors.darkBgSecondary.withOpacity(0.92)
+          : Colors.white,
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
@@ -475,10 +491,14 @@ class _MosqueListTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFEDE9E3)),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withOpacity(0.08)
+                  : const Color(0xFFEDE9E3),
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withOpacity(isDark ? 0.18 : 0.04),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
@@ -511,10 +531,12 @@ class _MosqueListTile extends StatelessWidget {
                   children: [
                     Text(
                       mosque.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF1A1A1A),
+                        color: isDark
+                            ? AppColors.darkTextPrimary
+                            : const Color(0xFF1A1A1A),
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -522,7 +544,9 @@ class _MosqueListTile extends StatelessWidget {
                       mosque.address,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.black.withOpacity(0.50),
+                        color: isDark
+                            ? AppColors.darkTextSecondary
+                            : Colors.black.withOpacity(0.50),
                         height: 1.3,
                       ),
                     ),
@@ -538,9 +562,11 @@ class _MosqueListTile extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: Color(0xFFB0A898),
+                color: isDark
+                    ? AppColors.darkTextLight
+                    : const Color(0xFFB0A898),
                 size: 22,
               ),
             ],
@@ -553,11 +579,13 @@ class _MosqueListTile extends StatelessWidget {
 
 class _EmptyMosqueState extends StatelessWidget {
   const _EmptyMosqueState({
+    required this.isDark,
     required this.icon,
     required this.title,
     required this.message,
   });
 
+  final bool isDark;
   final IconData icon;
   final String title;
   final String message;
@@ -574,18 +602,22 @@ class _EmptyMosqueState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
-                color: Color(0xFF1F1A16),
+                color: isDark
+                    ? AppColors.darkTextPrimary
+                    : const Color(0xFF1F1A16),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFF61584E),
+              style: TextStyle(
+                color: isDark
+                    ? AppColors.darkTextSecondary
+                    : const Color(0xFF61584E),
                 height: 1.45,
               ),
             ),

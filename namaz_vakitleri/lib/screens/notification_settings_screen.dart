@@ -236,10 +236,6 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
 
             // Prayer list
             ..._buildPrayerList(isDark),
-            const SizedBox(height: 24),
-
-            // Test notification button
-            _buildTestNotificationButton(isDark),
             const SizedBox(height: 30),
           ],
         ),

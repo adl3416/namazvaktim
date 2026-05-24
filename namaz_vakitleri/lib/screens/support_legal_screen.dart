@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../config/color_system.dart';
+
 class SupportLegalScreen extends StatelessWidget {
   const SupportLegalScreen({super.key, required this.language});
 
@@ -50,12 +52,14 @@ class SupportLegalScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F1E8),
+      backgroundColor: isDark ? AppColors.darkBg : const Color(0xFFF6F1E8),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: const Color(0xFF1E1A16),
+        foregroundColor:
+            isDark ? AppColors.darkTextPrimary : const Color(0xFF1E1A16),
         title: Text(
           _text(
             tr: 'Destek ve Gizlilik',
@@ -65,15 +69,21 @@ class SupportLegalScreen extends StatelessWidget {
         ),
       ),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF6F0E6),
-              Color(0xFFE7DCCB),
-              Color(0xFFF9F6F1),
-            ],
+            colors: isDark
+                ? const [
+                    Color(0xFF0F172A),
+                    Color(0xFF111827),
+                    Color(0xFF172033),
+                  ]
+                : const [
+                    Color(0xFFF6F0E6),
+                    Color(0xFFE7DCCB),
+                    Color(0xFFF9F6F1),
+                  ],
           ),
         ),
         child: ListView(
@@ -93,6 +103,7 @@ class SupportLegalScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             _SectionCard(
+              isDark: isDark,
               title: _text(
                 tr: 'İletişim',
                 en: 'Contact',
@@ -111,6 +122,7 @@ class SupportLegalScreen extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             _SectionCard(
+              isDark: isDark,
               title: _text(
                 tr: 'Hangi veriler kullanılır?',
                 en: 'What data is used?',
@@ -124,6 +136,7 @@ class SupportLegalScreen extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             _SectionCard(
+              isDark: isDark,
               title: _text(
                 tr: 'Konum neden isteniyor?',
                 en: 'Why is location needed?',
@@ -137,6 +150,7 @@ class SupportLegalScreen extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             _SectionCard(
+              isDark: isDark,
               title: _text(
                 tr: 'Bildirimler ve ezan',
                 en: 'Notifications and adhan',
@@ -150,6 +164,7 @@ class SupportLegalScreen extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             _SectionCard(
+              isDark: isDark,
               title: _text(
                 tr: 'Üçüncü taraf servisler',
                 en: 'Third-party services',
@@ -163,6 +178,7 @@ class SupportLegalScreen extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             _SectionCard(
+              isDark: isDark,
               title: _text(
                 tr: 'Verileriniz nerede tutulur?',
                 en: 'Where is your data stored?',
@@ -176,6 +192,7 @@ class SupportLegalScreen extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             _SectionCard(
+              isDark: isDark,
               title: _text(
                 tr: 'Doğruluk hakkında',
                 en: 'About accuracy',
@@ -189,6 +206,7 @@ class SupportLegalScreen extends StatelessWidget {
             ),
             const SizedBox(height: 14),
             _SectionCard(
+              isDark: isDark,
               title: _text(
                 tr: 'Haklarınız',
                 en: 'Your rights',
@@ -269,11 +287,13 @@ class _HeaderCard extends StatelessWidget {
 
 class _SectionCard extends StatelessWidget {
   const _SectionCard({
+    required this.isDark,
     required this.title,
     required this.body,
     this.child,
   });
 
+  final bool isDark;
   final String title;
   final String body;
   final Widget? child;
@@ -283,12 +303,18 @@ class _SectionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.84),
+        color: isDark
+            ? AppColors.darkBgSecondary.withOpacity(0.92)
+            : Colors.white.withOpacity(0.84),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withOpacity(0.88)),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.08)
+              : Colors.white.withOpacity(0.88),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(isDark ? 0.22 : 0.05),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -299,19 +325,23 @@ class _SectionCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w900,
-              color: Color(0xFF1E1A16),
+              color: isDark
+                  ? AppColors.darkTextPrimary
+                  : const Color(0xFF1E1A16),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             body,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               height: 1.5,
-              color: Color(0xFF655B51),
+              color: isDark
+                  ? AppColors.darkTextSecondary
+                  : const Color(0xFF655B51),
               fontWeight: FontWeight.w500,
             ),
           ),

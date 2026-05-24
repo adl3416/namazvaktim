@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../config/localization.dart';
+import '../config/color_system.dart';
 import '../providers/app_settings.dart';
 import '../providers/prayer_provider.dart';
 import '../widgets/qibla_compass_widget.dart';
 
 class QiblaScreen extends StatefulWidget {
-  const QiblaScreen({Key? key}) : super(key: key);
+  const QiblaScreen({super.key});
 
   @override
   State<QiblaScreen> createState() => _QiblaScreenState();
@@ -37,29 +37,37 @@ class _QiblaScreenState extends State<QiblaScreen> {
   Widget build(BuildContext context) {
     return Consumer2<AppSettings, PrayerProvider>(
       builder: (context, settings, prayerProvider, _) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         final locale = settings.language;
         final location = prayerProvider.currentLocation;
         final city = prayerProvider.savedCity.isNotEmpty
             ? prayerProvider.savedCity
-            : (location?.city ?? _text(
-                locale,
-                tr: 'Konum bekleniyor',
-                en: 'Waiting for location',
-                ar: 'بانتظار الموقع',
-              ));
+            : (location?.city ??
+                _text(
+                  locale,
+                  tr: 'Konum bekleniyor',
+                  en: 'Waiting for location',
+                  ar: 'بانتظار الموقع',
+                ));
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF6F1E8),
+          backgroundColor: isDark ? AppColors.darkBg : const Color(0xFFF6F1E8),
           body: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFF6F0E6),
-                  Color(0xFFE7DCCB),
-                  Color(0xFFF9F6F1),
-                ],
+                colors: isDark
+                    ? const [
+                        Color(0xFF0F172A),
+                        Color(0xFF111827),
+                        Color(0xFF172033),
+                      ]
+                    : const [
+                        Color(0xFFF6F0E6),
+                        Color(0xFFE7DCCB),
+                        Color(0xFFF9F6F1),
+                      ],
               ),
             ),
             child: SafeArea(
@@ -70,21 +78,29 @@ class _QiblaScreenState extends State<QiblaScreen> {
                     padding: const EdgeInsets.fromLTRB(18, 18, 18, 22),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(34),
-                      gradient: const LinearGradient(
+                      gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFFFBF8F2),
-                          Color(0xFFF2E9DA),
-                          Color(0xFFF7F1E6),
-                        ],
+                        colors: isDark
+                            ? const [
+                                Color(0xFF172033),
+                                Color(0xFF111827),
+                                Color(0xFF1E293B),
+                              ]
+                            : const [
+                                Color(0xFFFBF8F2),
+                                Color(0xFFF2E9DA),
+                                Color(0xFFF7F1E6),
+                              ],
                       ),
                       border: Border.all(
-                        color: const Color(0xFFE5D8C2),
+                        color: isDark
+                            ? Colors.white.withOpacity(0.08)
+                            : const Color(0xFFE5D8C2),
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFB9A381).withOpacity(0.18),
+                          color: Colors.black.withOpacity(isDark ? 0.24 : 0.18),
                           blurRadius: 28,
                           offset: const Offset(0, 14),
                         ),
@@ -97,6 +113,7 @@ class _QiblaScreenState extends State<QiblaScreen> {
                             _TopActionButton(
                               icon: Icons.place_rounded,
                               active: true,
+                              isDark: isDark,
                             ),
                             Expanded(
                               child: Column(
@@ -109,8 +126,10 @@ class _QiblaScreenState extends State<QiblaScreen> {
                                       ar: 'بوصلة القبلة',
                                     ),
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Color(0xFF8C7140),
+                                    style: TextStyle(
+                                      color: isDark
+                                          ? AppColors.darkTextSecondary
+                                          : const Color(0xFF8C7140),
                                       fontSize: 18,
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: 2.4,
@@ -120,12 +139,14 @@ class _QiblaScreenState extends State<QiblaScreen> {
                                   Text(
                                     _text(
                                       locale,
-                                      tr: 'Kibleye yonelin',
+                                      tr: 'Kıbleye yönelin',
                                       en: 'Face the Qibla',
                                       ar: 'اتجه نحو القبلة',
                                     ),
                                     style: TextStyle(
-                                      color: const Color(0xFF7B6A53),
+                                      color: isDark
+                                          ? AppColors.darkTextLight
+                                          : const Color(0xFF7B6A53),
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -138,6 +159,7 @@ class _QiblaScreenState extends State<QiblaScreen> {
                                   ? Icons.vibration_rounded
                                   : Icons.mobile_off_rounded,
                               active: _vibrationEnabled,
+                              isDark: isDark,
                               onTap: () {
                                 setState(() {
                                   _vibrationEnabled = !_vibrationEnabled;
@@ -156,6 +178,7 @@ class _QiblaScreenState extends State<QiblaScreen> {
                             ar: 'موقعك',
                           ),
                           value: city,
+                          isDark: isDark,
                           lightStyle: true,
                           multiline: true,
                           trailingIcon: Icons.gps_fixed_rounded,
@@ -169,7 +192,8 @@ class _QiblaScreenState extends State<QiblaScreen> {
                               locale: locale,
                               userLocation: location,
                               alignmentColor: const Color(0xFFE0B86D),
-                              backgroundColor: const Color(0xFF0B141B),
+                              backgroundColor:
+                                  isDark ? const Color(0xFF071018) : const Color(0xFF0B141B),
                               vibrationEnabled: _vibrationEnabled,
                               onTelemetry: (telemetry) {
                                 if (!mounted || telemetry == _telemetry) return;
@@ -183,9 +207,10 @@ class _QiblaScreenState extends State<QiblaScreen> {
                         const SizedBox(height: 18),
                         _StatusBadge(
                           aligned: _telemetry.isAligned,
+                          isDark: isDark,
                           alignedLabel: _text(
                             locale,
-                            tr: 'Kible hizalandi',
+                            tr: 'Kıble hizalandı',
                             en: 'Qibla aligned',
                             ar: 'تمت محاذاة القبلة',
                           ),
@@ -196,9 +221,10 @@ class _QiblaScreenState extends State<QiblaScreen> {
                           children: [
                             Expanded(
                               child: _BottomStat(
+                                isDark: isDark,
                                 label: _text(
                                   locale,
-                                  tr: 'Kible Yonu',
+                                  tr: 'Kıble Yönü',
                                   en: 'Qibla Bearing',
                                   ar: 'اتجاه القبلة',
                                 ),
@@ -209,6 +235,7 @@ class _QiblaScreenState extends State<QiblaScreen> {
                             ),
                             Expanded(
                               child: _BottomStat(
+                                isDark: isDark,
                                 label: _text(
                                   locale,
                                   tr: 'Enlem',
@@ -222,6 +249,7 @@ class _QiblaScreenState extends State<QiblaScreen> {
                             ),
                             Expanded(
                               child: _BottomStat(
+                                isDark: isDark,
                                 label: _text(
                                   locale,
                                   tr: 'Boylam',
@@ -244,9 +272,13 @@ class _QiblaScreenState extends State<QiblaScreen> {
                           ),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(999),
-                            color: Colors.white.withOpacity(0.80),
+                            color: isDark
+                                ? AppColors.darkBgSecondary.withOpacity(0.92)
+                                : Colors.white.withOpacity(0.80),
                             border: Border.all(
-                              color: const Color(0xFFE4D7C2),
+                              color: isDark
+                                  ? Colors.white.withOpacity(0.08)
+                                  : const Color(0xFFE4D7C2),
                             ),
                           ),
                           child: Row(
@@ -272,12 +304,14 @@ class _QiblaScreenState extends State<QiblaScreen> {
                                 child: Text(
                                   _text(
                                     locale,
-                                    tr: 'Kible; nerede olursan ol, yonun ayni olsun.',
+                                    tr: 'Kıble; nerede olursan ol, yönün aynı olsun.',
                                     en: 'Wherever you are, let your direction remain the same.',
                                     ar: 'أينما كنت، فلتبق وجهتك واحدة.',
                                   ),
                                   style: TextStyle(
-                                    color: const Color(0xFF4B3D2B),
+                                    color: isDark
+                                        ? AppColors.darkTextSecondary
+                                        : const Color(0xFF4B3D2B),
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     height: 1.35,
@@ -303,18 +337,22 @@ class _QiblaScreenState extends State<QiblaScreen> {
 class _TopActionButton extends StatelessWidget {
   const _TopActionButton({
     required this.icon,
+    required this.isDark,
     this.onTap,
     this.active = false,
   });
 
   final IconData icon;
+  final bool isDark;
   final VoidCallback? onTap;
   final bool active;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFFFFFBF5),
+      color: isDark
+          ? AppColors.darkBgSecondary.withOpacity(0.92)
+          : const Color(0xFFFFFBF5),
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
@@ -328,12 +366,16 @@ class _TopActionButton extends StatelessWidget {
               color: (active
                       ? const Color(0xFFE1BF84)
                       : const Color(0xFFE0D2BA))
-                  .withOpacity(0.45),
+                  .withOpacity(isDark ? 0.22 : 0.45),
             ),
           ),
           child: Icon(
             icon,
-            color: active ? const Color(0xFFC89B53) : const Color(0xFF8A7758),
+            color: active
+                ? const Color(0xFFC89B53)
+                : isDark
+                    ? AppColors.darkTextSecondary
+                    : const Color(0xFF8A7758),
             size: 24,
           ),
         ),
@@ -347,6 +389,7 @@ class _SideInfoCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.value,
+    required this.isDark,
     this.emphasized = false,
     this.lightStyle = false,
     this.multiline = false,
@@ -356,6 +399,7 @@ class _SideInfoCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String value;
+  final bool isDark;
   final bool emphasized;
   final bool lightStyle;
   final bool multiline;
@@ -366,16 +410,22 @@ class _SideInfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: lightStyle
-            ? const Color(0xFFF7F1E7)
-            : Colors.white.withOpacity(0.66),
+        color: isDark
+            ? AppColors.darkBgSecondary.withOpacity(0.92)
+            : lightStyle
+                ? const Color(0xFFF7F1E7)
+                : Colors.white.withOpacity(0.66),
         borderRadius: BorderRadius.circular(22),
         border: Border.all(
-          color: lightStyle
-              ? const Color(0xFFE2D2BC)
-              : emphasized
+          color: isDark
+              ? emphasized
                   ? const Color(0xFF4ADE80).withOpacity(0.34)
-                  : const Color(0xFFE8DCC8),
+                  : Colors.white.withOpacity(0.08)
+              : lightStyle
+                  ? const Color(0xFFE2D2BC)
+                  : emphasized
+                      ? const Color(0xFF4ADE80).withOpacity(0.34)
+                      : const Color(0xFFE8DCC8),
         ),
       ),
       child: Row(
@@ -385,19 +435,27 @@ class _SideInfoCard extends StatelessWidget {
             height: 42,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: lightStyle
-                  ? const Color(0xFFC89B53).withOpacity(0.12)
-                  : emphasized
+              color: isDark
+                  ? emphasized
                       ? const Color(0xFF14532D).withOpacity(0.42)
-                      : const Color(0xFFE1BF84).withOpacity(0.12),
+                      : const Color(0xFFE1BF84).withOpacity(0.12)
+                  : lightStyle
+                      ? const Color(0xFFC89B53).withOpacity(0.12)
+                      : emphasized
+                          ? const Color(0xFF14532D).withOpacity(0.42)
+                          : const Color(0xFFE1BF84).withOpacity(0.12),
             ),
             child: Icon(
               icon,
-              color: lightStyle
-                  ? const Color(0xFFB28A4B)
-                  : emphasized
+              color: isDark
+                  ? emphasized
                       ? const Color(0xFF4ADE80)
-                      : const Color(0xFFE1BF84),
+                      : const Color(0xFFE1BF84)
+                  : lightStyle
+                      ? const Color(0xFFB28A4B)
+                      : emphasized
+                          ? const Color(0xFF4ADE80)
+                          : const Color(0xFFE1BF84),
               size: 20,
             ),
           ),
@@ -412,9 +470,11 @@ class _SideInfoCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: lightStyle
-                              ? const Color(0xFF6E5C45)
-                              : const Color(0xFF8D775C),
+                          color: isDark
+                              ? AppColors.darkTextLight
+                              : lightStyle
+                                  ? const Color(0xFF6E5C45)
+                                  : const Color(0xFF8D775C),
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -425,11 +485,15 @@ class _SideInfoCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: lightStyle
-                              ? const Color(0xFF1E1A16)
-                              : emphasized
+                          color: isDark
+                              ? emphasized
                                   ? const Color(0xFF86EFAC)
-                                  : const Color(0xFF1E1A16),
+                                  : AppColors.darkTextPrimary
+                              : lightStyle
+                                  ? const Color(0xFF1E1A16)
+                                  : emphasized
+                                      ? const Color(0xFF86EFAC)
+                                      : const Color(0xFF1E1A16),
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                           height: 1.1,
@@ -442,11 +506,15 @@ class _SideInfoCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: lightStyle
-                          ? const Color(0xFF1E1A16)
-                          : emphasized
+                      color: isDark
+                          ? emphasized
                               ? const Color(0xFF86EFAC)
-                              : const Color(0xFF1E1A16),
+                              : AppColors.darkTextPrimary
+                          : lightStyle
+                              ? const Color(0xFF1E1A16)
+                              : emphasized
+                                  ? const Color(0xFF86EFAC)
+                                  : const Color(0xFF1E1A16),
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       height: 1.1,
@@ -458,8 +526,8 @@ class _SideInfoCard extends StatelessWidget {
             Icon(
               trailingIcon,
               size: 20,
-              color: lightStyle
-                  ? const Color(0xFF8C7453)
+              color: isDark
+                  ? AppColors.darkTextLight
                   : const Color(0xFF8C7453),
             ),
           ],
@@ -472,11 +540,13 @@ class _SideInfoCard extends StatelessWidget {
 class _StatusBadge extends StatelessWidget {
   const _StatusBadge({
     required this.aligned,
+    required this.isDark,
     required this.alignedLabel,
     required this.searchingLabel,
   });
 
   final bool aligned;
+  final bool isDark;
   final String alignedLabel;
   final String searchingLabel;
 
@@ -487,12 +557,16 @@ class _StatusBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: aligned
             ? const Color(0xFF14532D).withOpacity(0.42)
-            : Colors.white.withOpacity(0.74),
+            : isDark
+                ? AppColors.darkBgSecondary.withOpacity(0.92)
+                : Colors.white.withOpacity(0.74),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
           color: aligned
               ? const Color(0xFF6EE7B7).withOpacity(0.55)
-              : const Color(0xFFE2D4BE),
+              : isDark
+                  ? Colors.white.withOpacity(0.08)
+                  : const Color(0xFFE2D4BE),
         ),
       ),
       child: Row(
@@ -507,8 +581,12 @@ class _StatusBadge extends StatelessWidget {
           Flexible(
             child: Text(
               aligned ? alignedLabel : searchingLabel,
-              style: const TextStyle(
-                color: Color(0xFF2B241B),
+              style: TextStyle(
+                color: aligned
+                    ? const Color(0xFF86EFAC)
+                    : isDark
+                        ? AppColors.darkTextPrimary
+                        : const Color(0xFF2B241B),
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -521,10 +599,12 @@ class _StatusBadge extends StatelessWidget {
 
 class _BottomStat extends StatelessWidget {
   const _BottomStat({
+    required this.isDark,
     required this.label,
     required this.value,
   });
 
+  final bool isDark;
   final String label;
   final String value;
 
@@ -535,7 +615,7 @@ class _BottomStat extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(
           right: BorderSide(
-            color: Colors.white.withOpacity(0.08),
+            color: Colors.white.withOpacity(isDark ? 0.08 : 0.08),
             width: 1,
           ),
         ),
@@ -546,7 +626,9 @@ class _BottomStat extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: const Color(0xFF8A775B),
+              color: isDark
+                  ? AppColors.darkTextLight
+                  : const Color(0xFF8A775B),
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
@@ -556,8 +638,10 @@ class _BottomStat extends StatelessWidget {
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: Color(0xFF2A2218),
+            style: TextStyle(
+              color: isDark
+                  ? AppColors.darkTextPrimary
+                  : const Color(0xFF2A2218),
               fontSize: 17,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.2,
@@ -583,7 +667,7 @@ String _headlineForTelemetry(String locale, QiblaTelemetry telemetry) {
   if (telemetry.relativeAngle == null) {
     switch (locale) {
       case 'tr':
-        return 'Yon hesaplanamadi';
+        return 'Yön hesaplanamadı';
       case 'ar':
         return 'تعذر حساب الاتجاه';
       default:
@@ -593,7 +677,7 @@ String _headlineForTelemetry(String locale, QiblaTelemetry telemetry) {
   if (telemetry.relativeAngle! > 0) {
     switch (locale) {
       case 'tr':
-        return 'Biraz saga don';
+        return 'Biraz sağa dön';
       case 'ar':
         return 'استدر قليلاً إلى اليمين';
       default:
@@ -602,7 +686,7 @@ String _headlineForTelemetry(String locale, QiblaTelemetry telemetry) {
   }
   switch (locale) {
     case 'tr':
-      return 'Biraz sola don';
+      return 'Biraz sola dön';
     case 'ar':
       return 'استدر قليلاً إلى اليسار';
     default:

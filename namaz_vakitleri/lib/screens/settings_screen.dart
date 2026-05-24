@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../config/color_system.dart';
 import '../config/localization.dart';
 import '../providers/app_settings.dart';
 import '../providers/prayer_provider.dart';
@@ -33,6 +34,7 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer2<AppSettings, PrayerProvider>(
       builder: (context, settings, prayerProvider, _) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         final locale = settings.language;
         final currentCity =
             prayerProvider.savedCity.isNotEmpty ? prayerProvider.savedCity : 'Istanbul';
@@ -54,17 +56,23 @@ class SettingsScreen extends StatelessWidget {
               );
 
         return Scaffold(
-          backgroundColor: const Color(0xFFF6F1E8),
+          backgroundColor: isDark ? AppColors.darkBg : const Color(0xFFF6F1E8),
           body: Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFF6F0E6),
-                  Color(0xFFE7DCCB),
-                  Color(0xFFF9F6F1),
-                ],
+                colors: isDark
+                    ? const [
+                        Color(0xFF0F172A),
+                        Color(0xFF111827),
+                        Color(0xFF172033),
+                      ]
+                    : const [
+                        Color(0xFFF6F0E6),
+                        Color(0xFFE7DCCB),
+                        Color(0xFFF9F6F1),
+                      ],
               ),
             ),
             child: SafeArea(
@@ -73,6 +81,7 @@ class SettingsScreen extends StatelessWidget {
                 children: [
                   _SettingsHero(
                     title: AppLocalizations.translate('settings', locale),
+                    isDark: isDark,
                   ),
                   const SizedBox(height: 22),
                   _SettingsTile(
@@ -178,12 +187,18 @@ class SettingsScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.78),
+                      color: isDark
+                          ? AppColors.darkBgSecondary.withOpacity(0.92)
+                          : Colors.white.withOpacity(0.78),
                       borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: Colors.white.withOpacity(0.82)),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.white.withOpacity(0.08)
+                            : Colors.white.withOpacity(0.82),
+                      ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withOpacity(isDark ? 0.22 : 0.05),
                           blurRadius: 16,
                           offset: const Offset(0, 8),
                         ),
@@ -207,12 +222,14 @@ class SettingsScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Namaz Vakitim',
                                 style: TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.w800,
-                                  color: Color(0xFF1E1A16),
+                                  color: isDark
+                                      ? AppColors.darkTextPrimary
+                                      : Color(0xFF1E1A16),
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -223,8 +240,10 @@ class SettingsScreen extends StatelessWidget {
                                   en: 'Version 1.0.0',
                                   ar: 'الإصدار 1.0.0',
                                 ),
-                                style: const TextStyle(
-                                  color: Color(0xFF655B51),
+                                style: TextStyle(
+                                  color: isDark
+                                      ? AppColors.darkTextSecondary
+                                      : const Color(0xFF655B51),
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -251,7 +270,6 @@ class _SettingsTile extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
-    this.trailing,
   });
 
   final IconData icon;
@@ -259,14 +277,16 @@ class _SettingsTile extends StatelessWidget {
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Material(
-        color: Colors.white.withOpacity(0.84),
+        color: isDark
+            ? AppColors.darkBgSecondary.withOpacity(0.92)
+            : Colors.white.withOpacity(0.84),
         borderRadius: BorderRadius.circular(30),
         child: InkWell(
           borderRadius: BorderRadius.circular(30),
@@ -276,10 +296,14 @@ class _SettingsTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(30),
-              border: Border.all(color: Colors.white.withOpacity(0.82)),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withOpacity(0.08)
+                    : Colors.white.withOpacity(0.82),
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFFA58E69).withOpacity(0.10),
+                  color: Colors.black.withOpacity(isDark ? 0.22 : 0.10),
                   blurRadius: 22,
                   offset: const Offset(0, 10),
                 ),
@@ -306,10 +330,12 @@ class _SettingsTile extends StatelessWidget {
                         title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF1E1A16),
+                          color: isDark
+                              ? AppColors.darkTextPrimary
+                              : Color(0xFF1E1A16),
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -317,8 +343,10 @@ class _SettingsTile extends StatelessWidget {
                         subtitle,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF655B51),
+                        style: TextStyle(
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : Color(0xFF655B51),
                           fontSize: 13,
                           height: 1.4,
                         ),
@@ -327,12 +355,13 @@ class _SettingsTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                trailing ??
-                    const Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      size: 16,
-                      color: Color(0xFF8A7B6A),
-                    ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: isDark
+                      ? AppColors.darkTextLight
+                      : Color(0xFF8A7B6A),
+                ),
               ],
             ),
           ),
@@ -343,9 +372,10 @@ class _SettingsTile extends StatelessWidget {
 }
 
 class _SettingsHero extends StatelessWidget {
-  const _SettingsHero({required this.title});
+  const _SettingsHero({required this.title, required this.isDark});
 
   final String title;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
@@ -353,7 +383,11 @@ class _SettingsHero extends StatelessWidget {
       height: 300,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(34),
-        border: Border.all(color: Colors.white.withOpacity(0.86)),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.08)
+              : Colors.white.withOpacity(0.86),
+        ),
         image: const DecorationImage(
           image: AssetImage('assets/images/arkafon.png'),
           fit: BoxFit.contain,
@@ -370,9 +404,15 @@ class _SettingsHero extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.white.withOpacity(0.22),
-                    Colors.white.withOpacity(0.02),
-                    Colors.white.withOpacity(0.08),
+                    (isDark ? Colors.black : Colors.white).withOpacity(
+                      isDark ? 0.34 : 0.22,
+                    ),
+                    (isDark ? Colors.black : Colors.white).withOpacity(
+                      isDark ? 0.10 : 0.02,
+                    ),
+                    (isDark ? Colors.black : Colors.white).withOpacity(
+                      isDark ? 0.16 : 0.08,
+                    ),
                   ],
                 ),
               ),
@@ -383,10 +423,12 @@ class _SettingsHero extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 10),
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF1E1A16),
+                    color: isDark
+                        ? AppColors.darkTextPrimary
+                        : const Color(0xFF1E1A16),
                   ),
                 ),
               ),

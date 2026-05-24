@@ -79,6 +79,7 @@ class MainActivity : FlutterActivity() {
         prefs.edit()
             .putString("city", arguments["city"]?.toString() ?: "Namaz Vaktim")
             .putString("date_label", arguments["dateLabel"]?.toString() ?: "")
+            .putString("active_prayer_name", arguments["activePrayerName"]?.toString() ?: "")
             .putString("prayers_json", prayersJson.toString())
             .apply()
 

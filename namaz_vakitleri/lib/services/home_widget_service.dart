@@ -24,6 +24,7 @@ class HomeWidgetService {
       'country': prayerTimes.country,
       'dateIso': prayerTimes.date.toIso8601String(),
       'dateLabel': _formatDateLabel(prayerTimes.date),
+      'activePrayerName': prayerTimes.activePrayer?.name,
       'prayers': prayers,
     };
 
@@ -33,17 +34,17 @@ class HomeWidgetService {
   static String _formatDateLabel(DateTime date) {
     const months = <String>[
       'Ocak',
-      'Subat',
+      'Şubat',
       'Mart',
       'Nisan',
-      'Mayis',
+      'Mayıs',
       'Haziran',
       'Temmuz',
-      'Agustos',
-      'Eylul',
+      'Ağustos',
+      'Eylül',
       'Ekim',
-      'Kasim',
-      'Aralik',
+      'Kasım',
+      'Aralık',
     ];
 
     final month = months[date.month - 1];

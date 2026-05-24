@@ -108,7 +108,7 @@ class _SplashScreenState extends State<SplashScreen>
                             ),
                             const SizedBox(height: 10),
                             Text(
-                              'Vakitlerin huzuruyla gune baglanin',
+                              'Vakitlerin huzuruyla güne bağlanın',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: const Color(0xFF6B5A3A).withOpacity(0.9),
@@ -147,7 +147,7 @@ class _SplashScreenState extends State<SplashScreen>
                             ),
                             const SizedBox(height: 14),
                             Text(
-                              'Konum ve vakit bilgileri hazirlaniyor...',
+                              'Konum ve vakit bilgileri hazırlanıyor...',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: const Color(0xFF7C6B4D).withOpacity(0.92),

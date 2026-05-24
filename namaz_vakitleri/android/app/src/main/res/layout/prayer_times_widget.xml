@@ -23,7 +23,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
-            android:text="Istanbul - 23 Mayis 2026"
+            android:text="İstanbul - 23 Mayıs 2026"
             android:textColor="#FFFDF8"
             android:textSize="18sp"
             android:textStyle="bold" />
@@ -51,7 +51,7 @@
                 android:id="@+id/widget_next_name"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Imsak"
+                android:text="İmsak"
                 android:textColor="#205A54"
                 android:textSize="21sp"
                 android:textStyle="bold" />
@@ -70,12 +70,12 @@
                 android:id="@+id/widget_countdown"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Kalan sure 02s 14d"
+                android:layout_marginTop="14dp"
+                android:text="Kalan süre 02s 14d"
                 android:textColor="#6B5A3A"
-                android:textSize="14sp"
-                android:textStyle="bold"
-                android:visibility="gone" />
+                android:textSize="12sp"
+                android:textStyle="normal"
+                android:visibility="visible" />
         </LinearLayout>
 
         <LinearLayout
@@ -97,7 +97,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Imsak"
+                    android:text="İmsak"
                     android:textColor="#2B241D"
                     android:textSize="16sp" />
 
@@ -123,7 +123,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Gunes"
+                    android:text="Güneş"
                     android:textColor="#2B241D"
                     android:textSize="16sp" />
 
@@ -149,7 +149,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Ogle"
+                    android:text="Öğle"
                     android:textColor="#2B241D"
                     android:textSize="16sp" />
 
@@ -175,7 +175,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Ikindi"
+                    android:text="İkindi"
                     android:textColor="#2B241D"
                     android:textSize="16sp" />
 
@@ -201,7 +201,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Aksam"
+                    android:text="Akşam"
                     android:textColor="#2B241D"
                     android:textSize="16sp" />
 
@@ -227,7 +227,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Yatsi"
+                    android:text="Yatsı"
                     android:textColor="#2B241D"
                     android:textSize="16sp" />
 

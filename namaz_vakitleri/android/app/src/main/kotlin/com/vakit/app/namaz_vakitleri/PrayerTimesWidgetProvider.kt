@@ -54,6 +54,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
         private const val PREFS_NAME = "prayer_widget"
         private const val KEY_CITY = "city"
         private const val KEY_DATE_LABEL = "date_label"
+        private const val KEY_ACTIVE_PRAYER_NAME = "active_prayer_name"
         private const val KEY_PRAYERS_JSON = "prayers_json"
 
         fun updateAllWidgets(context: Context) {
@@ -73,18 +74,20 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val city = prefs.getString(KEY_CITY, "Namaz Vaktim") ?: "Namaz Vaktim"
             val dateLabel = prefs.getString(KEY_DATE_LABEL, formatToday()) ?: formatToday()
+            val storedActivePrayerName = prefs.getString(KEY_ACTIVE_PRAYER_NAME, null)
             val prayersJson = prefs.getString(KEY_PRAYERS_JSON, "[]") ?: "[]"
             val prayers = parsePrayers(prayersJson)
             val nextPrayerName = findNextPrayerName(prayers)
+            val activePrayerName = storedActivePrayerName ?: findActivePrayerName(prayers)
             val nextPrayer = prayers.firstOrNull { it.name == nextPrayerName } ?: prayers.firstOrNull()
             val isCompact = isCompactWidget(appWidgetManager.getAppWidgetOptions(appWidgetId))
 
             val views = RemoteViews(context.packageName, R.layout.prayer_times_widget)
-            views.setTextViewText(R.id.widget_header, "$city - $dateLabel")
+            views.setTextViewText(R.id.widget_header, city)
             views.setInt(
                 R.id.widget_header_container,
                 "setBackgroundColor",
-                resolvePrayerHeaderColor(nextPrayerName)
+                resolvePrayerHeaderColor(activePrayerName ?: nextPrayerName)
             )
 
             bindNextPrayerCard(views, nextPrayer, isCompact)
@@ -112,23 +115,17 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
         ) {
             views.setTextViewText(
                 R.id.widget_next_name,
-                nextPrayer?.displayName ?: "Vakit yok"
+                nextPrayer?.let { "${it.displayName} Vaktine" } ?: "Vakit yok"
             )
             views.setTextViewText(
                 R.id.widget_next_time,
-                nextPrayer?.timeLabel ?: "--:--"
+                nextPrayer?.let { formatRemaining(it.remainingMillis) } ?: "--"
             )
-            views.setViewVisibility(
+            views.setViewVisibility(R.id.widget_countdown, View.VISIBLE)
+            views.setTextViewText(
                 R.id.widget_countdown,
-                if (isCompact) View.VISIBLE else View.GONE
+                nextPrayer?.let { "Saat ${it.timeLabel}" } ?: "Saat --:--"
             )
-            if (isCompact) {
-                views.setTextViewText(
-                    R.id.widget_countdown,
-                    nextPrayer?.let { "Kalan sure ${formatRemaining(it.remainingMillis)}" }
-                        ?: "Kalan sure --"
-                )
-            }
         }
 
         private fun bindPrayerRows(
@@ -194,6 +191,18 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             return future?.name ?: prayers.first().name
         }
 
+        private fun findActivePrayerName(prayers: List<WidgetPrayer>): String? {
+            if (prayers.isEmpty()) return null
+
+            val now = System.currentTimeMillis()
+            val currentIndex = prayers.indexOfLast { it.timestamp <= now }
+            if (currentIndex == -1) {
+                return prayers.first().name
+            }
+
+            return prayers[currentIndex].name
+        }
+
         private fun formatToday(): String {
             val formatter = SimpleDateFormat("d MMMM yyyy", Locale("tr", "TR"))
             return formatter.format(Date())
@@ -205,12 +214,18 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
         }
 
         private fun formatRemaining(remainingMillis: Long): String {
-            if (remainingMillis <= 0L) return "00d 00s"
+            if (remainingMillis <= 0L) return "Şimdi"
 
             val totalMinutes = remainingMillis / 60000
-            val hours = totalMinutes / 60
+            val days = totalMinutes / (24 * 60)
+            val hours = (totalMinutes % (24 * 60)) / 60
             val minutes = totalMinutes % 60
-            return "${hours.toString().padStart(2, '0')}s ${minutes.toString().padStart(2, '0')}d"
+
+            return when {
+                days > 0 -> "${days}g ${hours}s ${minutes}dk"
+                hours > 0 -> "${hours}s ${minutes}dk"
+                else -> "${minutes}dk"
+            }
         }
 
         private fun resolvePrayerHeaderColor(prayerName: String?): Int {
@@ -262,12 +277,12 @@ data class WidgetPrayer(
 
     val displayName: String
         get() = when (name.lowercase(Locale.ROOT)) {
-            "fajr" -> "Imsak"
-            "sunrise" -> "Gunes"
-            "dhuhr" -> "Ogle"
-            "asr" -> "Ikindi"
-            "maghrib" -> "Aksam"
-            "isha" -> "Yatsi"
+            "fajr" -> "İmsak"
+            "sunrise" -> "Güneş"
+            "dhuhr" -> "Öğle"
+            "asr" -> "İkindi"
+            "maghrib" -> "Akşam"
+            "isha" -> "Yatsı"
             else -> name
         }
 }

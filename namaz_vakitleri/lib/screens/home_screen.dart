@@ -155,10 +155,10 @@ class HomeScreen extends StatelessWidget {
       await prayerProvider.refreshLocation();
       if (!context.mounted) return;
       messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
+        messenger.showSnackBar(
         SnackBar(
           content: Text(
-            'Konum guncellendi: ${prayerProvider.savedCity.isNotEmpty ? prayerProvider.savedCity : 'Bilinmiyor'}',
+            'Konum güncellendi: ${prayerProvider.savedCity.isNotEmpty ? prayerProvider.savedCity : 'Bilinmiyor'}',
           ),
           backgroundColor: const Color(0xFF0F766E),
         ),

@@ -1,6 +1,7 @@
 package com.vakit.app.namaz_vakitleri
 
 import android.content.Context
+import android.media.AudioManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -24,10 +25,12 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "startAdhanPlayback" -> {
                     currentlyPlayingAdhan = true
+                    volumeControlStream = AudioManager.STREAM_MUSIC
                     result.success(true)
                 }
                 "stopAdhanPlayback" -> {
                     currentlyPlayingAdhan = false
+                    volumeControlStream = AudioManager.USE_DEFAULT_STREAM_TYPE
                     result.success(true)
                 }
                 else -> result.notImplemented()
@@ -54,6 +57,9 @@ class MainActivity : FlutterActivity() {
         return when (keyCode) {
             KeyEvent.KEYCODE_VOLUME_UP,
             KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                if (currentlyPlayingAdhan) {
+                    volumeControlStream = AudioManager.STREAM_MUSIC
+                }
                 super.onKeyDown(keyCode, event)
             }
             else -> super.onKeyDown(keyCode, event)

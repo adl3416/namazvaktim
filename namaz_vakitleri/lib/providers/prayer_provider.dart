@@ -256,6 +256,10 @@ class PrayerProvider extends ChangeNotifier {
         // Reset adhan tracking for new prayer cycle
         _lastAdhanPlayedForPrayer = null;
 
+        // If the app is opened while a prayer alert is actively sounding,
+        // continue playback inside the app so opening it doesn't silence the adhan.
+        await resumeActivePrayerAdhanIfNeeded();
+
         print(
           '✅ Prayer Times Loaded: ${prayerTimes.prayerTimesList.length} prayers',
         );
@@ -415,11 +419,12 @@ class PrayerProvider extends ChangeNotifier {
     
     if (!soundEnabled) return;
 
-    // Only play adhan if the prayer time is recent (within last 30 minutes)
-    // This prevents adhan from playing if app is opened hours after prayer time
+    // Only continue adhan if the prayer time is very recent.
+    // This lets the app take over when opened during the adhan,
+    // without replaying it long after the prayer time has started.
     final now = DateTime.now();
     final timeSincePrayer = now.difference(prayer.time);
-    const maxTimeForAdhan = Duration(minutes: 30);
+    const maxTimeForAdhan = Duration(minutes: 2);
     
     print('🔔 Time since prayer: ${timeSincePrayer.inMinutes} minutes');
     
@@ -463,6 +468,13 @@ class PrayerProvider extends ChangeNotifier {
 
       _lastAdhanPlayedForPrayer = '${prayer.name}_ontime';
     }
+  }
+
+  Future<void> resumeActivePrayerAdhanIfNeeded() async {
+    final activePrayer = _activePrayer;
+    if (activePrayer == null) return;
+    if (_isAdhanPlaying) return;
+    await _checkAndPlayAdhanForActivePrayer(activePrayer);
   }
 
   Future<void> _scheduleNotificationsForCurrentAndNextDay(

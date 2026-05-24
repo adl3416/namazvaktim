@@ -12,20 +12,32 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@drawable/prayer_widget_header_background"
-        android:gravity="center"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
         android:paddingBottom="8dp"
         android:paddingLeft="12dp"
         android:paddingTop="8dp"
         android:paddingRight="12dp">
 
         <TextView
-            android:id="@+id/widget_header"
-            android:layout_width="match_parent"
+            android:id="@+id/widget_header_city"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="İstanbul - 23 Mayıs 2026"
+            android:layout_weight="1"
+            android:gravity="start|center_vertical"
+            android:text="İstanbul"
             android:textColor="#FFFDF8"
-            android:textSize="18sp"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_header_date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="end|center_vertical"
+            android:text="23 Mayıs 2026"
+            android:textColor="#FFFDF8"
+            android:textSize="13sp"
             android:textStyle="bold" />
     </LinearLayout>
 

@@ -28,7 +28,7 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   late final AppSettings _appSettings;
   late final PrayerProvider _prayerProvider;
   bool _isInitialized = false;
@@ -36,10 +36,24 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _appSettings = AppSettings();
     _prayerProvider = PrayerProvider(appSettings: _appSettings);
     _setupMethodChannels();
     _initializeApp();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _isInitialized) {
+      _prayerProvider.resumeActivePrayerAdhanIfNeeded();
+    }
   }
 
   void _setupMethodChannels() {

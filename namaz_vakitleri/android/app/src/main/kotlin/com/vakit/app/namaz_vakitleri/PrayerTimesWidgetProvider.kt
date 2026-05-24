@@ -1,5 +1,6 @@
 package com.vakit.app.namaz_vakitleri
 
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.os.Bundle
 import android.view.View
@@ -26,8 +27,20 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             Intent.ACTION_TIME_CHANGED,
             Intent.ACTION_TIMEZONE_CHANGED,
             Intent.ACTION_DATE_CHANGED,
+            Intent.ACTION_BOOT_COMPLETED,
+            ACTION_WIDGET_MINUTE_UPDATE,
             AppWidgetManager.ACTION_APPWIDGET_UPDATE -> updateAllWidgets(context)
         }
+    }
+
+    override fun onEnabled(context: Context) {
+        super.onEnabled(context)
+        scheduleNextMinuteUpdate(context)
+    }
+
+    override fun onDisabled(context: Context) {
+        super.onDisabled(context)
+        cancelMinuteUpdate(context)
     }
 
     override fun onUpdate(
@@ -38,6 +51,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
         appWidgetIds.forEach { appWidgetId ->
             updateAppWidget(context, appWidgetManager, appWidgetId)
         }
+        scheduleNextMinuteUpdate(context)
     }
 
     override fun onAppWidgetOptionsChanged(
@@ -48,6 +62,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
     ) {
         super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
         updateAppWidget(context, appWidgetManager, appWidgetId)
+        scheduleNextMinuteUpdate(context)
     }
 
     companion object {
@@ -56,6 +71,8 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
         private const val KEY_DATE_LABEL = "date_label"
         private const val KEY_ACTIVE_PRAYER_NAME = "active_prayer_name"
         private const val KEY_PRAYERS_JSON = "prayers_json"
+        private const val ACTION_WIDGET_MINUTE_UPDATE =
+            "com.vakit.app.namaz_vakitleri.ACTION_WIDGET_MINUTE_UPDATE"
 
         fun updateAllWidgets(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
@@ -64,6 +81,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             widgetIds.forEach { widgetId ->
                 updateAppWidget(context, manager, widgetId)
             }
+            scheduleNextMinuteUpdate(context)
         }
 
         private fun updateAppWidget(
@@ -83,7 +101,8 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             val isCompact = isCompactWidget(appWidgetManager.getAppWidgetOptions(appWidgetId))
 
             val views = RemoteViews(context.packageName, R.layout.prayer_times_widget)
-            views.setTextViewText(R.id.widget_header, city)
+            views.setTextViewText(R.id.widget_header_city, city)
+            views.setTextViewText(R.id.widget_header_date, dateLabel)
             views.setInt(
                 R.id.widget_header_container,
                 "setBackgroundColor",
@@ -232,19 +251,47 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             val normalized = prayerName?.lowercase(Locale.ROOT) ?: return Color.parseColor("#C89B53")
             return when {
                 normalized.contains("fajr") || normalized.contains("imsak") ->
-                    Color.parseColor("#7DB7D9")
+                    Color.parseColor("#4338CA")
                 normalized.contains("sunrise") || normalized.contains("gunes") ->
-                    Color.parseColor("#E3B55F")
+                    Color.parseColor("#C2410C")
                 normalized.contains("dhuhr") || normalized.contains("ogle") ->
-                    Color.parseColor("#D7A93D")
+                    Color.parseColor("#1D4ED8")
                 normalized.contains("asr") || normalized.contains("ikindi") ->
-                    Color.parseColor("#D89245")
+                    Color.parseColor("#B45309")
                 normalized.contains("maghrib") || normalized.contains("aksam") ->
-                    Color.parseColor("#C96C4B")
+                    Color.parseColor("#9F1239")
                 normalized.contains("isha") || normalized.contains("yatsi") ->
-                    Color.parseColor("#5E77C8")
+                    Color.parseColor("#5B21B6")
                 else -> Color.parseColor("#C89B53")
             }
+        }
+
+        private fun scheduleNextMinuteUpdate(context: Context) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+            val now = System.currentTimeMillis()
+            val nextMinute = ((now / 60000) + 1) * 60000
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                nextMinute,
+                widgetUpdatePendingIntent(context)
+            )
+        }
+
+        private fun cancelMinuteUpdate(context: Context) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+            alarmManager.cancel(widgetUpdatePendingIntent(context))
+        }
+
+        private fun widgetUpdatePendingIntent(context: Context): PendingIntent {
+            val intent = Intent(context, PrayerTimesWidgetProvider::class.java).apply {
+                action = ACTION_WIDGET_MINUTE_UPDATE
+            }
+            return PendingIntent.getBroadcast(
+                context,
+                1001,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
         }
     }
 }

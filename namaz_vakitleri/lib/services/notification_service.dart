@@ -789,7 +789,7 @@ class NotificationService {
             playSound: shouldPlaySound,
             sound: androidSound,
             enableVibration: true,
-            fullScreenIntent: !isReminderNotification && shouldPlaySound,
+            fullScreenIntent: false,
             autoCancel: isReminderNotification,
             onlyAlertOnce: false,
             actions: [

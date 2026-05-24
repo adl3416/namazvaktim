@@ -2,6 +2,10 @@ package com.vakit.app.namaz_vakitleri
 
 import android.content.Context
 import android.media.AudioManager
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -12,6 +16,7 @@ import org.json.JSONObject
 class MainActivity : FlutterActivity() {
     private val adhanChannel = "com.vakit.app.namaz_vakitleri/adhan"
     private val widgetChannel = "com.vakit.app.namaz_vakitleri/widget"
+    private val hapticChannel = "com.vakit.app.namaz_vakitleri/haptics"
     private var currentlyPlayingAdhan = false
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -44,6 +49,19 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "updatePrayerWidget" -> {
                     updatePrayerWidget(call.arguments as? Map<*, *>)
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            hapticChannel
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "vibrate" -> {
+                    vibrate(call.argument<String>("mode"))
                     result.success(true)
                 }
                 else -> result.notImplemented()
@@ -90,5 +108,37 @@ class MainActivity : FlutterActivity() {
             .apply()
 
         PrayerTimesWidgetProvider.updateAllWidgets(applicationContext)
+    }
+
+    private fun vibrate(mode: String?) {
+        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val manager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+            manager?.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+        } ?: return
+
+        if (!vibrator.hasVibrator()) return
+
+        val duration = when (mode) {
+            "target" -> 140L
+            "milestone" -> 90L
+            else -> 35L
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val amplitude = when (mode) {
+                "target" -> 220
+                "milestone" -> 180
+                else -> 120
+            }
+            vibrator.vibrate(
+                VibrationEffect.createOneShot(duration, amplitude)
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(duration)
+        }
     }
 }

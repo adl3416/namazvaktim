@@ -12,6 +12,7 @@
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY"/>
     <!-- Wake lock permission for keeping screen on -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
     <!-- Full screen intent for notifications -->
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
     <!-- Boot completed permission for notification reschedule -->

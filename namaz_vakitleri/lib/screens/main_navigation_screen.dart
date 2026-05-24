@@ -7,6 +7,7 @@ import 'home_screen.dart';
 import 'nearby_mosques_screen.dart';
 import 'qibla_screen.dart';
 import 'settings_screen.dart';
+import 'zikirmatik_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({Key? key}) : super(key: key);
@@ -22,6 +23,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     HomeScreen(),
     QiblaScreen(),
     NearbyMosquesScreen(),
+    ZikirmatikScreen(),
     SettingsScreen(),
   ];
 
@@ -131,6 +133,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         icon: Icon(Icons.mosque_outlined),
                         selectedIcon: Icon(Icons.mosque_rounded),
                         label: 'Camiler',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.touch_app_outlined),
+                        selectedIcon: Icon(Icons.touch_app_rounded),
+                        label: 'Zikir',
                       ),
                       NavigationDestination(
                         icon: Icon(Icons.settings_outlined),

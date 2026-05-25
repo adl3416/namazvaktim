@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:namaz_vakitleri/config/color_system.dart';
 import 'package:namaz_vakitleri/config/localization.dart';
 import 'package:namaz_vakitleri/providers/app_settings.dart';
 import 'package:namaz_vakitleri/providers/prayer_provider.dart';
+import 'package:provider/provider.dart';
+
 import 'common_widgets.dart';
 
 class CitySearchDialog extends StatefulWidget {
   final PrayerProvider prayerProvider;
 
-  const CitySearchDialog({Key? key, required this.prayerProvider})
-    : super(key: key);
+  const CitySearchDialog({super.key, required this.prayerProvider});
 
   @override
   State<CitySearchDialog> createState() => _CitySearchDialogState();
@@ -18,26 +18,24 @@ class CitySearchDialog extends StatefulWidget {
 
 class _CitySearchDialogState extends State<CitySearchDialog> {
   final TextEditingController _controller = TextEditingController();
-  bool _isLoading = false;
   final FocusNode _focusNode = FocusNode();
+  bool _isLoading = false;
   bool _hasFocus = false;
   String? _selectedCountry;
 
-  // Popular countries
-  final Map<String, String> _countries = {
-    'TR': 'Türkiye',
-    'DE': 'Almanya',
-    'SA': 'Suudi Arabistan',
-    'AE': 'Birleşik Arap Emirlikleri',
-    'US': 'Amerika Birleşik Devletleri',
-    'GB': 'Birleşik Krallık',
-    'FR': 'Fransa',
-    'NL': 'Hollanda',
-    'CA': 'Kanada',
-    'AU': 'Avustralya',
-  };
+  final List<String> _countryCodes = const [
+    'TR',
+    'DE',
+    'SA',
+    'AE',
+    'US',
+    'GB',
+    'FR',
+    'NL',
+    'CA',
+    'AU',
+  ];
 
-  // Popular cities by country
   final Map<String, List<String>> _citiesByCountry = {
     'TR': [
       'Istanbul',
@@ -168,32 +166,6 @@ class _CitySearchDialogState extends State<CitySearchDialog> {
     ],
   };
 
-  Future<void> _selectCity(String city) async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      await widget.prayerProvider.setManualLocation(city, 'Türkiye');
-      if (mounted) {
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Şehir bulunamadı: $e'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
   @override
   void initState() {
     super.initState();
@@ -204,10 +176,144 @@ class _CitySearchDialogState extends State<CitySearchDialog> {
     });
   }
 
+  String _text(
+    String language, {
+    required String tr,
+    required String en,
+    required String ar,
+  }) {
+    switch (language) {
+      case 'tr':
+        return tr;
+      case 'ar':
+        return ar;
+      default:
+        return en;
+    }
+  }
+
+  String _countryApiName(String code) {
+    switch (code) {
+      case 'TR':
+        return 'Turkey';
+      case 'DE':
+        return 'Germany';
+      case 'SA':
+        return 'Saudi Arabia';
+      case 'AE':
+        return 'United Arab Emirates';
+      case 'US':
+        return 'United States';
+      case 'GB':
+        return 'United Kingdom';
+      case 'FR':
+        return 'France';
+      case 'NL':
+        return 'Netherlands';
+      case 'CA':
+        return 'Canada';
+      case 'AU':
+        return 'Australia';
+      default:
+        return 'Turkey';
+    }
+  }
+
+  String _countryLabel(String code, String language) {
+    switch (code) {
+      case 'TR':
+        return _text(language, tr: 'Türkiye', en: 'Turkey', ar: 'تركيا');
+      case 'DE':
+        return _text(language, tr: 'Almanya', en: 'Germany', ar: 'ألمانيا');
+      case 'SA':
+        return _text(
+          language,
+          tr: 'Suudi Arabistan',
+          en: 'Saudi Arabia',
+          ar: 'السعودية',
+        );
+      case 'AE':
+        return _text(
+          language,
+          tr: 'Birleşik Arap Emirlikleri',
+          en: 'United Arab Emirates',
+          ar: 'الإمارات العربية المتحدة',
+        );
+      case 'US':
+        return _text(
+          language,
+          tr: 'Amerika Birleşik Devletleri',
+          en: 'United States',
+          ar: 'الولايات المتحدة',
+        );
+      case 'GB':
+        return _text(
+          language,
+          tr: 'Birleşik Krallık',
+          en: 'United Kingdom',
+          ar: 'المملكة المتحدة',
+        );
+      case 'FR':
+        return _text(language, tr: 'Fransa', en: 'France', ar: 'فرنسا');
+      case 'NL':
+        return _text(language, tr: 'Hollanda', en: 'Netherlands', ar: 'هولندا');
+      case 'CA':
+        return _text(language, tr: 'Kanada', en: 'Canada', ar: 'كندا');
+      case 'AU':
+        return _text(
+          language,
+          tr: 'Avustralya',
+          en: 'Australia',
+          ar: 'أستراليا',
+        );
+      default:
+        return code;
+    }
+  }
+
+  Future<void> _selectCity(String city) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await widget.prayerProvider.setManualLocation(
+        city,
+        _countryApiName(_selectedCountry ?? 'TR'),
+      );
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        final locale = context.read<AppSettings>().language;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _text(
+                locale,
+                tr: 'Şehir bulunamadı: $e',
+                en: 'City not found: $e',
+                ar: 'لم يتم العثور على المدينة: $e',
+              ),
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final locale = context.read<AppSettings>().language;
+    final locale = context.watch<AppSettings>().language;
 
     return Dialog(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
@@ -231,11 +337,14 @@ class _CitySearchDialogState extends State<CitySearchDialog> {
               ),
             ),
             SizedBox(height: AppSpacing.lg),
-
             if (_selectedCountry == null) ...[
-              // Country Selection
               Text(
-                'Ülke Seçin',
+                _text(
+                  locale,
+                  tr: 'Ülke seçin',
+                  en: 'Choose a country',
+                  ar: 'اختر دولة',
+                ),
                 style: AppTypography.bodySmall.copyWith(
                   color: isDark
                       ? AppColors.darkTextSecondary
@@ -244,17 +353,16 @@ class _CitySearchDialogState extends State<CitySearchDialog> {
                 ),
               ),
               SizedBox(height: AppSpacing.md),
-
               Flexible(
                 child: SingleChildScrollView(
                   child: Wrap(
                     spacing: AppSpacing.sm,
                     runSpacing: AppSpacing.sm,
-                    children: _countries.entries.map((entry) {
+                    children: _countryCodes.map((code) {
                       return GestureDetector(
                         onTap: () {
                           setState(() {
-                            _selectedCountry = entry.key;
+                            _selectedCountry = code;
                           });
                         },
                         child: Container(
@@ -273,7 +381,7 @@ class _CitySearchDialogState extends State<CitySearchDialog> {
                             borderRadius: BorderRadius.circular(AppRadius.md),
                           ),
                           child: Text(
-                            entry.value,
+                            _countryLabel(code, locale),
                             style: AppTypography.bodySmall.copyWith(
                               color: isDark
                                   ? AppColors.darkTextPrimary
@@ -287,7 +395,6 @@ class _CitySearchDialogState extends State<CitySearchDialog> {
                 ),
               ),
             ] else ...[
-              // Back to Country Selection
               Row(
                 children: [
                   IconButton(
@@ -304,28 +411,31 @@ class _CitySearchDialogState extends State<CitySearchDialog> {
                           : AppColors.textPrimary,
                     ),
                   ),
-                  Text(
-                    '${_countries[_selectedCountry]} - Şehir Seçin',
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: isDark
-                          ? AppColors.darkTextPrimary
-                          : AppColors.textPrimary,
+                  Expanded(
+                    child: Text(
+                      '${_countryLabel(_selectedCountry!, locale)} - ${_text(locale, tr: 'Şehir seçin', en: 'Choose a city', ar: 'اختر مدينة')}',
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: isDark
+                            ? AppColors.darkTextPrimary
+                            : AppColors.textPrimary,
+                      ),
                     ),
                   ),
                 ],
               ),
               SizedBox(height: AppSpacing.lg),
-
-              // Search Field
               TextField(
                 controller: _controller,
                 focusNode: _focusNode,
                 autofocus: true,
                 enabled: !_isLoading,
                 decoration: InputDecoration(
-                  hintText: '${_countries[_selectedCountry]} şehrini arayın...',
+                  hintText:
+                      '${_countryLabel(_selectedCountry!, locale)} ${_text(locale, tr: 'için şehir arayın...', en: 'city search...', ar: 'ابحث عن مدينة...')}',
                   hintStyle: TextStyle(
-                    color: isDark ? AppColors.darkTextLight : AppColors.textLight,
+                    color: isDark
+                        ? AppColors.darkTextLight
+                        : AppColors.textLight,
                   ),
                   prefixIcon: Icon(
                     Icons.location_on_outlined,
@@ -364,22 +474,17 @@ class _CitySearchDialogState extends State<CitySearchDialog> {
                       ? AppColors.darkTextPrimary
                       : AppColors.textPrimary,
                 ),
-                onChanged: (value) {
-                  setState(() {});
-                },
+                onChanged: (_) => setState(() {}),
                 onSubmitted: (value) {
                   if (value.isNotEmpty) {
                     _selectCity(value);
                   }
                 },
               ),
-
               SizedBox(height: AppSpacing.xl),
-
-              // Show Cities for selected country
               if (!_hasFocus && _controller.text.trim().isEmpty) ...[
                 Text(
-                  '${_countries[_selectedCountry]} Şehirleri',
+                  '${_countryLabel(_selectedCountry!, locale)} ${_text(locale, tr: 'Şehirleri', en: 'Cities', ar: 'المدن')}',
                   style: AppTypography.bodySmall.copyWith(
                     color: isDark
                         ? AppColors.darkTextSecondary
@@ -388,14 +493,13 @@ class _CitySearchDialogState extends State<CitySearchDialog> {
                   ),
                 ),
                 SizedBox(height: AppSpacing.md),
-
-                // Cities Grid
                 Flexible(
                   child: SingleChildScrollView(
                     child: Wrap(
                       spacing: AppSpacing.sm,
                       runSpacing: AppSpacing.sm,
-                      children: (_citiesByCountry[_selectedCountry] ?? []).map((city) {
+                      children: (_citiesByCountry[_selectedCountry] ?? [])
+                          .map((city) {
                         return GestureDetector(
                           onTap: _isLoading ? null : () => _selectCity(city),
                           child: Container(
@@ -429,10 +533,7 @@ class _CitySearchDialogState extends State<CitySearchDialog> {
                 ),
               ],
             ],
-
             SizedBox(height: AppSpacing.xl),
-
-            // Buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [

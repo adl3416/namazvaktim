@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../config/color_system.dart';
 import '../config/localization.dart';
 import '../providers/app_settings.dart';
@@ -10,13 +11,24 @@ class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
 
   @override
-  State<NotificationSettingsScreen> createState() => _NotificationSettingsScreenState();
+  State<NotificationSettingsScreen> createState() =>
+      _NotificationSettingsScreenState();
 }
 
-class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> {
+class _NotificationSettingsScreenState
+    extends State<NotificationSettingsScreen> {
+  static const List<String> _prayers = [
+    'Fajr',
+    'Sunrise',
+    'Dhuhr',
+    'Asr',
+    'Maghrib',
+    'Isha',
+  ];
+
   final Map<String, bool> _azanSoundEnabled = {};
   final Map<String, bool> _notificationEnabled = {};
-  final Map<String, int> _notificationOffset = {}; // 5 or 15 minutes before
+  final Map<String, int> _notificationOffset = {};
 
   @override
   void initState() {
@@ -27,33 +39,16 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   void _loadSettings() {
     final settings = context.read<AppSettings>();
     setState(() {
-      _azanSoundEnabled.clear();
-      _notificationEnabled.clear();
-      _notificationOffset.clear();
-      _azanSoundEnabled.addAll(settings.prayerSounds);
-      _notificationEnabled.addAll(settings.prayerNotifications);
-      _notificationOffset.addAll(settings.prayerNotificationOffsets);
+      _azanSoundEnabled
+        ..clear()
+        ..addAll(settings.prayerSounds);
+      _notificationEnabled
+        ..clear()
+        ..addAll(settings.prayerNotifications);
+      _notificationOffset
+        ..clear()
+        ..addAll(settings.prayerNotificationOffsets);
     });
-  }
-
-  void _saveSettings() {
-    final settings = context.read<AppSettings>();
-    _azanSoundEnabled.forEach((prayer, enabled) {
-      settings.setPrayerSound(prayer, enabled);
-    });
-    _notificationEnabled.forEach((prayer, enabled) {
-      settings.setPrayerNotification(prayer, enabled);
-    });
-    _notificationOffset.forEach((prayer, offset) {
-      settings.setPrayerNotificationOffset(prayer, offset);
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Ayarlar kaydedildi'),
-        backgroundColor: Colors.green.shade400,
-        duration: const Duration(seconds: 2),
-      ),
-    );
   }
 
   String _text(
@@ -75,21 +70,44 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   String _prayerLabel(String prayerName, String language) =>
       AppLocalizations.prayerName(prayerName, language);
 
-  // Prayer time color mapping matching home_screen.dart
+  void _saveSettings() {
+    final settings = context.read<AppSettings>();
+    final language = AppLocalizations.getLocale(settings.language);
+
+    _azanSoundEnabled.forEach(settings.setPrayerSound);
+    _notificationEnabled.forEach(settings.setPrayerNotification);
+    _notificationOffset.forEach(settings.setPrayerNotificationOffset);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _text(
+            language,
+            tr: 'Ayarlar kaydedildi',
+            en: 'Settings saved',
+            ar: 'تم حفظ الإعدادات',
+          ),
+        ),
+        backgroundColor: Colors.green.shade400,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   Color _getPrayerPhaseColor(String prayerName) {
     switch (prayerName) {
-      case 'İmsak':
-        return const Color(0xFFFFF3E0); // Early morning warm
-      case 'Güneş':
-        return const Color(0xFFFFE0B2); // Sunrise golden
-      case 'Öğle':
-        return const Color(0xFFC8E6C9); // Noon green
-      case 'İkindi':
-        return const Color(0xFFB3E5FC); // Afternoon blue
-      case 'Akşam':
-        return const Color(0xFFFFCDD2); // Evening pink-red
-      case 'Yatsı':
-        return const Color(0xFFEDE7F6); // Night purple
+      case 'Fajr':
+        return const Color(0xFFFFF3E0);
+      case 'Sunrise':
+        return const Color(0xFFFFE0B2);
+      case 'Dhuhr':
+        return const Color(0xFFC8E6C9);
+      case 'Asr':
+        return const Color(0xFFB3E5FC);
+      case 'Maghrib':
+        return const Color(0xFFFFCDD2);
+      case 'Isha':
+        return const Color(0xFFEDE7F6);
       default:
         return const Color(0xFFF5F5F5);
     }
@@ -97,36 +115,36 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
 
   Color _getPrayerTextColor(String prayerName) {
     switch (prayerName) {
-      case 'İmsak':
-        return const Color(0xFFE65100); // Dark orange
-      case 'Güneş':
-        return const Color(0xFFF57F17); // Dark golden
-      case 'Öğle':
-        return const Color(0xFF1B5E20); // Dark green
-      case 'İkindi':
-        return const Color(0xFF01579B); // Dark blue
-      case 'Akşam':
-        return const Color(0xFFC62828); // Dark red
-      case 'Yatsı':
-        return const Color(0xFF4A148C); // Dark purple
+      case 'Fajr':
+        return const Color(0xFFE65100);
+      case 'Sunrise':
+        return const Color(0xFFF57F17);
+      case 'Dhuhr':
+        return const Color(0xFF1B5E20);
+      case 'Asr':
+        return const Color(0xFF01579B);
+      case 'Maghrib':
+        return const Color(0xFFC62828);
+      case 'Isha':
+        return const Color(0xFF4A148C);
       default:
         return const Color(0xFF212121);
     }
   }
 
-  IconData _getPrayerIcon(String prayer) {
-    switch (prayer) {
-      case 'İmsak':
+  IconData _getPrayerIcon(String prayerName) {
+    switch (prayerName) {
+      case 'Fajr':
         return Icons.wb_sunny_outlined;
-      case 'Güneş':
+      case 'Sunrise':
         return Icons.wb_sunny;
-      case 'Öğle':
+      case 'Dhuhr':
         return Icons.brightness_high;
-      case 'İkindi':
+      case 'Asr':
         return Icons.brightness_medium;
-      case 'Akşam':
+      case 'Maghrib':
         return Icons.brightness_low;
-      case 'Yatsı':
+      case 'Isha':
         return Icons.nightlight_round;
       default:
         return Icons.access_time;
@@ -136,10 +154,12 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final settings = context.read<AppSettings>();
+    final settings = context.watch<AppSettings>();
+    final language = AppLocalizations.getLocale(settings.language);
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFFAFAFA),
+      backgroundColor:
+          isDark ? const Color(0xFF121212) : const Color(0xFFFAFAFA),
       appBar: AppBar(
         backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         elevation: 0.5,
@@ -155,7 +175,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           },
         ),
         title: Text(
-          AppLocalizations.translate('notification_settings', settings.language),
+          AppLocalizations.translate('notification_settings', language),
           style: AppTypography.h3.copyWith(
             color: isDark ? Colors.white : Colors.black87,
             fontWeight: FontWeight.w600,
@@ -167,14 +187,18 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Column(
           children: [
-            // Header section
             Padding(
               padding: const EdgeInsets.only(bottom: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Namaz Vakitleri',
+                    _text(
+                      language,
+                      tr: 'Namaz Vakitleri',
+                      en: 'Prayer Times',
+                      ar: 'مواقيت الصلاة',
+                    ),
                     style: AppTypography.h2.copyWith(
                       color: isDark ? Colors.white : Colors.black87,
                       fontWeight: FontWeight.w700,
@@ -182,7 +206,12 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Her namaz için bildirim ve ezan sesi ayarları',
+                    _text(
+                      language,
+                      tr: 'Her vakit için bildirim ve ezan ayarları',
+                      en: 'Notification and adhan settings for each prayer',
+                      ar: 'إعدادات الإشعارات والأذان لكل صلاة',
+                    ),
                     style: AppTypography.bodyMedium.copyWith(
                       color: isDark ? Colors.grey[400] : Colors.grey[600],
                     ),
@@ -190,8 +219,6 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                 ],
               ),
             ),
-
-            // Column headers
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
@@ -199,7 +226,12 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                   Expanded(
                     flex: 3,
                     child: Text(
-                      'Vakit',
+                      _text(
+                        language,
+                        tr: 'Vakit',
+                        en: 'Prayer',
+                        ar: 'الوقت',
+                      ),
                       style: AppTypography.bodySmall.copyWith(
                         color: isDark ? Colors.grey[400] : Colors.grey[600],
                         fontWeight: FontWeight.w600,
@@ -207,10 +239,14 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                     ),
                   ),
                   Expanded(
-                    flex: 1,
                     child: Center(
                       child: Text(
-                        'Bildirim',
+                        _text(
+                          language,
+                          tr: 'Bildirim',
+                          en: 'Alert',
+                          ar: 'الإشعار',
+                        ),
                         style: AppTypography.bodySmall.copyWith(
                           color: isDark ? Colors.grey[400] : Colors.grey[600],
                           fontWeight: FontWeight.w600,
@@ -219,10 +255,14 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                     ),
                   ),
                   Expanded(
-                    flex: 1,
                     child: Center(
                       child: Text(
-                        'Ezan',
+                        _text(
+                          language,
+                          tr: 'Ezan',
+                          en: 'Adhan',
+                          ar: 'الأذان',
+                        ),
                         style: AppTypography.bodySmall.copyWith(
                           color: isDark ? Colors.grey[400] : Colors.grey[600],
                           fontWeight: FontWeight.w600,
@@ -233,9 +273,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                 ],
               ),
             ),
-
-            // Prayer list
-            ..._buildPrayerList(isDark),
+            ..._buildPrayerList(isDark, language),
             const SizedBox(height: 30),
           ],
         ),
@@ -243,7 +281,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     );
   }
 
-  Widget _buildTestNotificationButton(bool isDark) {
+  Widget _buildTestNotificationButton(bool isDark, String language) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -251,7 +289,6 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-          width: 1,
         ),
       ),
       padding: const EdgeInsets.all(16),
@@ -259,7 +296,12 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Bildirim Testi',
+            _text(
+              language,
+              tr: 'Bildirim Testi',
+              en: 'Notification Test',
+              ar: 'اختبار الإشعار',
+            ),
             style: AppTypography.bodyMedium.copyWith(
               color: isDark ? Colors.white : Colors.black87,
               fontWeight: FontWeight.w600,
@@ -267,7 +309,12 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           ),
           const SizedBox(height: 4),
           Text(
-            'Anlık bildirim + 30 sn sonra zamanlanmış bildirim gönderir.',
+            _text(
+              language,
+              tr: 'Anlık bildirim ve 30 saniye sonra zamanlanmış bildirim gönderir.',
+              en: 'Sends an instant notification and another one 30 seconds later.',
+              ar: 'يرسل إشعارًا فوريًا وآخر بعد 30 ثانية.',
+            ),
             style: AppTypography.bodySmall.copyWith(
               color: isDark ? Colors.grey[400] : Colors.grey[600],
             ),
@@ -277,7 +324,14 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
             width: double.infinity,
             child: ElevatedButton.icon(
               icon: const Icon(Icons.alarm, size: 18),
-              label: const Text('Test bildirimi gönder'),
+              label: Text(
+                _text(
+                  language,
+                  tr: 'Test bildirimi gönder',
+                  en: 'Send test notification',
+                  ar: 'أرسل إشعارًا تجريبيًا',
+                ),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.indigo.shade600,
                 foregroundColor: Colors.white,
@@ -286,7 +340,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              onPressed: () => _runNotificationTest(),
+              onPressed: _runNotificationTest,
             ),
           ),
         ],
@@ -295,7 +349,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   }
 
   Future<void> _runNotificationTest() async {
-    // Step 1: Check exact alarm permission and show diagnostic info
+    final language = AppLocalizations.getLocale(
+      context.read<AppSettings>().language,
+    );
     final canSchedule =
         await NotificationService.canScheduleExactNotifications();
 
@@ -304,23 +360,38 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       await showDialog<void>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('İzin Gerekli'),
-          content: const Text(
-            '"Kesin Alarmlar" izni verilmemiş.\n\n'
-            'Açılacak ekranda "Namaz Vaktim" uygulamasını bulup izni açın, '
-            'sonra geri dönüp tekrar deneyin.',
+          title: Text(
+            _text(
+              language,
+              tr: 'İzin Gerekli',
+              en: 'Permission Required',
+              ar: 'يلزم منح الإذن',
+            ),
+          ),
+          content: Text(
+            _text(
+              language,
+              tr:
+                  '"Kesin Alarmlar" izni verilmemiş.\n\nAçılacak ekranda uygulamayı bulup izni açın, sonra geri dönüp tekrar deneyin.',
+              en:
+                  'Exact alarm permission is not granted.\n\nOpen the next screen, enable the permission for this app, then return and try again.',
+              ar:
+                  'لم يتم منح إذن المنبهات الدقيقة.\n\nافتح الشاشة التالية وفعّل الإذن لهذا التطبيق ثم ارجع وجرّب مرة أخرى.',
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('İptal'),
+              child: Text(AppLocalizations.translate('cancel', language)),
             ),
             TextButton(
               onPressed: () async {
                 Navigator.of(ctx).pop();
                 await NotificationService.requestExactAlarmPermission();
               },
-              child: const Text('Ayarlara Git'),
+              child: Text(
+                AppLocalizations.translate('go_to_settings', language),
+              ),
             ),
           ],
         ),
@@ -328,92 +399,102 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       return;
     }
 
-    // Step 2: Send immediate notification (verifies channel works)
     await NotificationService.showTestNotification();
-
-    // Step 3: Schedule one for 10 seconds later (verifies zonedSchedule works)
-    final String scheduleResult =
+    final scheduleResult =
         await NotificationService.scheduleTestNotificationIn10Seconds();
 
     if (!mounted) return;
 
-    // Show full diagnostic info in a dialog
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Test Sonucu'),
+        title: Text(
+          _text(
+            language,
+            tr: 'Test Sonucu',
+            en: 'Test Result',
+            ar: 'نتيجة الاختبار',
+          ),
+        ),
         content: Text(
-          'İzin durumu: ${canSchedule == true ? "✅ İzin var" : "⚠️ Bilinmiyor"}\n\n'
-          'Anlık bildirim: ✅ Gönderildi\n\n'
-          'Zamanlanmış (10 sn) bildirim:\n$scheduleResult\n\n'
-          '10 saniye bekleyin. Bildirim gelirse sistem çalışıyor.',
+          _text(
+            language,
+            tr:
+                'İzin durumu: ${canSchedule == true ? "İzin var" : "Bilinmiyor"}\n\nAnlık bildirim: Gönderildi\n\nZamanlanmış (10 sn) bildirim:\n$scheduleResult\n\n10 saniye bekleyin. Bildirim gelirse sistem çalışıyor.',
+            en:
+                'Permission status: ${canSchedule == true ? "Granted" : "Unknown"}\n\nInstant notification: Sent\n\nScheduled (10 sec) notification:\n$scheduleResult\n\nWait 10 seconds. If the notification arrives, the system is working.',
+            ar:
+                'حالة الإذن: ${canSchedule == true ? "ممنوح" : "غير معروف"}\n\nالإشعار الفوري: تم الإرسال\n\nالإشعار المجدول (10 ثوان):\n$scheduleResult\n\nانتظر 10 ثوانٍ. إذا وصل الإشعار فهذا يعني أن النظام يعمل.',
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Tamam'),
+            child: Text(
+              _text(
+                language,
+                tr: 'Tamam',
+                en: 'OK',
+                ar: 'حسنًا',
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  List<Widget> _buildPrayerList(bool isDark) {
-    // Map Turkish names to English prayer names used in settings
-    final Map<String, String> turkishToEnglish = {
-      'İmsak': 'Fajr',
-      'Güneş': 'Sunrise',
-      'Öğle': 'Dhuhr',
-      'İkindi': 'Asr',
-      'Akşam': 'Maghrib',
-      'Yatsı': 'Isha',
-    };
-    
-    final prayers = ['İmsak', 'Güneş', 'Öğle', 'İkindi', 'Akşam', 'Yatsı'];
-    return List.generate(
-      prayers.length,
-      (index) => Padding(
-        padding: const EdgeInsets.only(bottom: 12.0),
-        child: _buildSimplePrayerRow(prayers[index], turkishToEnglish[prayers[index]]!, isDark),
-      ),
-    );
+  List<Widget> _buildPrayerList(bool isDark, String language) {
+    return _prayers
+        .map(
+          (prayer) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildPrayerRow(
+              prayerName: prayer,
+              displayName: _prayerLabel(prayer, language),
+              isDark: isDark,
+              language: language,
+            ),
+          ),
+        )
+        .toList();
   }
 
-  Widget _buildSimplePrayerRow(String displayName, String prayerName, bool isDark) {
+  Widget _buildPrayerRow({
+    required String prayerName,
+    required String displayName,
+    required bool isDark,
+    required String language,
+  }) {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
-          width: 1,
         ),
       ),
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
       child: Row(
         children: [
-          // Prayer icon and name - 3 parts
           Expanded(
             flex: 3,
             child: Row(
               children: [
-                // Prayer icon
                 Container(
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: _getPrayerPhaseColor(displayName),
+                    color: _getPrayerPhaseColor(prayerName),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
-                    _getPrayerIcon(displayName),
-                    color: _getPrayerTextColor(displayName),
+                    _getPrayerIcon(prayerName),
+                    color: _getPrayerTextColor(prayerName),
                     size: 20,
                   ),
                 ),
                 const SizedBox(width: 12),
-
-                // Prayer name
                 Text(
                   displayName,
                   style: AppTypography.bodyLarge.copyWith(
@@ -424,21 +505,16 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               ],
             ),
           ),
-
-          // Notification button - 1 part
           Expanded(
-            flex: 1,
             child: Center(
               child: _buildNotificationButton(
                 isDark: isDark,
                 prayerName: prayerName,
+                language: language,
               ),
             ),
           ),
-
-          // Azan button - 1 part
           Expanded(
-            flex: 1,
             child: Center(
               child: _buildIconButton(
                 isDark: isDark,
@@ -450,9 +526,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                     _azanSoundEnabled[prayerName] = newValue;
                   });
                   final settings = context.read<AppSettings>();
-                  final prayerProvider = context.read<PrayerProvider>();
                   await settings.setPrayerSound(prayerName, newValue);
-                  await prayerProvider.rescheduleNotifications();
+                  await context.read<PrayerProvider>().rescheduleNotifications();
                 },
               ),
             ),
@@ -465,12 +540,13 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   Widget _buildNotificationButton({
     required bool isDark,
     required String prayerName,
+    required String language,
   }) {
     final isActive = _notificationEnabled[prayerName] ?? false;
     final currentOffset = _notificationOffset[prayerName] ?? 5;
 
     return PopupMenuButton<int>(
-      onSelected: (int selectedOffset) async {
+      onSelected: (selectedOffset) async {
         setState(() {
           if (selectedOffset == 0) {
             _notificationEnabled[prayerName] = false;
@@ -479,87 +555,57 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
             _notificationOffset[prayerName] = selectedOffset;
           }
         });
-        // Save immediately so closing the app doesn't lose the change
         final settings = context.read<AppSettings>();
         await settings.setPrayerNotification(prayerName, selectedOffset != 0);
         if (selectedOffset != 0) {
-          await settings.setPrayerNotificationOffset(prayerName, selectedOffset);
+          await settings.setPrayerNotificationOffset(
+            prayerName,
+            selectedOffset,
+          );
         }
-        // Reschedule so the new offset takes effect right away
         await context.read<PrayerProvider>().rescheduleNotifications();
       },
       color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       itemBuilder: (context) => [
-        PopupMenuItem<int>(
+        _buildOffsetItem(
+          isDark: isDark,
+          language: language,
           value: 0,
-          child: Row(
-            children: [
-              Icon(
-                !isActive ? Icons.check_circle : Icons.radio_button_unchecked,
-                size: 18,
-                color: !isActive
-                    ? const Color(0xFFEF4444)
-                    : (isDark ? Colors.grey[400] : Colors.grey[600]),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                'Kapali',
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
-                  fontWeight: !isActive ? FontWeight.w600 : FontWeight.normal,
-                ),
-              ),
-            ],
+          currentOffset: currentOffset,
+          isActive: isActive,
+          label: _text(
+            language,
+            tr: 'Kapalı',
+            en: 'Off',
+            ar: 'إيقاف',
           ),
         ),
-        PopupMenuItem<int>(
+        _buildOffsetItem(
+          isDark: isDark,
+          language: language,
           value: 5,
-          child: Row(
-            children: [
-              Icon(
-                isActive && currentOffset == 5 ? Icons.check_circle : Icons.radio_button_unchecked,
-                size: 18,
-                color: isActive && currentOffset == 5
-                    ? const Color(0xFF2196F3)
-                    : (isDark ? Colors.grey[400] : Colors.grey[600]),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                '5 dk önce',
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
-                  fontWeight: isActive && currentOffset == 5
-                      ? FontWeight.w600
-                      : FontWeight.normal,
-                ),
-              ),
-            ],
+          currentOffset: currentOffset,
+          isActive: isActive,
+          label: _text(
+            language,
+            tr: '5 dk önce',
+            en: '5 min before',
+            ar: 'قبل 5 دقائق',
           ),
         ),
-        PopupMenuItem<int>(
+        _buildOffsetItem(
+          isDark: isDark,
+          language: language,
           value: 15,
-          child: Row(
-            children: [
-              Icon(
-                isActive && currentOffset == 15 ? Icons.check_circle : Icons.radio_button_unchecked,
-                size: 18,
-                color: isActive && currentOffset == 15
-                    ? const Color(0xFF2196F3)
-                    : (isDark ? Colors.grey[400] : Colors.grey[600]),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                '15 dk önce',
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
-                  fontWeight: isActive && currentOffset == 15
-                      ? FontWeight.w600
-                      : FontWeight.normal,
-                ),
-              ),
-            ],
+          currentOffset: currentOffset,
+          isActive: isActive,
+          label: _text(
+            language,
+            tr: '15 dk önce',
+            en: '15 min before',
+            ar: 'قبل 15 دقيقة',
           ),
         ),
       ],
@@ -587,7 +633,10 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
                 right: 4,
                 bottom: 4,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 2,
+                    vertical: 1,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF2196F3),
                     borderRadius: BorderRadius.circular(4),
@@ -604,6 +653,43 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  PopupMenuItem<int> _buildOffsetItem({
+    required bool isDark,
+    required String language,
+    required int value,
+    required int currentOffset,
+    required bool isActive,
+    required String label,
+  }) {
+    final isSelected =
+        value == 0 ? !isActive : (isActive && currentOffset == value);
+
+    return PopupMenuItem<int>(
+      value: value,
+      child: Row(
+        children: [
+          Icon(
+            isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 18,
+            color: isSelected
+                ? (value == 0
+                    ? const Color(0xFFEF4444)
+                    : const Color(0xFF2196F3))
+                : (isDark ? Colors.grey[400] : Colors.grey[600]),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: TextStyle(
+              color: isDark ? Colors.white : Colors.black87,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ],
       ),
     );
   }

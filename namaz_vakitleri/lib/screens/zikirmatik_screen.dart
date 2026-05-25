@@ -2,9 +2,11 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/color_system.dart';
+import '../providers/app_settings.dart';
 
 class ZikirmatikScreen extends StatefulWidget {
   const ZikirmatikScreen({super.key});
@@ -58,25 +60,60 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
     super.dispose();
   }
 
+  String _text(
+    String language, {
+    required String tr,
+    required String en,
+    required String ar,
+  }) {
+    switch (language) {
+      case 'tr':
+        return tr;
+      case 'ar':
+        return ar;
+      default:
+        return en;
+    }
+  }
+
+  String _hapticModeLabel(_ZikirHapticMode mode, String language) {
+    switch (mode) {
+      case _ZikirHapticMode.off:
+        return _text(language, tr: 'Kapalı', en: 'Off', ar: 'إيقاف');
+      case _ZikirHapticMode.everyTap:
+        return _text(
+          language,
+          tr: 'Her dokunuş',
+          en: 'Every tap',
+          ar: 'كل لمسة',
+        );
+      case _ZikirHapticMode.every33:
+        return _text(language, tr: 'Her 33', en: 'Every 33', ar: 'كل 33');
+      case _ZikirHapticMode.onTarget:
+        return _text(language, tr: 'Hedefte', en: 'On target', ar: 'عند الهدف');
+    }
+  }
+
   Future<void> _loadState() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
+
+    final saved = _decodeSavedZikirler(prefs.getStringList(_savedZikirListKey));
+    final currentZikir = prefs.getString(_currentZikirKey) ?? 'Subhanallah';
+    final active = saved.firstWhere(
+      (item) => item.name == currentZikir,
+      orElse: () => saved.first,
+    );
+
     setState(() {
       _count = prefs.getInt(_countKey) ?? 0;
-      _target = prefs.getInt(_targetKey) ?? 33;
+      _target = prefs.getInt(_targetKey) ?? active.target;
       _hapticMode = _ZikirHapticMode.values.byName(
         prefs.getString(_hapticModeKey) ?? _ZikirHapticMode.everyTap.name,
       );
-      _currentZikir = prefs.getString(_currentZikirKey) ?? 'Subhanallah';
-      _savedZikirler = _decodeSavedZikirler(
-        prefs.getStringList(_savedZikirListKey),
-      );
-      final active = _savedZikirler.firstWhere(
-        (item) => item.name == _currentZikir,
-        orElse: () => _savedZikirler.first,
-      );
-      _target = prefs.getInt(_targetKey) ?? active.target;
-      _zikirTargetController.text = active.target.toString();
+      _currentZikir = currentZikir;
+      _savedZikirler = saved;
+      _zikirTargetController.text = _target.toString();
       _isLoading = false;
     });
   }
@@ -113,9 +150,10 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
   Future<void> _setTarget(int value) async {
     setState(() {
       _target = value;
-      if (_count > _target) {
+      if (_count > value) {
         _count = 0;
       }
+      _zikirTargetController.text = value.toString();
     });
     await _saveState();
   }
@@ -158,6 +196,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
       _zikirController.clear();
       _zikirTargetController.text = target.toString();
     });
+
     await _saveState();
   }
 
@@ -247,6 +286,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
 
   Future<void> _showSettingsSheet({
     required BuildContext context,
+    required String language,
     required bool isDark,
     required Color cardColor,
     required Color textPrimary,
@@ -259,7 +299,11 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
       backgroundColor: Colors.transparent,
       builder: (context) {
         final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-        Future<void> refreshSheet(Future<void> Function() action, StateSetter setSheetState) async {
+
+        Future<void> refreshSheet(
+          Future<void> Function() action,
+          StateSetter setSheetState,
+        ) async {
           await action();
           if (!mounted) return;
           setSheetState(() {});
@@ -311,7 +355,12 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Zikirmatik ayarları',
+                                  _text(
+                                    language,
+                                    tr: 'Zikirmatik ayarları',
+                                    en: 'Dhikr counter settings',
+                                    ar: 'إعدادات السبحة',
+                                  ),
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w900,
@@ -320,7 +369,15 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Hedefini, titreşimi ve kayıtlı zikirlerini düzenle.',
+                                  _text(
+                                    language,
+                                    tr:
+                                        'Hedefini, titreşimi ve kayıtlı zikirlerini düzenle.',
+                                    en:
+                                        'Manage your target, haptics, and saved dhikr list.',
+                                    ar:
+                                        'أدر الهدف والاهتزاز وقائمة الأذكار المحفوظة.',
+                                  ),
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: textPrimary.withOpacity(0.68),
@@ -342,7 +399,12 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                             child: Column(
                               children: [
                                 Text(
-                                  'Aktif',
+                                  _text(
+                                    language,
+                                    tr: 'Aktif',
+                                    en: 'Active',
+                                    ar: 'النشط',
+                                  ),
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
@@ -365,8 +427,18 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                       ),
                       const SizedBox(height: 18),
                       _SettingsSectionCard(
-                        title: 'Hedef',
-                        subtitle: 'Sayaç tamamlanma sayısını seç.',
+                        title: _text(
+                          language,
+                          tr: 'Hedef',
+                          en: 'Target',
+                          ar: 'الهدف',
+                        ),
+                        subtitle: _text(
+                          language,
+                          tr: 'Sayaç tamamlanma sayısını seç.',
+                          en: 'Choose the completion count for the counter.',
+                          ar: 'اختر عدد الإكمال للعداد.',
+                        ),
                         textPrimary: textPrimary,
                         borderColor: isDark
                             ? Colors.white.withOpacity(0.06)
@@ -391,7 +463,9 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                               ),
                               labelStyle: TextStyle(
                                 color: isSelected
-                                    ? (isDark ? AppColors.darkBg : Colors.white)
+                                    ? (isDark
+                                        ? AppColors.darkBg
+                                        : Colors.white)
                                     : textPrimary,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -402,8 +476,18 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                       ),
                       const SizedBox(height: 14),
                       _SettingsSectionCard(
-                        title: 'Titreşim',
-                        subtitle: 'Dokunuşta hangi geri bildirim verilsin.',
+                        title: _text(
+                          language,
+                          tr: 'Titreşim',
+                          en: 'Haptics',
+                          ar: 'الاهتزاز',
+                        ),
+                        subtitle: _text(
+                          language,
+                          tr: 'Dokunuşta hangi geri bildirim verilsin.',
+                          en: 'Choose the feedback you want on tap.',
+                          ar: 'اختر نوع الاستجابة عند اللمس.',
+                        ),
                         textPrimary: textPrimary,
                         borderColor: isDark
                             ? Colors.white.withOpacity(0.06)
@@ -415,7 +499,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                           children: _ZikirHapticMode.values.map((mode) {
                             final isSelected = _hapticMode == mode;
                             return ChoiceChip(
-                              label: Text(mode.label),
+                              label: Text(_hapticModeLabel(mode, language)),
                               selected: isSelected,
                               onSelected: (_) => refreshSheet(
                                 () => _setHapticMode(mode),
@@ -428,7 +512,9 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                               ),
                               labelStyle: TextStyle(
                                 color: isSelected
-                                    ? (isDark ? AppColors.darkBg : Colors.white)
+                                    ? (isDark
+                                        ? AppColors.darkBg
+                                        : Colors.white)
                                     : textPrimary,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -439,8 +525,18 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                       ),
                       const SizedBox(height: 14),
                       _SettingsSectionCard(
-                        title: 'Zikir ekle',
-                        subtitle: 'Yeni zikir ve hedef kaydı oluştur.',
+                        title: _text(
+                          language,
+                          tr: 'Zikir ekle',
+                          en: 'Add dhikr',
+                          ar: 'أضف ذكرًا',
+                        ),
+                        subtitle: _text(
+                          language,
+                          tr: 'Yeni zikir ve hedef kaydı oluştur.',
+                          en: 'Create a new dhikr entry and target.',
+                          ar: 'أنشئ ذكرًا جديدًا وهدفًا له.',
+                        ),
                         textPrimary: textPrimary,
                         borderColor: isDark
                             ? Colors.white.withOpacity(0.06)
@@ -457,7 +553,12 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                                     controller: _zikirController,
                                     style: TextStyle(color: textPrimary),
                                     decoration: InputDecoration(
-                                      hintText: 'Mesela: Estağfirullah',
+                                      hintText: _text(
+                                        language,
+                                        tr: 'Mesela: Estağfirullah',
+                                        en: 'Example: Astaghfirullah',
+                                        ar: 'مثال: أستغفر الله',
+                                      ),
                                       isDense: true,
                                       filled: true,
                                       fillColor: accentSoft,
@@ -512,9 +613,8 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                                 icon: const Icon(Icons.add_rounded),
                                 style: FilledButton.styleFrom(
                                   backgroundColor: accent,
-                                  foregroundColor: isDark
-                                      ? AppColors.darkBg
-                                      : Colors.white,
+                                  foregroundColor:
+                                      isDark ? AppColors.darkBg : Colors.white,
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 16,
                                   ),
@@ -522,7 +622,14 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                                     borderRadius: BorderRadius.circular(18),
                                   ),
                                 ),
-                                label: const Text('Kayda ekle'),
+                                label: Text(
+                                  _text(
+                                    language,
+                                    tr: 'Kayda ekle',
+                                    en: 'Save to list',
+                                    ar: 'احفظ في القائمة',
+                                  ),
+                                ),
                               ),
                             ),
                             const SizedBox(height: 14),
@@ -540,9 +647,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                                   final isSelected =
                                       zikir.name == _currentZikir;
                                   return ChoiceChip(
-                                    label: Text(
-                                      '${zikir.name} • ${zikir.target}',
-                                    ),
+                                    label: Text('${zikir.name} • ${zikir.target}'),
                                     selected: isSelected,
                                     onSelected: (_) => refreshSheet(
                                       () => _selectZikir(zikir.name),
@@ -584,6 +689,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
 
   @override
   Widget build(BuildContext context) {
+    final language = context.watch<AppSettings>().language;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final background = isDark ? AppColors.darkBg : const Color(0xFFF6F1E8);
     final cardColor = isDark
@@ -633,7 +739,12 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                       children: [
                         Expanded(
                           child: Text(
-                            'Zikirmatik',
+                            _text(
+                              language,
+                              tr: 'Zikirmatik',
+                              en: 'Dhikr Counter',
+                              ar: 'السبحة',
+                            ),
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w900,
@@ -644,6 +755,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                         IconButton(
                           onPressed: () => _showSettingsSheet(
                             context: context,
+                            language: language,
                             isDark: isDark,
                             cardColor: cardColor,
                             textPrimary: textPrimary,
@@ -651,7 +763,12 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                             accentSoft: accentSoft,
                           ),
                           icon: Icon(Icons.tune_rounded, color: textPrimary),
-                          tooltip: 'Ayarlar',
+                          tooltip: _text(
+                            language,
+                            tr: 'Ayarlar',
+                            en: 'Settings',
+                            ar: 'الإعدادات',
+                          ),
                         ),
                       ],
                     ),
@@ -682,9 +799,13 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                             children: [
                               Expanded(
                                 child: _InfoPill(
-                                  label: 'Hedef',
+                                  label: _text(
+                                    language,
+                                    tr: 'Hedef',
+                                    en: 'Target',
+                                    ar: 'الهدف',
+                                  ),
                                   value: '$_target',
-                                  accent: accent,
                                   accentSoft: accentSoft,
                                   textColor: textPrimary,
                                   subtitleColor: textSecondary,
@@ -706,7 +827,19 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    _count >= _target ? 'Tamam' : 'Sayaç',
+                                    _count >= _target
+                                        ? _text(
+                                            language,
+                                            tr: 'Tamam',
+                                            en: 'Done',
+                                            ar: 'تم',
+                                          )
+                                        : _text(
+                                            language,
+                                            tr: 'Sayaç',
+                                            en: 'Counter',
+                                            ar: 'العداد',
+                                          ),
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
@@ -718,9 +851,13 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                               const SizedBox(width: 12),
                               Expanded(
                                 child: _InfoPill(
-                                  label: 'Kalan',
+                                  label: _text(
+                                    language,
+                                    tr: 'Kalan',
+                                    en: 'Left',
+                                    ar: 'المتبقي',
+                                  ),
                                   value: '${(_target - _count).clamp(0, _target)}',
-                                  accent: accent,
                                   accentSoft: accentSoft,
                                   textColor: textPrimary,
                                   subtitleColor: textSecondary,
@@ -790,10 +927,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                                     ),
                                   ),
                                 ),
-                                Transform.scale(
-                                  scale: coreScale,
-                                  child: child,
-                                ),
+                                Transform.scale(scale: coreScale, child: child),
                               ],
                             );
                           },
@@ -808,7 +942,11 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                                 colors: isDark
                                     ? [
                                         accent.withOpacity(0.92),
-                                        Color.lerp(accent, Colors.white, 0.18)!,
+                                        Color.lerp(
+                                          accent,
+                                          Colors.white,
+                                          0.18,
+                                        )!,
                                       ]
                                     : const [
                                         Color(0xFF0F766E),
@@ -817,26 +955,32 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color:
-                                      accent.withOpacity(isDark ? 0.34 : 0.26),
+                                  color: accent.withOpacity(
+                                    isDark ? 0.34 : 0.26,
+                                  ),
                                   blurRadius: 26,
                                   offset: const Offset(0, 16),
                                 ),
                               ],
                             ),
-                            child: const Center(
+                            child: Center(
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
+                                  const Icon(
                                     Icons.touch_app_rounded,
                                     size: 52,
                                     color: Colors.white,
                                   ),
-                                  SizedBox(height: 12),
+                                  const SizedBox(height: 12),
                                   Text(
-                                    'Dokun',
-                                    style: TextStyle(
+                                    _text(
+                                      language,
+                                      tr: 'Dokun',
+                                      en: 'Tap',
+                                      ar: 'المس',
+                                    ),
+                                    style: const TextStyle(
                                       fontSize: 30,
                                       fontWeight: FontWeight.w900,
                                       color: Colors.white,
@@ -865,7 +1009,14 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                     OutlinedButton.icon(
                       onPressed: _reset,
                       icon: const Icon(Icons.refresh_rounded),
-                      label: const Text('Sayacı sıfırla'),
+                      label: Text(
+                        _text(
+                          language,
+                          tr: 'Sayacı sıfırla',
+                          en: 'Reset counter',
+                          ar: 'إعادة ضبط العداد',
+                        ),
+                      ),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size.fromHeight(54),
                       ),
@@ -878,16 +1029,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
   }
 }
 
-enum _ZikirHapticMode {
-  off('Kapalı'),
-  everyTap('Her dokunuş'),
-  every33('Her 33'),
-  onTarget('Hedefte');
-
-  const _ZikirHapticMode(this.label);
-
-  final String label;
-}
+enum _ZikirHapticMode { off, everyTap, every33, onTarget }
 
 class _SavedZikir {
   const _SavedZikir({
@@ -973,7 +1115,6 @@ class _InfoPill extends StatelessWidget {
   const _InfoPill({
     required this.label,
     required this.value,
-    required this.accent,
     required this.accentSoft,
     required this.textColor,
     required this.subtitleColor,
@@ -982,7 +1123,6 @@ class _InfoPill extends StatelessWidget {
 
   final String label;
   final String value;
-  final Color accent;
   final Color accentSoft;
   final Color textColor;
   final Color subtitleColor;

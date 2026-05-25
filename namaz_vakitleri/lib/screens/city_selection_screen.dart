@@ -4,6 +4,7 @@ import '../config/color_system.dart';
 import '../config/localization.dart';
 import '../providers/app_settings.dart';
 import '../providers/prayer_provider.dart';
+import 'district_selection_screen.dart';
 
 class CitySelectionScreen extends StatefulWidget {
   final String countryCode;
@@ -23,6 +24,22 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _isLoading = false;
+
+  static const List<String> _turkishCities = [
+    'Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Amasya', 'Ankara',
+    'Antalya', 'Artvin', 'Aydın', 'Balıkesir', 'Bilecik', 'Bingöl',
+    'Bitlis', 'Bolu', 'Burdur', 'Bursa', 'Çanakkale', 'Çankırı', 'Çorum',
+    'Denizli', 'Diyarbakır', 'Edirne', 'Elazığ', 'Erzincan', 'Erzurum',
+    'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkari', 'Hatay',
+    'Isparta', 'Mersin', 'İstanbul', 'İzmir', 'Kars', 'Kastamonu',
+    'Kayseri', 'Kırklareli', 'Kırşehir', 'Kocaeli', 'Konya', 'Kütahya',
+    'Malatya', 'Manisa', 'Kahramanmaraş', 'Mardin', 'Muğla', 'Muş',
+    'Nevşehir', 'Niğde', 'Ordu', 'Rize', 'Sakarya', 'Samsun', 'Siirt',
+    'Sinop', 'Sivas', 'Tekirdağ', 'Tokat', 'Trabzon', 'Tunceli',
+    'Şanlıurfa', 'Uşak', 'Van', 'Yozgat', 'Zonguldak', 'Aksaray',
+    'Bayburt', 'Karaman', 'Kırıkkale', 'Batman', 'Şırnak', 'Bartın',
+    'Ardahan', 'Iğdır', 'Yalova', 'Karabük', 'Kilis', 'Osmaniye', 'Düzce',
+  ];
 
   final Map<String, List<String>> _citiesByCountry = {
     'TR': [
@@ -221,7 +238,9 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
   };
 
   List<String> get _filteredCities {
-    final cities = _citiesByCountry[widget.countryCode] ?? [];
+    final cities = widget.countryCode == 'TR'
+        ? _turkishCities
+        : (_citiesByCountry[widget.countryCode] ?? []);
     if (_searchQuery.isEmpty) {
       return cities;
     }
@@ -248,6 +267,19 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
   }
 
   Future<void> _selectCity(String city) async {
+    if (widget.countryCode == 'TR') {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DistrictSelectionScreen(
+            city: city,
+            countryName: widget.countryName,
+          ),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });

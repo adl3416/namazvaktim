@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Namaz Vaktim | Landing</title>
+  <meta
+    name="description"
+    content="Namaz Vaktim için çalışan landing sayfası. Konum girerek namaz vakitlerini anında görüntüleyin, destek ve yasal sayfalara ayrı sekmelerde ulaşın."
+  >
+  <link rel="icon" type="image/png" href="assets/images/app_icon.png">
+  <link rel="stylesheet" href="landing.css">
+</head>
+<body>
+  <div class="site-shell">
+    <header class="topbar">
+      <div class="topbar__inner">
+        <a class="brand" href="#hero">
+          <span class="brand__mark">
+            <img src="assets/images/app_icon.png" alt="Namaz Vaktim logo">
+          </span>
+          <span class="brand__text">
+            <span class="brand__title">Namaz Vaktim</span>
+            <span class="brand__subtitle">Vakit, kıble ve bildirim deneyimi</span>
+          </span>
+        </a>
+        <nav class="nav" aria-label="Ana gezinme">
+          <a href="#vakitler">Vakitler</a>
+          <a href="#neden">Özellikler</a>
+          <a href="#yasal">Yasal Sayfalar</a>
+          <a href="privacy-policy.html" target="_blank" rel="noopener">Privacy Policy</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero section" id="hero">
+        <div class="hero__grid">
+          <article class="panel panel--hero">
+            <span class="eyebrow">Çalışan Landing Deneyimi</span>
+            <h1>Konumu gir, vakti gör, yasal sayfalara ayrı sekmede geç.</h1>
+            <p>
+              Bu sayfa sadece tanıtım değil. İlçe, şehir ya da ülke girildiğinde konumu çözümler,
+              Diyanet yöntemine göre namaz vakitlerini getirir ve tüm yasal bağlantıları ayrı
+              HTML sayfaları olarak açar.
+            </p>
+            <div class="hero__actions">
+              <a class="button button--primary" href="#vakitler">Namaz Vakitlerini Getir</a>
+              <a class="button button--ghost" href="#yasal">Yasal Sayfaları İncele</a>
+            </div>
+            <div class="stat-grid">
+              <div class="stat-card">
+                <strong>Canlı</strong>
+                <span>Konumdan anlık vakit hesaplama</span>
+              </div>
+              <div class="stat-card">
+                <strong>Ayrı</strong>
+                <span>Privacy policy ve tüm yasal sayfalar yeni sekmede açılır</span>
+              </div>
+              <div class="stat-card">
+                <strong>Uyumlu</strong>
+                <span>Mobil ve masaüstünde aynı yapı</span>
+              </div>
+            </div>
+          </article>
+
+          <aside class="panel panel--side">
+            <div class="app-showcase">
+              <div class="app-showcase__intro">
+                <span class="section__label">Uygulamadan Gerçek Ekran</span>
+                <h3>Landing, app’in hissini taşısın</h3>
+                <p>
+                  Ana vakit ekranını doğrudan gösterince ziyaretçi sadece anlatımı değil,
+                  ürünün gerçek görünümünü de görüyor.
+                </p>
+              </div>
+              <div class="phone-stack">
+                <figure class="phone-frame phone-frame--main">
+                  <img src="flutter_04.png" alt="Namaz Vaktim ana ekran görüntüsü">
+                  <figcaption>Ana ekran • sonraki vakit sayacı</figcaption>
+                </figure>
+                <figure class="phone-frame phone-frame--offset">
+                  <img src="flutter_05.png" alt="Namaz Vaktim vakitler ekranı görünümü">
+                  <figcaption>Vakit listesi • uygulama kart yapısı</figcaption>
+                </figure>
+              </div>
+            </div>
+            <div class="mini-card">
+              <h3>Ne destekliyor?</h3>
+              <p>
+                `Kadıköy, İstanbul`, `Kastamonu`, `Berlin`, `Medine` gibi sorgularla
+                konum araması yapabilir ya da cihaz konumunu kullanabilirsin.
+              </p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section" id="vakitler">
+        <div class="section__grid">
+          <article class="section__content">
+            <span class="section__label">Canlı Vakit Paneli</span>
+            <h2>Konum girince vakitleri hemen ver</h2>
+            <p>
+              İlçe, şehir veya ülke yaz. Sayfa önce konumu çözümler, sonra uygulamadakiyle
+              aynı şekilde AlAdhan `method=13` ile vakitleri getirir.
+            </p>
+            <div class="feature-points">
+              <div class="feature-point">
+                <div class="feature-point__icon">📍</div>
+                <div>
+                  <h3>Serbest konum girişi</h3>
+                  <p>Kadıköy, İstanbul, Türkiye gibi ayrıntılı girişler desteklenir.</p>
+                </div>
+              </div>
+              <div class="feature-point">
+                <div class="feature-point__icon">🧭</div>
+                <div>
+                  <h3>Cihaz konumu</h3>
+                  <p>İstersen doğrudan mevcut konumunu kullanarak vakitleri çekebilirsin.</p>
+                </div>
+              </div>
+              <div class="feature-point">
+                <div class="feature-point__icon">🕰️</div>
+                <div>
+                  <h3>Sonraki vakit vurgusu</h3>
+                  <p>Sonuç ekranı sıradaki vakti ve kalan süreyi özellikle öne çıkarır.</p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <aside class="section__aside">
+            <div class="lookup-form">
+              <label class="input-label" for="locationInput">
+                Konum
+                <input
+                  class="input"
+                  id="locationInput"
+                  name="location"
+                  type="text"
+                  placeholder="Örn: Kadıköy, İstanbul, Türkiye"
+                  autocomplete="off"
+                >
+              </label>
+              <p class="helper">
+                İstersen sadece şehir de yazabilirsin. Daha doğru sonuç için ilçe + şehir önerilir.
+              </p>
+              <div class="lookup-actions">
+                <button class="primary" id="findPrayerTimes" type="button">Vakitleri Getir</button>
+                <button class="secondary" id="useMyLocation" type="button">Konumumu Kullan</button>
+              </div>
+              <div class="status" id="statusBox" aria-live="polite"></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="results" id="resultsBox">
+          <div class="results__top">
+            <div class="results__heading">
+              <h3 id="resultTitle">Seçilen konum</h3>
+              <p id="resultMeta">Vakit detayları burada görünecek.</p>
+            </div>
+            <div class="next-prayer" id="nextPrayerBox"></div>
+          </div>
+          <div class="prayer-grid" id="prayerGrid"></div>
+        </div>
+      </section>
+
+      <section class="section" id="neden">
+        <div class="section__grid">
+          <article class="section__content">
+            <span class="section__label">Landing Mimarisi</span>
+            <h2>Yasal linkler gömülü değil, ayrı sayfa mantığında</h2>
+            <p>
+              Ana sayfadaki privacy policy, kullanım şartları, konum izinleri, bildirimler,
+              veri saklama ve destek bağlantıları ayrı HTML belgeleri olarak hazırlanır.
+              Böylece mağaza bağlantısı, footer linkleri ve paylaşılabilir URL yapısı daha profesyonel olur.
+            </p>
+          </article>
+
+          <aside class="section__aside">
+            <div class="mini-card">
+              <h3>Mağaza ve web için uygun</h3>
+              <p>
+                Privacy policy linki tek başına paylaşılabilir, destek sayfası ayrı açılır,
+                veri silme ve bildirim açıklamaları da kendi sayfalarında kalır.
+              </p>
+            </div>
+            <div class="mini-card">
+              <h3>Gerçek uygulama görünümü</h3>
+              <p>
+                Landing’de kullanılan ekranlar doğrudan uygulamadan alındığı için renk dili,
+                kart tasarımı ve genel atmosfer birebir tanıdık kalır.
+              </p>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section" id="yasal">
+        <div class="legal-grid">
+          <a class="legal-link" href="privacy-policy.html" target="_blank" rel="noopener">
+            <div class="legal-link__icon">🔐</div>
+            <h3>Privacy Policy</h3>
+            <p>Gizlilik, veri işleme, üçüncü taraf servisler ve kullanıcı hakları.</p>
+          </a>
+          <a class="legal-link" href="terms-of-use.html" target="_blank" rel="noopener">
+            <div class="legal-link__icon">📄</div>
+            <h3>Kullanım Şartları</h3>
+            <p>Uygulamanın kullanım sınırları, doğruluk notları ve sorumluluk çerçevesi.</p>
+          </a>
+          <a class="legal-link" href="location-permissions.html" target="_blank" rel="noopener">
+            <div class="legal-link__icon">📍</div>
+            <h3>Konum ve İzinler</h3>
+            <p>Konum neden istenir, manuel kullanım nasıl çalışır, hangi izinler gerekir.</p>
+          </a>
+          <a class="legal-link" href="notifications-adhan.html" target="_blank" rel="noopener">
+            <div class="legal-link__icon">🔔</div>
+            <h3>Bildirimler ve Ezan</h3>
+            <p>Hatırlatmalar, tam zamanlı alarm davranışı ve cihaz kısıtları açıklamaları.</p>
+          </a>
+          <a class="legal-link" href="data-storage-deletion.html" target="_blank" rel="noopener">
+            <div class="legal-link__icon">🗂️</div>
+            <h3>Veri Saklama ve Silme</h3>
+            <p>Yerel kayıtlar, uygulama kaldırıldığında ne olur ve silme talebi akışı.</p>
+          </a>
+          <a class="legal-link" href="support.html" target="_blank" rel="noopener">
+            <div class="legal-link__icon">✉️</div>
+            <h3>Destek</h3>
+            <p>İletişim e-postası, destek kanalı ve veri talepleri için yönlendirme.</p>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer__inner">
+        <div class="footer__grid">
+          <div>
+            <h3>Namaz Vaktim Landing</h3>
+            <p>
+              Bu landing yapısı; çalışan vakit araması, paylaşılabilir privacy policy sayfası
+              ve tüm yasal başlıkların ayrı sekmelerde açıldığı profesyonel bir web iskeleti sunar.
+            </p>
+          </div>
+          <div class="footer__links">
+            <a href="privacy-policy.html" target="_blank" rel="noopener">Privacy Policy</a>
+            <a href="terms-of-use.html" target="_blank" rel="noopener">Kullanım Şartları</a>
+            <a href="support.html" target="_blank" rel="noopener">Destek</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script src="landing.js"></script>
+</body>
+</html>

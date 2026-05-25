@@ -304,30 +304,51 @@ class PrayerProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> setManualLocation(String city, String country) async {
+  Future<void> setManualLocation(
+    String city,
+    String country, {
+    String? district,
+  }) async {
     try {
-      final locations = await LocationService.searchLocation('$city, $country');
-      if (locations.isNotEmpty) {
-        final normalizedCountry = country.toLowerCase();
-        _currentLocation = locations.firstWhere(
-          (location) => location.country.toLowerCase().contains(normalizedCountry),
-          orElse: () => locations.first,
-        );
-        _savedCity = city;
-        _savedCountry = country;
-        _useAutomaticLocation = false;
+      _isLoading = true;
+      _errorMessage = '';
+      notifyListeners();
 
-        await _prefs.setString('city', city);
-        await _prefs.setString('country', country);
-        await _prefs.setBool('use_automatic_location', false);
-        await _prefs.setDouble('latitude', _currentLocation!.latitude);
-        await _prefs.setDouble('longitude', _currentLocation!.longitude);
+      final trimmedDistrict = district?.trim();
+      final hasDistrict = trimmedDistrict != null && trimmedDistrict.isNotEmpty;
+      final searchQuery = hasDistrict
+          ? '$trimmedDistrict, $city, $country'
+          : '$city, $country';
+      final displayCity = hasDistrict ? '$trimmedDistrict, $city' : city;
+      final locations = await LocationService.searchLocation(searchQuery);
 
-        await fetchPrayerTimes();
-        notifyListeners();
+      if (locations.isEmpty) {
+        throw Exception('Konum bulunamadı');
       }
+
+      final normalizedCountry = country.toLowerCase();
+      _currentLocation = locations.firstWhere(
+        (location) => location.country.toLowerCase().contains(normalizedCountry),
+        orElse: () => locations.first,
+      );
+      _savedCity = displayCity;
+      _savedCountry = country;
+      _useAutomaticLocation = false;
+      _lastFetchTime = null;
+      _scheduledNotifications.clear();
+
+      await _prefs.setString('city', displayCity);
+      await _prefs.setString('country', country);
+      await _prefs.setBool('use_automatic_location', false);
+      await _prefs.setDouble('latitude', _currentLocation!.latitude);
+      await _prefs.setDouble('longitude', _currentLocation!.longitude);
+
+      await fetchPrayerTimes();
     } catch (e) {
       _errorMessage = 'Error setting location: $e';
+      notifyListeners();
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
   }

@@ -145,6 +145,7 @@ flutter:
   assets:
     - assets/images/
     - assets/sounds/
+    - lib/data/tr_districts_raw.json
 
 flutter_launcher_icons:
   android: "launcher_icon"

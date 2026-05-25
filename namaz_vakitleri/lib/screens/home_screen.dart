@@ -29,6 +29,11 @@ class HomeScreen extends StatelessWidget {
         final progress = prayerTimes.isEmpty
             ? 0.0
             : completedCount / prayerTimes.length;
+        final locationLabel = prayerProvider.savedCountry.isNotEmpty
+            ? '${prayerProvider.savedCity.isNotEmpty ? prayerProvider.savedCity : 'Istanbul'} • ${prayerProvider.savedCountry}'
+            : (prayerProvider.savedCity.isNotEmpty
+                ? prayerProvider.savedCity
+                : 'Istanbul');
 
         return Scaffold(
           backgroundColor: scheme.background,
@@ -75,6 +80,8 @@ class HomeScreen extends StatelessWidget {
                           city: prayerProvider.savedCity.isNotEmpty
                               ? prayerProvider.savedCity
                               : 'Istanbul',
+                          locationLabel: locationLabel,
+                          locale: locale,
                           onRefreshLocation: () =>
                               _refreshLocationLocalized(context, prayerProvider),
                         ),
@@ -97,6 +104,7 @@ class HomeScreen extends StatelessWidget {
                                 completedCount: completedCount,
                                 totalCount: prayerTimes.length,
                                 activePrayerName: prayerProvider.activePrayer?.name,
+                                locationLabel: locationLabel,
                               ),
                               const SizedBox(height: 6),
                             ],
@@ -248,31 +256,58 @@ class _TopHeader extends StatelessWidget {
   const _TopHeader({
     required this.scheme,
     required this.city,
+    required this.locationLabel,
+    required this.locale,
     required this.onRefreshLocation,
     this.compact = false,
   });
 
   final _HomePalette scheme;
   final String city;
+  final String locationLabel;
+  final String locale;
   final VoidCallback onRefreshLocation;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Expanded(
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              city,
-              style: TextStyle(
-                fontSize: compact ? 14 : 16,
-                fontWeight: compact ? FontWeight.w700 : FontWeight.w700,
-                letterSpacing: compact ? -0.2 : -0.5,
-                color: Colors.white,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!compact)
+                Text(
+                  _homeText(
+                    locale,
+                    tr: 'Secili konum',
+                    en: 'Selected location',
+                    ar: 'الموقع المحدد',
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: Colors.white.withOpacity(0.68),
+                  ),
+                ),
+              Text(
+                compact ? city : locationLabel,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: compact ? 14 : 16,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: compact ? -0.2 : -0.4,
+                  color: Colors.white,
+                ),
               ),
-            ),
+            ],
           ),
         ),
         Material(
@@ -300,18 +335,22 @@ class _StickyTopHeaderDelegate extends SliverPersistentHeaderDelegate {
   _StickyTopHeaderDelegate({
     required this.scheme,
     required this.city,
+    required this.locationLabel,
+    required this.locale,
     required this.onRefreshLocation,
   });
 
   final _HomePalette scheme;
   final String city;
+  final String locationLabel;
+  final String locale;
   final VoidCallback onRefreshLocation;
 
   @override
-  double get minExtent => 44;
+  double get minExtent => 48;
 
   @override
-  double get maxExtent => 54;
+  double get maxExtent => 62;
 
   @override
   Widget build(
@@ -326,7 +365,7 @@ class _StickyTopHeaderDelegate extends SliverPersistentHeaderDelegate {
     return Container(
       padding: EdgeInsets.fromLTRB(
         20,
-        compact ? 2 : 4,
+        compact ? 2 : 6,
         20,
         0,
       ),
@@ -355,6 +394,8 @@ class _StickyTopHeaderDelegate extends SliverPersistentHeaderDelegate {
         child: _TopHeader(
           scheme: scheme,
           city: city,
+          locationLabel: locationLabel,
+          locale: locale,
           onRefreshLocation: onRefreshLocation,
           compact: compact,
         ),
@@ -366,6 +407,8 @@ class _StickyTopHeaderDelegate extends SliverPersistentHeaderDelegate {
   bool shouldRebuild(covariant _StickyTopHeaderDelegate oldDelegate) {
     return oldDelegate.scheme != scheme ||
         oldDelegate.city != city ||
+        oldDelegate.locationLabel != locationLabel ||
+        oldDelegate.locale != locale ||
         oldDelegate.onRefreshLocation != onRefreshLocation;
   }
 }
@@ -383,6 +426,7 @@ class _HeroCountdownCard extends StatelessWidget {
     required this.completedCount,
     required this.totalCount,
     required this.activePrayerName,
+    required this.locationLabel,
   });
 
   final _HomePalette scheme;
@@ -396,6 +440,7 @@ class _HeroCountdownCard extends StatelessWidget {
   final int completedCount;
   final int totalCount;
   final String? activePrayerName;
+  final String locationLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -421,11 +466,45 @@ class _HeroCountdownCard extends StatelessWidget {
         ),
         boxShadow: [],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Next prayer label
-          LayoutBuilder(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.14),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.10),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.place_rounded,
+                    size: 14,
+                    color: Colors.white.withOpacity(0.82),
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      locationLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.86),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Next prayer label
+            LayoutBuilder(
             builder: (context, constraints) {
               final title = nextPrayer != null
                   ? '${AppLocalizations.prayerName(nextPrayer!.name, locale)} ${AppLocalizations.translate('prayer_time_label', locale)}'

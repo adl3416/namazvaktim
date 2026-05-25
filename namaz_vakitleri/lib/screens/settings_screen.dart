@@ -282,20 +282,20 @@ class _SettingsTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Material(
         color: isDark
             ? AppColors.darkBgSecondary.withOpacity(0.92)
             : Colors.white.withOpacity(0.84),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(24),
         child: InkWell(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(24),
           onTap: onTap,
           child: Container(
-            constraints: const BoxConstraints(minHeight: 72),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            constraints: const BoxConstraints(minHeight: 78),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(24),
               border: Border.all(
                 color: isDark
                     ? Colors.white.withOpacity(0.08)
@@ -304,23 +304,23 @@ class _SettingsTile extends StatelessWidget {
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(isDark ? 0.20 : 0.07),
-                  blurRadius: 13,
-                  offset: const Offset(0, 8),
+                  blurRadius: 18,
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),
             child: Row(
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 42,
+                  height: 42,
                   decoration: BoxDecoration(
                     color: iconColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Icon(icon, color: iconColor, size: 19),
+                  child: Icon(icon, color: iconColor, size: 21),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -347,17 +347,17 @@ class _SettingsTile extends StatelessWidget {
                           color: isDark
                               ? AppColors.darkTextSecondary
                               : Color(0xFF655B51),
-                          fontSize: 11,
-                          height: 1.25,
+                          fontSize: 13,
+                          height: 1.4,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Icon(
                   Icons.arrow_forward_ios_rounded,
-                  size: 14,
+                  size: 16,
                   color: isDark
                       ? AppColors.darkTextLight
                       : Color(0xFF8A7B6A),

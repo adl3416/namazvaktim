@@ -3,6 +3,7 @@ package com.vakit.app.namaz_vakitleri
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.View
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
@@ -98,14 +99,31 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             val nextPrayerName = findNextPrayerName(prayers)
             val activePrayerName = storedActivePrayerName ?: findActivePrayerName(prayers)
             val nextPrayer = prayers.firstOrNull { it.name == nextPrayerName } ?: prayers.firstOrNull()
-            val isCompact = isCompactWidget(appWidgetManager.getAppWidgetOptions(appWidgetId))
+            val widgetOptions = appWidgetManager.getAppWidgetOptions(appWidgetId)
+            val isCompact = isCompactWidget(widgetOptions)
+            val isSingleRowHeight = isSingleRowHeightWidget(widgetOptions)
+            val isSingleColumnWidth = isSingleColumnWidthWidget(widgetOptions)
+            val isTiny = isTinyWidget(widgetOptions)
 
-            val views = RemoteViews(context.packageName, R.layout.prayer_times_widget)
+            val layoutId = if (isTiny) {
+                R.layout.prayer_times_widget_compact
+            } else {
+                R.layout.prayer_times_widget
+            }
+            val views = RemoteViews(context.packageName, layoutId)
             views.setTextViewText(R.id.widget_header_city, city)
             views.setTextViewText(R.id.widget_header_date, dateLabel)
             views.setViewVisibility(
+                R.id.widget_header_city,
+                if (isSingleRowHeight || isSingleColumnWidth || isTiny) View.GONE else View.VISIBLE
+            )
+            views.setViewVisibility(
+                R.id.widget_header_container,
+                if (isSingleRowHeight || isSingleColumnWidth || isTiny) View.GONE else View.VISIBLE
+            )
+            views.setViewVisibility(
                 R.id.widget_header_date,
-                if (isCompact) View.GONE else View.VISIBLE
+                if (isSingleRowHeight || isSingleColumnWidth || isTiny) View.GONE else View.VISIBLE
             )
             views.setInt(
                 R.id.widget_header_container,
@@ -113,8 +131,9 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
                 resolvePrayerHeaderColor(activePrayerName ?: nextPrayerName)
             )
 
-            bindNextPrayerCard(views, nextPrayer, isCompact)
-            bindPrayerRows(views, prayers, nextPrayerName, isCompact)
+            bindNextPrayerCard(views, nextPrayer, isCompact, isTiny)
+            bindPrayerRows(views, prayers, nextPrayerName, isCompact || isTiny)
+            applyTextSizing(views, isSingleRowHeight, isTiny)
             bindLaunchIntent(context, views)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
@@ -134,17 +153,29 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
         private fun bindNextPrayerCard(
             views: RemoteViews,
             nextPrayer: WidgetPrayer?,
-            isCompact: Boolean
+            isCompact: Boolean,
+            isTiny: Boolean
         ) {
             views.setTextViewText(
                 R.id.widget_next_name,
-                nextPrayer?.let { "${it.displayName} Vaktine" } ?: "Vakit yok"
+                if (isTiny) {
+                    nextPrayer?.let { formatRemainingLabel(it.displayName) } ?: "Vakit yok"
+                } else {
+                    nextPrayer?.let { "${it.displayName} Vaktine" } ?: "Vakit yok"
+                }
             )
             views.setTextViewText(
                 R.id.widget_next_time,
                 nextPrayer?.let { formatRemaining(it.remainingMillis) } ?: "--"
             )
-            views.setViewVisibility(R.id.widget_countdown, View.VISIBLE)
+            views.setViewVisibility(
+                R.id.widget_next_name,
+                View.VISIBLE
+            )
+            views.setViewVisibility(
+                R.id.widget_countdown,
+                if (isTiny) View.GONE else View.VISIBLE
+            )
             views.setTextViewText(
                 R.id.widget_countdown,
                 nextPrayer?.let { "Saat ${it.timeLabel}" } ?: "Saat --:--"
@@ -185,6 +216,24 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
                     val color = if (prayer.name == nextPrayerName) accentColor else textColor
                     views.setTextColor(ids.first, color)
                     views.setTextColor(ids.second, color)
+                }
+            }
+        }
+
+        private fun applyTextSizing(
+            views: RemoteViews,
+            isSingleRowHeight: Boolean,
+            isTiny: Boolean
+        ) {
+            when {
+                isTiny -> {
+                    views.setTextViewTextSize(R.id.widget_next_name, TypedValue.COMPLEX_UNIT_SP, 11f)
+                    views.setTextViewTextSize(R.id.widget_next_time, TypedValue.COMPLEX_UNIT_SP, 22f)
+                }
+                isSingleRowHeight -> {
+                    views.setTextViewTextSize(R.id.widget_next_name, TypedValue.COMPLEX_UNIT_SP, 17f)
+                    views.setTextViewTextSize(R.id.widget_next_time, TypedValue.COMPLEX_UNIT_SP, 24f)
+                    views.setTextViewTextSize(R.id.widget_countdown, TypedValue.COMPLEX_UNIT_SP, 11f)
                 }
             }
         }
@@ -237,6 +286,22 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             return minHeight in 1..140 || minWidth in 1..260
         }
 
+        private fun isSingleRowHeightWidget(options: Bundle): Boolean {
+            val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
+            return minHeight in 1..110
+        }
+
+        private fun isSingleColumnWidthWidget(options: Bundle): Boolean {
+            val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
+            return minWidth in 1..180
+        }
+
+        private fun isTinyWidget(options: Bundle): Boolean {
+            val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
+            val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
+            return minWidth in 1..180 && minHeight in 1..180
+        }
+
         private fun formatRemaining(remainingMillis: Long): String {
             if (remainingMillis <= 0L) return "Şimdi"
 
@@ -249,6 +314,18 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
                 days > 0 -> "${days}g ${hours}s ${minutes}dk"
                 hours > 0 -> "${hours}s ${minutes}dk"
                 else -> "${minutes}dk"
+            }
+        }
+
+        private fun formatRemainingLabel(displayName: String): String {
+            return when (displayName) {
+                "İmsak" -> "İmsaka kalan"
+                "Güneş" -> "Güneşe kalan"
+                "Öğle" -> "Öğleye kalan"
+                "İkindi" -> "İkindiye kalan"
+                "Akşam" -> "Akşama kalan"
+                "Yatsı" -> "Yatsıya kalan"
+                else -> "$displayName kalan"
             }
         }
 

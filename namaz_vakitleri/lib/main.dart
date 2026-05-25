@@ -112,13 +112,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    if (!_isInitialized) {
-      return const MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: SplashScreen(),
-      );
-    }
-
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: _appSettings),
@@ -154,7 +147,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             theme: _buildLightTheme(),
             darkTheme: _buildDarkTheme(),
             themeMode: appSettings.themeMode,
-            home: const MainNavigationScreen(),
+            home: _isInitialized
+                ? const MainNavigationScreen()
+                : const SplashScreen(),
           );
         },
       ),

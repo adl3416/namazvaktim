@@ -81,7 +81,7 @@ class HomeScreen extends StatelessWidget {
                       ),
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(10, 8, 10, 24),
+                          padding: const EdgeInsets.fromLTRB(0, 4, 0, 14),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -98,13 +98,13 @@ class HomeScreen extends StatelessWidget {
                                 totalCount: prayerTimes.length,
                                 activePrayerName: prayerProvider.activePrayer?.name,
                               ),
-                              const SizedBox(height: 18),
+                              const SizedBox(height: 6),
                             ],
                           ),
                         ),
                       ),
                       SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(10, 0, 10, 28),
+                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 20),
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate((context, index) {
                             final prayer = prayerTimes[index];
@@ -113,7 +113,7 @@ class HomeScreen extends StatelessWidget {
                             final isNext =
                                 prayerProvider.nextPrayer?.name == prayer.name;
                             return Padding(
-                              padding: const EdgeInsets.only(bottom: 14),
+                              padding: const EdgeInsets.only(bottom: 3),
                               child: _LocalizedPrayerTile(
                                 prayer: prayer,
                                 label: AppLocalizations.prayerName(
@@ -404,9 +404,12 @@ class _HeroCountdownCard extends StatelessWidget {
     final seconds = (countdown?.inSeconds ?? 0) % 60;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(30),
+          bottomRight: Radius.circular(30),
+        ),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -416,13 +419,7 @@ class _HeroCountdownCard extends StatelessWidget {
             scheme.tertiary,
           ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: scheme.primary.withOpacity(0.38),
-            blurRadius: 32,
-            offset: const Offset(0, 18),
-          ),
-        ],
+        boxShadow: [],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -1037,12 +1034,12 @@ class _PrayerTile extends StatelessWidget {
                 : _slotLabel(prayer.time);
 
     return Container(
-      padding: const EdgeInsets.all(11),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: isActive
             ? scheme.surfaceStrong
             : Colors.white.withOpacity(isCompleted ? 0.58 : 0.76),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isActive
               ? scheme.primary.withOpacity(0.55)
@@ -1176,12 +1173,12 @@ class _LocalizedPrayerTile extends StatelessWidget {
                 : _localizedSlotLabel(prayer.time, locale);
 
     return Container(
-      padding: const EdgeInsets.all(11),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: isActive
             ? scheme.surfaceStrong
             : Colors.white.withOpacity(isCompleted ? 0.58 : 0.76),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: isActive
               ? scheme.primary.withOpacity(0.55)

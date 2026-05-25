@@ -25,10 +25,16 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
   static const _hapticModeKey = 'zikirmatik_haptic_mode';
   static const _currentZikirKey = 'zikirmatik_current_zikir';
   static const _savedZikirListKey = 'zikirmatik_saved_zikir_list';
+  static const _defaultZikirler = [
+    _SavedZikir(name: 'Subhanallah', target: 33),
+    _SavedZikir(name: 'Elhamdulillah', target: 33),
+    _SavedZikir(name: 'Allahu Ekber', target: 33),
+  ];
 
   int _count = 0;
   int _target = 33;
   bool _isLoading = true;
+  bool _isSavedZikirExpanded = false;
   _ZikirHapticMode _hapticMode = _ZikirHapticMode.everyTap;
   final TextEditingController _zikirController = TextEditingController();
   final TextEditingController _zikirTargetController = TextEditingController(
@@ -36,11 +42,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
   );
   late final AnimationController _tapPulseController;
   String _currentZikir = 'Subhanallah';
-  List<_SavedZikir> _savedZikirler = const [
-    _SavedZikir(name: 'Subhanallah', target: 33),
-    _SavedZikir(name: 'Elhamdulillah', target: 33),
-    _SavedZikir(name: 'Allahu Ekber', target: 33),
-  ];
+  List<_SavedZikir> _savedZikirler = _defaultZikirler;
 
   @override
   void initState() {
@@ -111,7 +113,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
       _hapticMode = _ZikirHapticMode.values.byName(
         prefs.getString(_hapticModeKey) ?? _ZikirHapticMode.everyTap.name,
       );
-      _currentZikir = currentZikir;
+      _currentZikir = active.name;
       _savedZikirler = saved;
       _zikirTargetController.text = _target.toString();
       _isLoading = false;
@@ -216,6 +218,52 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
     await _saveState();
   }
 
+  bool _isDefaultZikir(String zikir) {
+    return _defaultZikirler.any(
+      (item) => item.name.toLowerCase() == zikir.toLowerCase(),
+    );
+  }
+
+  Future<void> _removeZikir(String zikir) async {
+    if (_isDefaultZikir(zikir)) return;
+
+    final updated = _savedZikirler.where((item) => item.name != zikir).toList();
+    if (updated.isEmpty) return;
+
+    final nextSelected = updated.firstWhere(
+      (item) => item.name == _currentZikir,
+      orElse: () => updated.first,
+    );
+
+    setState(() {
+      _savedZikirler = updated;
+      _currentZikir = nextSelected.name;
+      _target = nextSelected.target;
+      if (_count > _target) {
+        _count = 0;
+      }
+      _zikirTargetController.text = _target.toString();
+    });
+
+    await _saveState();
+  }
+
+  void _toggleSavedZikirExpanded() {
+    setState(() {
+      _isSavedZikirExpanded = !_isSavedZikirExpanded;
+    });
+  }
+
+  void _dismissSettingsSheetIfDraggedDown(
+    BuildContext context,
+    DragEndDetails details,
+  ) {
+    final velocity = details.primaryVelocity ?? 0;
+    if (velocity > 250) {
+      Navigator.of(context).maybePop();
+    }
+  }
+
   Future<void> _triggerHapticIfNeeded(int nextCount) async {
     switch (_hapticMode) {
       case _ZikirHapticMode.off:
@@ -255,11 +303,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
 
   List<_SavedZikir> _decodeSavedZikirler(List<String>? rawList) {
     if (rawList == null || rawList.isEmpty) {
-      return const [
-        _SavedZikir(name: 'Subhanallah', target: 33),
-        _SavedZikir(name: 'Elhamdulillah', target: 33),
-        _SavedZikir(name: 'Allahu Ekber', target: 33),
-      ];
+      return _defaultZikirler;
     }
 
     final parsed = <_SavedZikir>[];
@@ -275,13 +319,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
       }
     }
 
-    return parsed.isEmpty
-        ? const [
-            _SavedZikir(name: 'Subhanallah', target: 33),
-            _SavedZikir(name: 'Elhamdulillah', target: 33),
-            _SavedZikir(name: 'Allahu Ekber', target: 33),
-          ]
-        : parsed;
+    return parsed.isEmpty ? _defaultZikirler : parsed;
   }
 
   Future<void> _showSettingsSheet({
@@ -296,6 +334,8 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      enableDrag: true,
+      isDismissible: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
         final bottomInset = MediaQuery.of(context).viewInsets.bottom;
@@ -337,6 +377,15 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onVerticalDragEnd: (details) =>
+                            _dismissSettingsSheetIfDraggedDown(
+                          context,
+                          details,
+                        ),
+                        child: Column(
+                          children: [
                       Center(
                         child: Container(
                           width: 44,
@@ -345,6 +394,9 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                             color: textPrimary.withOpacity(0.18),
                             borderRadius: BorderRadius.circular(999),
                           ),
+                        ),
+                      ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 18),
@@ -633,6 +685,65 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                               ),
                             ),
                             const SizedBox(height: 14),
+                            InkWell(
+                              borderRadius: BorderRadius.circular(18),
+                              onTap: () => refreshSheet(() async {
+                                _toggleSavedZikirExpanded();
+                              }, setSheetState),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: accentSoft.withOpacity(0.55),
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _text(
+                                              language,
+                                              tr: 'Kayitli zikirler',
+                                              en: 'Saved dhikr',
+                                              ar: 'الاذكار المحفوظة',
+                                            ),
+                                            style: TextStyle(
+                                              color: textPrimary,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${_savedZikirler.length}',
+                                            style: TextStyle(
+                                              color:
+                                                  textPrimary.withOpacity(0.65),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    AnimatedRotation(
+                                      turns: _isSavedZikirExpanded ? 0.5 : 0,
+                                      duration:
+                                          const Duration(milliseconds: 180),
+                                      child: Icon(
+                                        Icons.keyboard_arrow_down_rounded,
+                                        color: textPrimary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            if (_isSavedZikirExpanded)
                             Container(
                               width: double.infinity,
                               padding: const EdgeInsets.all(14),
@@ -646,12 +757,27 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                                 children: _savedZikirler.map((zikir) {
                                   final isSelected =
                                       zikir.name == _currentZikir;
-                                  return ChoiceChip(
+                                  return InputChip(
                                     label: Text('${zikir.name} • ${zikir.target}'),
                                     selected: isSelected,
                                     onSelected: (_) => refreshSheet(
                                       () => _selectZikir(zikir.name),
                                       setSheetState,
+                                    ),
+                                    onDeleted: _isDefaultZikir(zikir.name)
+                                        ? null
+                                        : () => refreshSheet(
+                                            () => _removeZikir(zikir.name),
+                                            setSheetState,
+                                          ),
+                                    deleteIcon: Icon(
+                                      Icons.close_rounded,
+                                      size: 18,
+                                      color: isSelected
+                                          ? (isDark
+                                              ? AppColors.darkBg
+                                              : Colors.white)
+                                          : textPrimary.withOpacity(0.75),
                                     ),
                                     selectedColor: accent,
                                     backgroundColor: Colors.white.withOpacity(

@@ -77,13 +77,13 @@ class SettingsScreen extends StatelessWidget {
             ),
             child: SafeArea(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+                padding: const EdgeInsets.fromLTRB(0, 16, 0, 28),
                 children: [
                   _SettingsHero(
                     title: AppLocalizations.translate('settings', locale),
                     isDark: isDark,
                   ),
-                  const SizedBox(height: 22),
+                  const SizedBox(height: 18),
                   _SettingsTile(
                     icon: Icons.location_on_rounded,
                     iconColor: const Color(0xFF2563EB),
@@ -183,14 +183,14 @@ class SettingsScreen extends StatelessWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.all(18),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: isDark
                           ? AppColors.darkBgSecondary.withOpacity(0.92)
                           : Colors.white.withOpacity(0.78),
-                      borderRadius: BorderRadius.circular(28),
+                      borderRadius: BorderRadius.circular(24),
                       border: Border.all(
                         color: isDark
                             ? Colors.white.withOpacity(0.08)
@@ -199,7 +199,7 @@ class SettingsScreen extends StatelessWidget {
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(isDark ? 0.22 : 0.05),
-                          blurRadius: 16,
+                          blurRadius: 18,
                           offset: const Offset(0, 8),
                         ),
                       ],
@@ -282,20 +282,20 @@ class _SettingsTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 6),
       child: Material(
         color: isDark
             ? AppColors.darkBgSecondary.withOpacity(0.92)
             : Colors.white.withOpacity(0.84),
-        borderRadius: BorderRadius.circular(30),
+        borderRadius: BorderRadius.circular(14),
         child: InkWell(
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(14),
           onTap: onTap,
           child: Container(
-            constraints: const BoxConstraints(minHeight: 78),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            constraints: const BoxConstraints(minHeight: 72),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(30),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: isDark
                     ? Colors.white.withOpacity(0.08)
@@ -303,24 +303,24 @@ class _SettingsTile extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.22 : 0.10),
-                  blurRadius: 22,
-                  offset: const Offset(0, 10),
+                  color: Colors.black.withOpacity(isDark ? 0.20 : 0.07),
+                  blurRadius: 13,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
             child: Row(
               children: [
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: iconColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: iconColor, size: 21),
+                  child: Icon(icon, color: iconColor, size: 19),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -347,17 +347,17 @@ class _SettingsTile extends StatelessWidget {
                           color: isDark
                               ? AppColors.darkTextSecondary
                               : Color(0xFF655B51),
-                          fontSize: 13,
-                          height: 1.4,
+                          fontSize: 11,
+                          height: 1.25,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Icon(
                   Icons.arrow_forward_ios_rounded,
-                  size: 16,
+                  size: 14,
                   color: isDark
                       ? AppColors.darkTextLight
                       : Color(0xFF8A7B6A),
@@ -382,7 +382,7 @@ class _SettingsHero extends StatelessWidget {
     return Container(
       height: 300,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(34),
+        borderRadius: BorderRadius.circular(26),
         border: Border.all(
           color: isDark
               ? Colors.white.withOpacity(0.08)
@@ -395,7 +395,7 @@ class _SettingsHero extends StatelessWidget {
         ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(34),
+        borderRadius: BorderRadius.circular(26),
         child: Stack(
           children: [
             Container(

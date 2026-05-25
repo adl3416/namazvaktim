@@ -83,7 +83,7 @@ class SettingsScreen extends StatelessWidget {
                     title: AppLocalizations.translate('settings', locale),
                     isDark: isDark,
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 8),
                   _SettingsTile(
                     icon: Icons.location_on_rounded,
                     iconColor: const Color(0xFF2563EB),
@@ -183,7 +183,7 @@ class SettingsScreen extends StatelessWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
@@ -282,20 +282,20 @@ class _SettingsTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 2),
       child: Material(
         color: isDark
             ? AppColors.darkBgSecondary.withOpacity(0.92)
             : Colors.white.withOpacity(0.84),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(14),
         child: InkWell(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(14),
           onTap: onTap,
           child: Container(
-            constraints: const BoxConstraints(minHeight: 78),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            constraints: const BoxConstraints(minHeight: 72),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
                 color: isDark
                     ? Colors.white.withOpacity(0.08)
@@ -303,24 +303,24 @@ class _SettingsTile extends StatelessWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.20 : 0.07),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
+                  color: Colors.black.withOpacity(isDark ? 0.20 : 0.08),
+                  blurRadius: 13,
+                  offset: const Offset(0, 8),
                 ),
               ],
             ),
             child: Row(
               children: [
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: iconColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, color: iconColor, size: 21),
+                  child: Icon(icon, color: iconColor, size: 19),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -328,7 +328,7 @@ class _SettingsTile extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 16,
@@ -341,23 +341,23 @@ class _SettingsTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: isDark
                               ? AppColors.darkTextSecondary
                               : Color(0xFF655B51),
-                          fontSize: 13,
-                          height: 1.4,
+                          fontSize: 11,
+                          height: 1.2,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Icon(
                   Icons.arrow_forward_ios_rounded,
-                  size: 16,
+                  size: 14,
                   color: isDark
                       ? AppColors.darkTextLight
                       : Color(0xFF8A7B6A),

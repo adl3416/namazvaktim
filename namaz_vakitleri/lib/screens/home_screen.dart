@@ -81,7 +81,7 @@ class HomeScreen extends StatelessWidget {
                       ),
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(0, 4, 0, 14),
+                          padding: const EdgeInsets.fromLTRB(0, 0, 0, 14),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -328,7 +328,7 @@ class _StickyTopHeaderDelegate extends SliverPersistentHeaderDelegate {
         20,
         compact ? 2 : 4,
         20,
-        compact ? 2 : 4,
+        0,
       ),
       decoration: BoxDecoration(
         gradient: LinearGradient(

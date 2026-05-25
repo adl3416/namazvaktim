@@ -25,6 +25,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
   static const _hapticModeKey = 'zikirmatik_haptic_mode';
   static const _currentZikirKey = 'zikirmatik_current_zikir';
   static const _savedZikirListKey = 'zikirmatik_saved_zikir_list';
+  static const _zikirCountsKey = 'zikirmatik_zikir_counts';
   static const _defaultZikirler = [
     _SavedZikir(name: 'Subhanallah', target: 33),
     _SavedZikir(name: 'Elhamdulillah', target: 33),
@@ -43,6 +44,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
   late final AnimationController _tapPulseController;
   String _currentZikir = 'Subhanallah';
   List<_SavedZikir> _savedZikirler = _defaultZikirler;
+  Map<String, int> _zikirCounts = const {};
 
   @override
   void initState() {
@@ -102,13 +104,15 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
 
     final saved = _decodeSavedZikirler(prefs.getStringList(_savedZikirListKey));
     final currentZikir = prefs.getString(_currentZikirKey) ?? 'Subhanallah';
+    final zikirCounts = _decodeZikirCounts(prefs.getString(_zikirCountsKey));
     final active = saved.firstWhere(
       (item) => item.name == currentZikir,
       orElse: () => saved.first,
     );
 
     setState(() {
-      _count = prefs.getInt(_countKey) ?? 0;
+      _zikirCounts = zikirCounts;
+      _count = zikirCounts[active.name] ?? prefs.getInt(_countKey) ?? 0;
       _target = prefs.getInt(_targetKey) ?? active.target;
       _hapticMode = _ZikirHapticMode.values.byName(
         prefs.getString(_hapticModeKey) ?? _ZikirHapticMode.everyTap.name,
@@ -122,10 +126,13 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
 
   Future<void> _saveState() async {
     final prefs = await SharedPreferences.getInstance();
+    final counts = Map<String, int>.from(_zikirCounts);
+    counts[_currentZikir] = _count;
     await prefs.setInt(_countKey, _count);
     await prefs.setInt(_targetKey, _target);
     await prefs.setString(_hapticModeKey, _hapticMode.name);
     await prefs.setString(_currentZikirKey, _currentZikir);
+    await prefs.setString(_zikirCountsKey, jsonEncode(counts));
     await prefs.setStringList(
       _savedZikirListKey,
       _savedZikirler.map((item) => jsonEncode(item.toJson())).toList(),
@@ -137,6 +144,10 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
     _tapPulseController.forward(from: 0);
     setState(() {
       _count = nextCount;
+      _zikirCounts = {
+        ..._zikirCounts,
+        _currentZikir: nextCount,
+      };
     });
     await _triggerHapticIfNeeded(nextCount);
     await _saveState();
@@ -145,6 +156,10 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
   Future<void> _reset() async {
     setState(() {
       _count = 0;
+      _zikirCounts = {
+        ..._zikirCounts,
+        _currentZikir: 0,
+      };
     });
     await _saveState();
   }
@@ -195,6 +210,10 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
       _currentZikir = raw;
       _target = target;
       _count = 0;
+      _zikirCounts = {
+        ..._zikirCounts,
+        raw: _zikirCounts[raw] ?? 0,
+      };
       _zikirController.clear();
       _zikirTargetController.text = target.toString();
     });
@@ -210,8 +229,13 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
     setState(() {
       _currentZikir = selected.name;
       _target = selected.target;
+      _count = _zikirCounts[selected.name] ?? 0;
       if (_count > _target) {
         _count = 0;
+        _zikirCounts = {
+          ..._zikirCounts,
+          selected.name: 0,
+        };
       }
       _zikirTargetController.text = selected.target.toString();
     });
@@ -239,8 +263,14 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
       _savedZikirler = updated;
       _currentZikir = nextSelected.name;
       _target = nextSelected.target;
+      _zikirCounts = Map<String, int>.from(_zikirCounts)..remove(zikir);
+      _count = _zikirCounts[nextSelected.name] ?? 0;
       if (_count > _target) {
         _count = 0;
+        _zikirCounts = {
+          ..._zikirCounts,
+          nextSelected.name: 0,
+        };
       }
       _zikirTargetController.text = _target.toString();
     });
@@ -320,6 +350,24 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
     }
 
     return parsed.isEmpty ? _defaultZikirler : parsed;
+  }
+
+  Map<String, int> _decodeZikirCounts(String? raw) {
+    if (raw == null || raw.isEmpty) return const {};
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return const {};
+
+      final counts = <String, int>{};
+      for (final entry in decoded.entries) {
+        counts[entry.key.toString()] =
+            int.tryParse(entry.value?.toString() ?? '') ?? 0;
+      }
+      return counts;
+    } catch (_) {
+      return const {};
+    }
   }
 
   Future<void> _showSettingsSheet({

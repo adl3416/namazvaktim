@@ -297,14 +297,16 @@ button:hover {
 }
 
 .phone-stack {
-  position: relative;
-  min-height: 640px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
 }
 
 .phone-frame {
-  position: absolute;
+  position: relative;
   margin: 0;
-  width: 58%;
+  width: 100%;
   padding: 14px 14px 18px;
   border-radius: 34px;
   background:
@@ -342,16 +344,23 @@ button:hover {
   text-align: center;
 }
 
-.phone-frame--main {
-  top: 0;
-  left: 0;
-  transform: rotate(-6deg);
+.phone-frame--primary {
+  transform: rotate(-4deg);
 }
 
-.phone-frame--offset {
-  right: 0;
-  bottom: 0;
-  transform: rotate(8deg);
+.phone-frame--secondary {
+  margin-top: 56px;
+  transform: rotate(5deg);
+}
+
+.phone-frame--tertiary {
+  margin-top: -26px;
+  transform: rotate(3deg);
+}
+
+.phone-frame--quaternary {
+  margin-top: 24px;
+  transform: rotate(-5deg);
 }
 
 .mini-card {
@@ -799,11 +808,7 @@ button:hover {
   }
 
   .phone-stack {
-    min-height: 680px;
-  }
-
-  .phone-frame {
-    width: 54%;
+    gap: 16px;
   }
 }
 
@@ -838,24 +843,21 @@ button:hover {
   }
 
   .phone-stack {
-    min-height: auto;
     display: grid;
+    grid-template-columns: 1fr;
     gap: 18px;
   }
 
   .phone-frame {
-    position: relative;
-    width: 100%;
     max-width: 320px;
     margin: 0 auto;
   }
 
-  .phone-frame--main,
-  .phone-frame--offset {
-    top: auto;
-    right: auto;
-    bottom: auto;
-    left: auto;
+  .phone-frame--primary,
+  .phone-frame--secondary,
+  .phone-frame--tertiary,
+  .phone-frame--quaternary {
+    margin-top: 0;
     transform: none;
   }
 

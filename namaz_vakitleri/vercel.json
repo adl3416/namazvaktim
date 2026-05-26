@@ -2,6 +2,10 @@
   "cleanUrls": true,
   "routes": [
     {
+      "src": "/(.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js))",
+      "dest": "/$1"
+    },
+    {
       "handle": "filesystem"
     },
     {

@@ -196,7 +196,7 @@ class NotificationService {
               title: const Text('Zamanlı Bildirim İzni'),
               content: const Text(
                 'Namaz vakitlerinde bildirim gelebilmesi için "Kesin Alarmlar" iznini açmanız gerekiyor.\n\n'
-                'Açılacak ekranda "Namaz Vaktim" uygulamasını bulup izni açın.',
+                'Açılacak ekranda "Ezanlar" uygulamasını bulup izni açın.',
               ),
               actions: [
                 TextButton(

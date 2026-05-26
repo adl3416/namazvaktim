@@ -115,9 +115,9 @@ class _SplashScreenState extends State<SplashScreen>
                         Text(
                           _text(
                             locale,
-                            tr: 'Namaz Vakitleri',
-                            en: 'Prayer Times',
-                            ar: 'مواقيت الصلاة',
+                            tr: 'Ezanlar',
+                            en: 'Ezanlar',
+                            ar: 'Ezanlar',
                           ),
                           textAlign: TextAlign.center,
                           style: const TextStyle(

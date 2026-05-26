@@ -5,7 +5,7 @@ class AppLocalizations {
 
   static const Map<String, Map<String, String>> translations = {
     'tr': {
-      'app_title': 'Namaz Vakitleri',
+      'app_title': 'Ezanlar',
       'fajr': 'İmsak',
       'sunrise': 'Güneş',
       'dhuhr': 'Öğle',
@@ -54,7 +54,7 @@ class AppLocalizations {
       'go_to_settings': 'Ayarlara Git',
     },
     'en': {
-      'app_title': 'Prayer Times',
+      'app_title': 'Ezanlar',
       'fajr': 'Fajr',
       'sunrise': 'Sunrise',
       'dhuhr': 'Dhuhr',
@@ -103,7 +103,7 @@ class AppLocalizations {
       'go_to_settings': 'Go to Settings',
     },
     'ar': {
-      'app_title': 'مواقيت الصلاة',
+      'app_title': 'Ezanlar',
       'fajr': 'الفجر',
       'sunrise': 'الشروق',
       'dhuhr': 'الظهر',

@@ -11,7 +11,7 @@ class SupportLegalScreen extends StatelessWidget {
   static final Uri _supportEmailUri = Uri(
     scheme: 'mailto',
     path: 'software19951995@gmail.com',
-    query: 'subject=Namaz Vakitim Destek',
+    query: 'subject=Ezanlar Destek',
   );
 
   String _text({

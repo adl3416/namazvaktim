@@ -1,4 +1,4 @@
-package com.vakit.app.namaz_vakitleri
+package com.vakit.app.ezanlar
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -73,7 +73,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
         private const val KEY_ACTIVE_PRAYER_NAME = "active_prayer_name"
         private const val KEY_PRAYERS_JSON = "prayers_json"
         private const val ACTION_WIDGET_MINUTE_UPDATE =
-            "com.vakit.app.namaz_vakitleri.ACTION_WIDGET_MINUTE_UPDATE"
+            "com.vakit.app.ezanlar.ACTION_WIDGET_MINUTE_UPDATE"
 
         fun updateAllWidgets(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
@@ -91,7 +91,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             appWidgetId: Int
         ) {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val city = prefs.getString(KEY_CITY, "Namaz Vaktim") ?: "Namaz Vaktim"
+            val city = prefs.getString(KEY_CITY, "Ezanlar") ?: "Ezanlar"
             val dateLabel = prefs.getString(KEY_DATE_LABEL, formatToday()) ?: formatToday()
             val storedActivePrayerName = prefs.getString(KEY_ACTIVE_PRAYER_NAME, null)
             val prayersJson = prefs.getString(KEY_PRAYERS_JSON, "[]") ?: "[]"

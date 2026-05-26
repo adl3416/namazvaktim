@@ -195,9 +195,9 @@ class _NotificationSettingsScreenState
                   Text(
                     _text(
                       language,
-                      tr: 'Namaz Vakitleri',
-                      en: 'Prayer Times',
-                      ar: 'مواقيت الصلاة',
+                      tr: 'Ezanlar',
+                      en: 'Ezanlar',
+                      ar: 'Ezanlar',
                     ),
                     style: AppTypography.h2.copyWith(
                       color: isDark ? Colors.white : Colors.black87,

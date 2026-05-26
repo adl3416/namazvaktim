@@ -19,7 +19,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <application
-        android:label="Namaz Vaktim"
+        android:label="Ezanlar"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon"
         android:enableOnBackInvokedCallback="true"
@@ -69,7 +69,7 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.vakit.app.namaz_vakitleri.ACTION_WIDGET_MINUTE_UPDATE" />
+                <action android:name="com.vakit.app.ezanlar.ACTION_WIDGET_MINUTE_UPDATE" />
                 <action android:name="android.intent.action.TIME_SET" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
                 <action android:name="android.intent.action.DATE_CHANGED" />

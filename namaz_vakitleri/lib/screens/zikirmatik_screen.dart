@@ -18,7 +18,7 @@ class ZikirmatikScreen extends StatefulWidget {
 class _ZikirmatikScreenState extends State<ZikirmatikScreen>
     with SingleTickerProviderStateMixin {
   static const _hapticChannel = MethodChannel(
-    'com.vakit.app.namaz_vakitleri/haptics',
+    'com.vakit.app.ezanlar/haptics',
   );
   static const _countKey = 'zikirmatik_count';
   static const _targetKey = 'zikirmatik_target';

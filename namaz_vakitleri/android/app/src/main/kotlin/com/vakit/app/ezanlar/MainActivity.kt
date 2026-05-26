@@ -1,4 +1,4 @@
-package com.vakit.app.namaz_vakitleri
+package com.vakit.app.ezanlar
 
 import android.content.Context
 import android.media.AudioManager
@@ -14,9 +14,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 class MainActivity : FlutterActivity() {
-    private val adhanChannel = "com.vakit.app.namaz_vakitleri/adhan"
-    private val widgetChannel = "com.vakit.app.namaz_vakitleri/widget"
-    private val hapticChannel = "com.vakit.app.namaz_vakitleri/haptics"
+    private val adhanChannel = "com.vakit.app.ezanlar/adhan"
+    private val widgetChannel = "com.vakit.app.ezanlar/widget"
+    private val hapticChannel = "com.vakit.app.ezanlar/haptics"
     private var currentlyPlayingAdhan = false
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -101,7 +101,7 @@ class MainActivity : FlutterActivity() {
         }
 
         prefs.edit()
-            .putString("city", arguments["city"]?.toString() ?: "Namaz Vaktim")
+            .putString("city", arguments["city"]?.toString() ?: "Ezanlar")
             .putString("date_label", arguments["dateLabel"]?.toString() ?: "")
             .putString("active_prayer_name", arguments["activePrayerName"]?.toString() ?: "")
             .putString("prayers_json", prayersJson.toString())

@@ -4,7 +4,7 @@ import '../models/prayer_model.dart';
 
 class HomeWidgetService {
   static const MethodChannel _channel = MethodChannel(
-    'com.vakit.app.namaz_vakitleri/widget',
+    'com.vakit.app.ezanlar/widget',
   );
 
   static Future<void> syncPrayerTimes({

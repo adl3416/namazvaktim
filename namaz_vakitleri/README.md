@@ -1,4 +1,4 @@
-# Namaz Vakitleri - Flutter Prayer Times App
+# Ezanlar - Flutter Prayer Times App
 
 A beautiful, modern Flutter application for displaying Islamic prayer times with a soft pastel design aesthetic.
 

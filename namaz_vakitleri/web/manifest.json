@@ -1,11 +1,11 @@
 {
-    "name": "namaz_vakitleri",
-    "short_name": "namaz_vakitleri",
+    "name": "Ezanlar",
+    "short_name": "Ezanlar",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#2196F3",
     "theme_color": "#2196F3",
-    "description": "A new Flutter project.",
+    "description": "Ezanlar namaz vakitleri, kıble ve bildirim deneyimi.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

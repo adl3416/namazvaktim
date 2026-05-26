@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.vakit.app" "\0"
-            VALUE "FileDescription", "namaz_vakitleri" "\0"
+            VALUE "FileDescription", "Ezanlar" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "namaz_vakitleri" "\0"
+            VALUE "InternalName", "Ezanlar" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.vakit.app. All rights reserved." "\0"
-            VALUE "OriginalFilename", "namaz_vakitleri.exe" "\0"
-            VALUE "ProductName", "namaz_vakitleri" "\0"
+            VALUE "OriginalFilename", "Ezanlar.exe" "\0"
+            VALUE "ProductName", "Ezanlar" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

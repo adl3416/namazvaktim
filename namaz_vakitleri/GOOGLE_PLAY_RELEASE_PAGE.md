@@ -1,13 +1,14 @@
 # Google Play Yayın Sayfası
 
-Son güncelleme: 24 Mayıs 2026
+Son güncelleme: 26 Mayıs 2026
 
-Bu dosya, `Namaz Vaktim` uygulamasını Google Play'de yayınlamak için gereken temel bilgileri tek yerde toplar.
+Bu dosya, `Ezanlar` uygulamasını Google Play'de yayınlamak için gereken temel bilgileri tek yerde toplar.
 
 ## 1. Uygulama Kimliği
 
-- Uygulama adı: `Namaz Vaktim`
-- Paket adı: `com.vakit.app.namaz_vakitleri`
+- Uygulama içi marka adı: `Ezanlar`
+- Google Play adı: `Ezanlar – Namaz Vakitleri`
+- Paket adı: `com.vakit.app.ezanlar`
 - Sürüm adı: `1.0.0`
 - Sürüm kodu: `1`
 - Varsayılan dil: `Türkçe`
@@ -30,7 +31,7 @@ Kaynak:
 ### 2.1 Uygulama Adı
 
 ```text
-Namaz Vaktim
+Ezanlar – Namaz Vakitleri
 ```
 
 ### 2.2 Kısa Açıklama
@@ -42,7 +43,7 @@ Namaz vakitleri, ezan, kıble, yakın camiler ve zikirmatik tek uygulamada.
 ### 2.3 Tam Açıklama
 
 ```text
-Namaz Vaktim, günlük ibadet düzenini kolaylaştırmak için hazırlanmış pratik bir yardımcı uygulamadır.
+Ezanlar, günlük ibadet düzenini kolaylaştırmak için hazırlanmış pratik bir yardımcı uygulamadır.
 
 Uygulama ile bulunduğunuz şehir veya seçtiğiniz konuma göre namaz vakitlerini takip edebilir, ezan ve hatırlatma bildirimlerini yönetebilir, kıble yönünü görebilir ve yakındaki camileri harita üzerinde inceleyebilirsiniz.
 
@@ -83,7 +84,7 @@ Bu bölüm Play Console içindeki `App content` alanı için hazırlanmıştır.
 ### 4.1 Privacy Policy
 
 Gerekli:
-- Her uygulama için herkese açık bir gizlilik politikası URL’si
+- Her uygulama için herkese açık bir gizlilik politikası URL'si
 - PDF olmamalı
 - Aktif, herkese açık, coğrafi engelli olmayan bir URL olmalı
 - Uygulama adı veya geliştirici adı politikada görünmeli
@@ -114,8 +115,8 @@ Gerekçe:
 - Bu nedenle konum verisini `not collected` veya `not shared` olarak işaretlemek risklidir.
 
 Önemli not:
-- Bu uygulamada kullanıcı hesabı, reklam SDK’sı veya analitik için açık bir yapı görünmüyor.
-- Yine de Data safety formunu doldurmadan önce son release bundle içindeki tüm SDK’ları ayrıca kontrol edin.
+- Bu uygulamada kullanıcı hesabı, reklam SDK'sı veya analitik için açık bir yapı görünmüyor.
+- Yine de Data safety formunu doldurmadan önce son release bundle içindeki tüm SDK'ları ayrıca kontrol edin.
 
 Kaynak:
 - https://support.google.com/googleplay/android-developer/answer/10787469?hl=en
@@ -255,7 +256,7 @@ Kaynak:
 
 ## 7. Destek ve Geliştirici Bilgileri
 
-Play Console’da doldurulacak:
+Play Console'da doldurulacak:
 
 - Contact email: `software19951995@gmail.com`
 - Website: `varsa ekleyin`
@@ -270,7 +271,7 @@ Kaynak:
 
 ## 8. Yeni Kişisel Geliştirici Hesabı Notu
 
-Eğer geliştirici hesabınız kişisel hesap olarak yeni açıldıysa, production’a geçmeden önce Google Play bazı ek test veya doğrulama adımları isteyebilir.
+Eğer geliştirici hesabınız kişisel hesap olarak yeni açıldıysa, production'a geçmeden önce Google Play bazı ek test veya doğrulama adımları isteyebilir.
 
 Kaynak:
 - https://support.google.com/googleplay/android-developer/answer/9859454?hl=en
@@ -280,11 +281,13 @@ Kaynak:
 
 Yayınlamadan önce tek tek işaretleyin:
 
-- [ ] Uygulama adı `Namaz Vaktim`
+- [ ] Uygulama içi ad `Ezanlar`
+- [ ] Google Play adı `Ezanlar – Namaz Vakitleri`
+- [ ] Paket adı `com.vakit.app.ezanlar`
 - [ ] Kısa açıklama girildi
 - [ ] Tam açıklama girildi
 - [ ] İletişim e-postası `software19951995@gmail.com`
-- [ ] Gizlilik politikası web URL’si eklendi
+- [ ] Gizlilik politikası web URL'si eklendi
 - [ ] En az 2 ekran görüntüsü yüklendi
 - [ ] Feature graphic hazırlandı
 - [ ] İçerik derecelendirme anketi tamamlandı
@@ -301,3 +304,4 @@ Yayınlamadan önce tek tek işaretleyin:
 - [support_legal_screen.dart](C:/Users/Lenovo/Desktop/Neuer%20Ordner/namzappleri/namazvaktim/namaz_vakitleri/lib/screens/support_legal_screen.dart)
 - [settings_screen.dart](C:/Users/Lenovo/Desktop/Neuer%20Ordner/namzappleri/namazvaktim/namaz_vakitleri/lib/screens/settings_screen.dart)
 - [AndroidManifest.xml](C:/Users/Lenovo/Desktop/Neuer%20Ordner/namzappleri/namazvaktim/namaz_vakitleri/android/app/src/main/AndroidManifest.xml)
+- [build.gradle.kts](C:/Users/Lenovo/Desktop/Neuer%20Ordner/namzappleri/namazvaktim/namaz_vakitleri/android/app/build.gradle.kts)

@@ -56,7 +56,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   void _setupMethodChannels() {
-    const platform = MethodChannel('com.vakit.app.namaz_vakitleri/adhan');
+    const platform = MethodChannel('com.vakit.app.ezanlar/adhan');
 
     platform.setMethodCallHandler((call) async {
       if (call.method == 'stopAdhan') {
@@ -121,7 +121,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         builder: (context, appSettings, child) {
           return MaterialApp(
             navigatorKey: navigatorKey,
-            title: 'Namaz Vakitleri',
+            title: 'Ezanlar',
             debugShowCheckedModeBanner: false,
             locale: Locale(appSettings.language),
             supportedLocales: const [

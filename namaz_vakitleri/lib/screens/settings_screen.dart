@@ -223,7 +223,7 @@ class SettingsScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Namaz Vakitim',
+                                'Ezanlar',
                                 style: TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.w800,

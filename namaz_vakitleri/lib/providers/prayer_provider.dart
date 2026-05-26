@@ -604,7 +604,7 @@ class PrayerProvider extends ChangeNotifier {
       // Notify Android that adhan is starting (for volume button monitoring).
       // Wrapped in try-catch: if the native channel is unavailable, audio still plays.
       try {
-        const platform = MethodChannel('com.vakit.app.namaz_vakitleri/adhan');
+        const platform = MethodChannel('com.vakit.app.ezanlar/adhan');
         await platform.invokeMethod('startAdhanPlayback');
       } catch (e) {
         print('ℹ️ Native adhan channel unavailable, continuing with audio: $e');
@@ -684,7 +684,7 @@ class PrayerProvider extends ChangeNotifier {
     _currentAdhanVolume = 1.0;
     notifyListeners();
     try {
-      const platform = MethodChannel('com.vakit.app.namaz_vakitleri/adhan');
+      const platform = MethodChannel('com.vakit.app.ezanlar/adhan');
       await platform.invokeMethod('stopAdhanPlayback');
     } catch (e) {
       print('⚠️ Error notifying adhan stop: $e');

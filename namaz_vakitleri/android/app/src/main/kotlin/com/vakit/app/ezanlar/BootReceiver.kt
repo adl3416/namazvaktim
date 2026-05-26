@@ -1,4 +1,4 @@
-package com.vakit.app.namaz_vakitleri
+package com.vakit.app.ezanlar
 
 import android.content.BroadcastReceiver
 import android.content.Context

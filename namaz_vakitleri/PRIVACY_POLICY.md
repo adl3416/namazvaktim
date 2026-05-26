@@ -1,8 +1,8 @@
 # Gizlilik Politikası
 
-Son güncelleme: 24 Mayıs 2026
+Son güncelleme: 26 Mayıs 2026
 
-Bu Gizlilik Politikası, `Namaz Vakitim` mobil uygulamasının kullanıcı verilerini nasıl işlediğini açıklar. Uygulamayı kullanarak bu politikada açıklanan veri işleme çerçevesini kabul etmiş olursunuz.
+Bu Gizlilik Politikası, `Ezanlar` mobil uygulamasının kullanıcı verilerini nasıl işlediğini açıklar. Uygulamayı kullanarak bu politikada açıklanan veri işleme çerçevesini kabul etmiş olursunuz.
 
 ## 1. İletişim
 

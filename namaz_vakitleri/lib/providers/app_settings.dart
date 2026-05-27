@@ -6,30 +6,31 @@ import '../config/localization.dart';
 class AppSettings extends ChangeNotifier {
   late SharedPreferences _prefs;
   bool _initialized = false;
+  static const _languageExplicitlySetKey = 'language_explicitly_set';
 
   // Settings
-  String _language = 'en';
+  String _language = AppLocalizations.getLocale(null);
   ThemeMode _themeMode = ThemeMode.system;
-  bool _enableAdhanSound = true;
-  bool _enablePrayerNotifications = true;
+  bool _enableAdhanSound = false;
+  bool _enablePrayerNotifications = false;
 
   // Prayer-specific notification settings
   Map<String, bool> _prayerNotifications = {
-    'Fajr': true,
+    'Fajr': false,
     'Sunrise': false,
-    'Dhuhr': true,
-    'Asr': true,
-    'Maghrib': true,
-    'Isha': true,
+    'Dhuhr': false,
+    'Asr': false,
+    'Maghrib': false,
+    'Isha': false,
   };
 
   Map<String, bool> _prayerSounds = {
-    'Fajr': true,
+    'Fajr': false,
     'Sunrise': false,
-    'Dhuhr': true,
-    'Asr': true,
-    'Maghrib': true,
-    'Isha': true,
+    'Dhuhr': false,
+    'Asr': false,
+    'Maghrib': false,
+    'Isha': false,
   };
 
   // Minutes before prayer time to fire the notification (5 or 15)
@@ -67,14 +68,22 @@ class AppSettings extends ChangeNotifier {
 
   // Load settings from SharedPreferences
   Future<void> loadSettings() async {
-    _language = _prefs.getString('language') ?? 
-        AppLocalizations.getLocale(null);
+    final languageWasExplicitlySet = _prefs.getBool(_languageExplicitlySetKey) ?? false;
+    final storedLanguage = _prefs.getString('language');
+    final systemLanguage = AppLocalizations.getLocale(null);
+
+    if (languageWasExplicitlySet) {
+      _language = storedLanguage ?? systemLanguage;
+    } else {
+      _language = systemLanguage;
+      await _prefs.setString('language', _language);
+    }
     
     final themeModeString = _prefs.getString('themeMode') ?? 'system';
     _themeMode = _parseThemeMode(themeModeString);
     
-    _enableAdhanSound = _prefs.getBool('enableAdhanSound') ?? true;
-    _enablePrayerNotifications = _prefs.getBool('enablePrayerNotifications') ?? true;
+    _enableAdhanSound = _prefs.getBool('enableAdhanSound') ?? false;
+    _enablePrayerNotifications = _prefs.getBool('enablePrayerNotifications') ?? false;
 
     // Load prayer-specific settings
     final prayerNotificationsRaw = _prefs.getString('prayer_notifications');
@@ -166,6 +175,7 @@ class AppSettings extends ChangeNotifier {
     _language = AppLocalizations.getLocale(language);
     if (_initialized) {
       await _prefs.setString('language', _language);
+      await _prefs.setBool(_languageExplicitlySetKey, true);
     }
     notifyListeners();
   }

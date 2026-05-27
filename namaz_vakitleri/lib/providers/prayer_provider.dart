@@ -31,6 +31,7 @@ class PrayerProvider extends ChangeNotifier {
   // Location
   GeoLocation? _currentLocation;
   String _savedCity = '';
+  String _savedState = '';
   String _savedCountry = '';
   bool _useAutomaticLocation = true;
 
@@ -60,8 +61,19 @@ class PrayerProvider extends ChangeNotifier {
   String get errorMessage => _errorMessage;
   GeoLocation? get currentLocation => _currentLocation;
   String get savedCity => _savedCity;
+  String get savedState => _savedState;
   String get savedCountry => _savedCountry;
   bool get useAutomaticLocation => _useAutomaticLocation;
+  String get savedLocationLabel {
+    final city = _savedCity.trim();
+    final country = _savedCountry.trim();
+
+    if (city.isEmpty) {
+      return country.isNotEmpty ? country : 'Istanbul';
+    }
+
+    return city;
+  }
   Duration? get countdownDuration => _countdownDuration;
   bool get isAdhanPlaying => _isAdhanPlaying;
   double get currentAdhanVolume => _currentAdhanVolume;
@@ -75,6 +87,7 @@ class PrayerProvider extends ChangeNotifier {
       print('⚙️ Settings loaded: notifications=${_appSettings.prayerNotifications}, sounds=${_appSettings.prayerSounds}');
 
       _savedCity = _prefs.getString('city') ?? '';
+      _savedState = _prefs.getString('state') ?? '';
       _savedCountry = _prefs.getString('country') ?? '';
       _useAutomaticLocation = _prefs.getBool('use_automatic_location') ?? true;
 
@@ -102,9 +115,11 @@ class PrayerProvider extends ChangeNotifier {
           country: 'Turkey',
         );
         _savedCity = 'Istanbul';
+        _savedState = 'Istanbul';
         _savedCountry = 'Turkey';
         _useAutomaticLocation = false;
         await _prefs.setString('city', 'Istanbul');
+        await _prefs.setString('state', 'Istanbul');
         await _prefs.setString('country', 'Turkey');
         await _prefs.setDouble('latitude', 41.0082);
         await _prefs.setDouble('longitude', 28.9784);
@@ -147,16 +162,18 @@ class PrayerProvider extends ChangeNotifier {
       final lon = _prefs.getDouble('longitude');
       final city = _prefs.getString('city') ?? '';
       final country = _prefs.getString('country') ?? '';
+      final state = _prefs.getString('state') ?? '';
 
       if (lat != null && lon != null && city.isNotEmpty) {
         _currentLocation = GeoLocation(
           latitude: lat,
           longitude: lon,
           city: city,
-          state: city,
+          state: state.isNotEmpty ? state : city,
           country: country,
         );
         _savedCity = city;
+        _savedState = state;
         _savedCountry = country;
         print('✅ Loaded location from cache: $city, $country');
       } else {
@@ -179,12 +196,14 @@ class PrayerProvider extends ChangeNotifier {
         _currentLocation = location;
         _useAutomaticLocation = true;
         await _prefs.setString('city', location.city);
+        await _prefs.setString('state', location.state);
         await _prefs.setString('country', location.country);
         await _prefs.setBool('use_automatic_location', true);
         await _prefs.setDouble('latitude', location.latitude);
         await _prefs.setDouble('longitude', location.longitude);
 
         _savedCity = location.city;
+        _savedState = location.state;
         _savedCountry = location.country;
         _useAutomaticLocation = true;
         await _prefs.setBool('use_automatic_location', true);
@@ -319,7 +338,6 @@ class PrayerProvider extends ChangeNotifier {
       final searchQuery = hasDistrict
           ? '$trimmedDistrict, $city, $country'
           : '$city, $country';
-      final displayCity = hasDistrict ? '$trimmedDistrict, $city' : city;
       final locations = await LocationService.searchLocation(searchQuery);
 
       if (locations.isEmpty) {
@@ -331,13 +349,15 @@ class PrayerProvider extends ChangeNotifier {
         (location) => location.country.toLowerCase().contains(normalizedCountry),
         orElse: () => locations.first,
       );
-      _savedCity = displayCity;
+      _savedCity = _currentLocation!.city;
+      _savedState = _currentLocation!.state;
       _savedCountry = country;
       _useAutomaticLocation = false;
       _lastFetchTime = null;
       _scheduledNotifications.clear();
 
-      await _prefs.setString('city', displayCity);
+      await _prefs.setString('city', _currentLocation!.city);
+      await _prefs.setString('state', _currentLocation!.state);
       await _prefs.setString('country', country);
       await _prefs.setBool('use_automatic_location', false);
       await _prefs.setDouble('latitude', _currentLocation!.latitude);
@@ -455,9 +475,17 @@ class PrayerProvider extends ChangeNotifier {
     
     // Only play adhan if sound is enabled for this prayer
     final soundEnabled = _appSettings.prayerSounds[prayer.name] ?? true;
+    final notificationEnabled = _appSettings.prayerNotifications[prayer.name] ?? true;
     print('🔔 Sound enabled for ${prayer.name}: $soundEnabled');
     
     if (!soundEnabled) return;
+
+    // If the exact prayer notification is enabled, let the notification
+    // channel handle the audio so we do not play the adhan twice.
+    if (notificationEnabled) {
+      print('📢 Exact notification is enabled for ${prayer.name}; skipping in-app adhan to avoid duplicate playback');
+      return;
+    }
 
     // Only continue adhan if the prayer time is very recent.
     // This lets the app take over when opened during the adhan,
@@ -502,6 +530,14 @@ class PrayerProvider extends ChangeNotifier {
     // Check if we haven't played adhan for this prayer yet
     if (_lastAdhanPlayedForPrayer != '${prayer.name}_ontime') {
       print('🔔 Prayer time arrived: ${prayer.name}');
+
+      // If the notification is enabled, its channel already carries the prayer audio.
+      // Skipping in-app playback prevents Maghrib and other prayers from sounding twice.
+      if (notificationEnabled) {
+        print('📢 Exact notification is enabled for ${prayer.name}; skipping in-app adhan to avoid duplicate playback');
+        _lastAdhanPlayedForPrayer = '${prayer.name}_ontime';
+        return;
+      }
 
       if (soundEnabled) {
         print('🎵 Playing adhan sound for ${prayer.name}');
@@ -704,12 +740,15 @@ class PrayerProvider extends ChangeNotifier {
       if (location != null) {
         print('✅ New location: ${location.city}, ${location.country}');
         _currentLocation = location;
+        _savedState = location.state;
         await _prefs.setString('city', location.city);
+        await _prefs.setString('state', location.state);
         await _prefs.setString('country', location.country);
         await _prefs.setDouble('latitude', location.latitude);
         await _prefs.setDouble('longitude', location.longitude);
 
         _savedCity = location.city;
+        _savedState = location.state;
         _savedCountry = location.country;
 
         // Reset last fetch time to force prayer times refresh

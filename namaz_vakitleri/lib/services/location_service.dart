@@ -5,6 +5,37 @@ import 'package:geocoding/geocoding.dart' as geo;
 import '../models/prayer_model.dart';
 
 class LocationService {
+  static GeoLocation _buildGeoLocation(
+    double latitude,
+    double longitude,
+    geo.Placemark? place,
+  ) {
+    final country = place?.country ?? 'Unknown';
+    final normalizedCountry = country.toLowerCase();
+    final isTurkey = normalizedCountry == 'turkey' ||
+        normalizedCountry == 'türkiye';
+    final city = isTurkey
+        ? (place?.subAdministrativeArea ??
+            place?.locality ??
+            place?.administrativeArea ??
+            'Unknown')
+        : (place?.locality ??
+            place?.subAdministrativeArea ??
+            place?.administrativeArea ??
+            'Unknown');
+    final state = place?.administrativeArea ??
+        place?.subAdministrativeArea ??
+        'Unknown';
+
+    return GeoLocation(
+      latitude: latitude,
+      longitude: longitude,
+      city: city,
+      state: state,
+      country: country,
+    );
+  }
+
   /// Request location permission
   static Future<bool> requestLocationPermission() async {
     final permission = await Geolocator.checkPermission();
@@ -32,8 +63,8 @@ class LocationService {
       // Try a quick last-known position first to avoid waiting on slow GPS startups
       Position? last = await Geolocator.getLastKnownPosition();
       final now = DateTime.now();
-      if (last != null && last.timestamp != null) {
-        final age = now.difference(last.timestamp!);
+      if (last != null) {
+        final age = now.difference(last.timestamp);
         if (age.inMinutes <= 5) {
           // recent enough, use it
           final placemarks = await geo.placemarkFromCoordinates(
@@ -41,13 +72,10 @@ class LocationService {
             last.longitude,
           );
           if (placemarks.isNotEmpty) {
-            final place = placemarks.first;
-            return GeoLocation(
-              latitude: last.latitude,
-              longitude: last.longitude,
-              city: place.locality ?? 'Unknown',
-              state: place.administrativeArea ?? 'Unknown',
-              country: place.country ?? 'Unknown',
+            return _buildGeoLocation(
+              last.latitude,
+              last.longitude,
+              placemarks.first,
             );
           }
           return GeoLocation(
@@ -108,13 +136,7 @@ class LocationService {
       }
 
       final place = placemarks.first;
-      return GeoLocation(
-        latitude: position.latitude,
-        longitude: position.longitude,
-        city: place.locality ?? 'Unknown',
-        state: place.administrativeArea ?? 'Unknown',
-        country: place.country ?? 'Unknown',
-      );
+      return _buildGeoLocation(position.latitude, position.longitude, place);
     } catch (e) {
       print('Error getting current location: $e');
       return null;
@@ -134,16 +156,17 @@ class LocationService {
         );
 
         final place = placemarks.isNotEmpty ? placemarks.first : null;
+        final resolved = place == null
+            ? GeoLocation(
+                latitude: location.latitude,
+                longitude: location.longitude,
+                city: 'Unknown',
+                state: 'Unknown',
+                country: 'Unknown',
+              )
+            : _buildGeoLocation(location.latitude, location.longitude, place);
 
-        result.add(
-          GeoLocation(
-            latitude: location.latitude,
-            longitude: location.longitude,
-            city: place?.locality ?? 'Unknown',
-            state: place?.administrativeArea ?? 'Unknown',
-            country: place?.country ?? 'Unknown',
-          ),
-        );
+        result.add(resolved);
       }
 
       return result;

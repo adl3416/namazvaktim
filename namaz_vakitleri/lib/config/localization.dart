@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:flutter/widgets.dart';
 
 class AppLocalizations {
   static const supportedLanguages = <String>['tr', 'en', 'ar'];
@@ -165,12 +166,15 @@ class AppLocalizations {
   }
 
   static String getLocale(String? preferredLanguage) {
-    final normalized = normalizeLocale(preferredLanguage);
-    if (supportedLanguages.contains(normalized) && normalized.isNotEmpty) {
-      return normalized;
+    final preferred = preferredLanguage?.trim().toLowerCase();
+    if (preferred != null && preferred.isNotEmpty) {
+      final normalized = normalizeLocale(preferred);
+      if (supportedLanguages.contains(normalized) && normalized.isNotEmpty) {
+        return normalized;
+      }
     }
 
-    final systemLocale = Intl.systemLocale.split('_')[0].toLowerCase();
+    final systemLocale = WidgetsBinding.instance.platformDispatcher.locale.languageCode.toLowerCase();
     return supportedLanguages.contains(systemLocale) ? systemLocale : 'en';
   }
 

@@ -29,11 +29,7 @@ class HomeScreen extends StatelessWidget {
         final progress = prayerTimes.isEmpty
             ? 0.0
             : completedCount / prayerTimes.length;
-        final locationLabel = prayerProvider.savedCountry.isNotEmpty
-            ? '${prayerProvider.savedCity.isNotEmpty ? prayerProvider.savedCity : 'Istanbul'} • ${prayerProvider.savedCountry}'
-            : (prayerProvider.savedCity.isNotEmpty
-                ? prayerProvider.savedCity
-                : 'Istanbul');
+        final locationLabel = prayerProvider.savedLocationLabel;
 
         return Scaffold(
           backgroundColor: scheme.background,
@@ -65,6 +61,7 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               SafeArea(
+                top: false,
                 child: RefreshIndicator(
                   color: scheme.primary,
                   onRefresh: prayerProvider.fetchPrayerTimes,
@@ -77,7 +74,7 @@ class HomeScreen extends StatelessWidget {
                         pinned: true,
                         delegate: _StickyTopHeaderDelegate(
                           scheme: scheme,
-                          city: prayerProvider.savedCity.isNotEmpty
+                            city: prayerProvider.savedCity.isNotEmpty
                               ? prayerProvider.savedCity
                               : 'Istanbul',
                           locationLabel: locationLabel,
@@ -279,49 +276,46 @@ class _TopHeader extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (!compact)
-                Text(
-                  _homeText(
-                    locale,
-                    tr: 'Secili konum',
-                    en: 'Selected location',
-                    ar: 'الموقع المحدد',
+              if (!compact) const SizedBox(height: 18),
+              InkWell(
+                onTap: onRefreshLocation,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Text(
+                    compact ? city : locationLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: compact ? 14 : 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: compact ? -0.2 : -0.4,
+                      color: Colors.white,
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.6,
-                    color: Colors.white.withOpacity(0.68),
-                  ),
-                ),
-              Text(
-                compact ? city : locationLabel,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: compact ? 14 : 16,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: compact ? -0.2 : -0.4,
-                  color: Colors.white,
                 ),
               ),
             ],
           ),
         ),
-        Material(
-          color: Colors.white.withOpacity(compact ? 0.14 : 0.18),
-          borderRadius: BorderRadius.circular(14),
-          child: InkWell(
+        Padding(
+          padding: EdgeInsets.only(
+            top: compact ? 0 : 24,
+            bottom: compact ? 0 : 4,
+          ),
+          child: Material(
+            color: Colors.white.withOpacity(compact ? 0.14 : 0.18),
             borderRadius: BorderRadius.circular(14),
-            onTap: onRefreshLocation,
-            child: Padding(
-              padding: EdgeInsets.all(compact ? 8 : 9),
-              child: Icon(
-                Icons.my_location_rounded,
-                color: Colors.white,
-                size: compact ? 16 : 17,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: onRefreshLocation,
+              child: Padding(
+                padding: EdgeInsets.all(compact ? 8 : 9),
+                child: Icon(
+                  Icons.my_location_rounded,
+                  color: Colors.white,
+                  size: compact ? 16 : 17,
+                ),
               ),
             ),
           ),
@@ -347,10 +341,10 @@ class _StickyTopHeaderDelegate extends SliverPersistentHeaderDelegate {
   final VoidCallback onRefreshLocation;
 
   @override
-  double get minExtent => 48;
+  double get minExtent => 58;
 
   @override
-  double get maxExtent => 62;
+  double get maxExtent => 76;
 
   @override
   Widget build(
@@ -365,7 +359,7 @@ class _StickyTopHeaderDelegate extends SliverPersistentHeaderDelegate {
     return Container(
       padding: EdgeInsets.fromLTRB(
         20,
-        compact ? 2 : 6,
+        10,
         20,
         0,
       ),
@@ -390,6 +384,7 @@ class _StickyTopHeaderDelegate extends SliverPersistentHeaderDelegate {
             : null,
       ),
       child: SafeArea(
+        top: false,
         bottom: false,
         child: _TopHeader(
           scheme: scheme,
@@ -466,45 +461,10 @@ class _HeroCountdownCard extends StatelessWidget {
         ),
         boxShadow: [],
       ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.14),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.10),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.place_rounded,
-                    size: 14,
-                    color: Colors.white.withOpacity(0.82),
-                  ),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      locationLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.86),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            // Next prayer label
-            LayoutBuilder(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          LayoutBuilder(
             builder: (context, constraints) {
               final title = nextPrayer != null
                   ? '${AppLocalizations.prayerName(nextPrayer!.name, locale)} ${AppLocalizations.translate('prayer_time_label', locale)}'

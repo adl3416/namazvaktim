@@ -40,9 +40,9 @@ class _QiblaScreenState extends State<QiblaScreen> {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final locale = settings.language;
         final location = prayerProvider.currentLocation;
-        final city = prayerProvider.savedCity.isNotEmpty
-            ? prayerProvider.savedCity
-            : (location?.city ??
+        final city = prayerProvider.savedLocationLabel.isNotEmpty
+            ? prayerProvider.savedLocationLabel
+            : (prayerProvider.currentLocation?.city ??
                 _text(
                   locale,
                   tr: 'Konum bekleniyor',

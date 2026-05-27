@@ -6,7 +6,6 @@ import 'package:namaz_vakitleri/providers/app_settings.dart';
 import 'package:namaz_vakitleri/providers/prayer_provider.dart';
 import 'package:namaz_vakitleri/screens/main_navigation_screen.dart';
 import 'package:namaz_vakitleri/screens/splash_screen.dart';
-import 'package:namaz_vakitleri/services/location_service.dart';
 import 'package:namaz_vakitleri/services/notification_service.dart';
 import 'package:provider/provider.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -98,10 +97,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           _isInitialized = true;
         });
 
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          await Future.delayed(const Duration(milliseconds: 800));
-          await NotificationService.checkAndRequestCriticalPermissions();
-        });
+        if (_appSettings.enablePrayerNotifications || _appSettings.enableAdhanSound) {
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            await Future.delayed(const Duration(milliseconds: 800));
+            await NotificationService.checkAndRequestCriticalPermissions();
+          });
+        }
       }
 
       print('App initialization complete');

@@ -36,8 +36,9 @@ class SettingsScreen extends StatelessWidget {
       builder: (context, settings, prayerProvider, _) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final locale = settings.language;
-        final currentCity =
-            prayerProvider.savedCity.isNotEmpty ? prayerProvider.savedCity : 'Istanbul';
+        final currentCity = prayerProvider.savedLocationLabel.isNotEmpty
+          ? prayerProvider.savedLocationLabel
+          : 'Istanbul';
         final currentCountry = prayerProvider.savedCountry.isNotEmpty
             ? prayerProvider.savedCountry
             : 'Turkey';

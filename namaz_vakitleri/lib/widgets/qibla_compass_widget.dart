@@ -299,6 +299,54 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
                 ],
               ),
             ),
+            AnimatedBuilder(
+              animation: _fallbackController,
+              builder: (context, child) {
+                final angle = _hasCompass
+                    ? _needleRadians
+                    : _fallbackController.value * 2 * math.pi;
+                return Transform.rotate(
+                  angle: angle,
+                  child: Transform.translate(
+                    offset: Offset(0, -size * 0.24),
+                    child: child,
+                  ),
+                );
+              },
+              child: IgnorePointer(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 220),
+                  opacity: _isAligned ? 1 : 0,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: math.max(4, size * 0.014),
+                      vertical: math.max(2, size * 0.008),
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: const Color(0xFFE0B86D).withOpacity(0.65),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF4ADE80).withOpacity(0.32),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      '🕋',
+                      style: TextStyle(
+                        fontSize: math.max(11, size * 0.05),
+                        height: 1,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
             Container(
               width: math.max(22, size * 0.14),
               height: math.max(22, size * 0.14),

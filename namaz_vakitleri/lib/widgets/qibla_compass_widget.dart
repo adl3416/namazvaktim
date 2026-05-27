@@ -423,21 +423,6 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
                           ? const Color(0xFF16A34A)
                           : const Color(0xFFC89B53),
                     ),
-                    SizedBox(width: math.max(5, size * 0.018)),
-                    Text(
-                      _isAligned
-                          ? 'KIBLE'
-                          : AppLocalizations.translate('qibla', widget.locale)
-                              .toUpperCase(),
-                      style: TextStyle(
-                        fontSize: math.max(10, size * 0.045),
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.1,
-                        color: _isAligned
-                            ? const Color(0xFF166534)
-                            : const Color(0xFF7A5A28),
-                      ),
-                    ),
                   ],
                 ),
               ),

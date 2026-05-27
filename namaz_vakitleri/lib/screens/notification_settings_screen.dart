@@ -528,6 +528,9 @@ class _NotificationSettingsScreenState
                   final settings = context.read<AppSettings>();
                   await settings.setPrayerSound(prayerName, newValue);
                   await context.read<PrayerProvider>().rescheduleNotifications();
+                  if (newValue) {
+                    await NotificationService.checkAndRequestCriticalPermissions();
+                  }
                 },
               ),
             ),
@@ -564,6 +567,9 @@ class _NotificationSettingsScreenState
           );
         }
         await context.read<PrayerProvider>().rescheduleNotifications();
+        if (selectedOffset != 0) {
+          await NotificationService.checkAndRequestCriticalPermissions();
+        }
       },
       color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
       elevation: 4,

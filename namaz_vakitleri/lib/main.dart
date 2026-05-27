@@ -97,7 +97,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           _isInitialized = true;
         });
 
-        if (_appSettings.enablePrayerNotifications || _appSettings.enableAdhanSound) {
+        if (_appSettings.hasAnyPrayerNotificationEnabled ||
+            _appSettings.hasAnyPrayerSoundEnabled) {
           WidgetsBinding.instance.addPostFrameCallback((_) async {
             await Future.delayed(const Duration(milliseconds: 800));
             await NotificationService.checkAndRequestCriticalPermissions();

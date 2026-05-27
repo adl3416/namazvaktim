@@ -47,6 +47,9 @@ class AppSettings extends ChangeNotifier {
   ThemeMode get themeMode => _themeMode;
   bool get enableAdhanSound => _enableAdhanSound;
   bool get enablePrayerNotifications => _enablePrayerNotifications;
+  bool get hasAnyPrayerSoundEnabled => _prayerSounds.values.any((enabled) => enabled);
+  bool get hasAnyPrayerNotificationEnabled =>
+      _prayerNotifications.values.any((enabled) => enabled);
   Map<String, bool> get prayerNotifications => Map.unmodifiable(_prayerNotifications);
   Map<String, bool> get prayerSounds => Map.unmodifiable(_prayerSounds);
   Map<String, int> get prayerNotificationOffsets => Map.unmodifiable(_prayerNotificationOffsets);
@@ -121,6 +124,8 @@ class AppSettings extends ChangeNotifier {
         });
       } catch (_) {}
     }
+
+    _syncAggregateNotificationFlags();
 
     // Load palettes (stored as JSON)
     final raw = _prefs.getString('theme_palettes_json') ?? '';
@@ -245,8 +250,11 @@ class AppSettings extends ChangeNotifier {
   Future<void> setPrayerNotification(String prayerName, bool enabled) async {
     if (_prayerNotifications.containsKey(prayerName)) {
       _prayerNotifications[prayerName] = enabled;
+      _syncAggregateNotificationFlags();
       if (_initialized) {
         await _prefs.setString('prayer_notifications', jsonEncode(_prayerNotifications));
+        await _prefs.setBool('enablePrayerNotifications', _enablePrayerNotifications);
+        await _prefs.setBool('enableAdhanSound', _enableAdhanSound);
       }
       notifyListeners();
     }
@@ -255,8 +263,11 @@ class AppSettings extends ChangeNotifier {
   Future<void> setPrayerSound(String prayerName, bool enabled) async {
     if (_prayerSounds.containsKey(prayerName)) {
       _prayerSounds[prayerName] = enabled;
+      _syncAggregateNotificationFlags();
       if (_initialized) {
         await _prefs.setString('prayer_sounds', jsonEncode(_prayerSounds));
+        await _prefs.setBool('enablePrayerNotifications', _enablePrayerNotifications);
+        await _prefs.setBool('enableAdhanSound', _enableAdhanSound);
       }
       notifyListeners();
     }
@@ -270,5 +281,10 @@ class AppSettings extends ChangeNotifier {
       }
       notifyListeners();
     }
+  }
+
+  void _syncAggregateNotificationFlags() {
+    _enablePrayerNotifications = hasAnyPrayerNotificationEnabled;
+    _enableAdhanSound = hasAnyPrayerSoundEnabled;
   }
 }

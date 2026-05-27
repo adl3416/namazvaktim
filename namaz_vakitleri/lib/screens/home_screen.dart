@@ -357,6 +357,7 @@ class _StickyTopHeaderDelegate extends SliverPersistentHeaderDelegate {
     final compact = progress > 0.45;
 
     return Container(
+      clipBehavior: Clip.antiAlias,
       padding: EdgeInsets.fromLTRB(
         20,
         10,
@@ -364,6 +365,10 @@ class _StickyTopHeaderDelegate extends SliverPersistentHeaderDelegate {
         0,
       ),
       decoration: BoxDecoration(
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.elliptical(26, 20),
+          topRight: Radius.elliptical(26, 20),
+        ),
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,

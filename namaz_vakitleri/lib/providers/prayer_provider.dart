@@ -4,7 +4,7 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../models/prayer_model.dart';
-import '../services/aladhan_service.dart';
+import '../services/emushaf_prayer_service.dart';
 import '../services/home_widget_service.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
@@ -33,6 +33,7 @@ class PrayerProvider extends ChangeNotifier {
   String _savedCity = '';
   String _savedState = '';
   String _savedCountry = '';
+  String _savedDistrict = '';
   bool _useAutomaticLocation = true;
 
   // Countdown
@@ -78,6 +79,48 @@ class PrayerProvider extends ChangeNotifier {
   bool get isAdhanPlaying => _isAdhanPlaying;
   double get currentAdhanVolume => _currentAdhanVolume;
 
+  bool get _hasManualLookupContext {
+    return !_useAutomaticLocation &&
+        _savedCity.trim().isNotEmpty &&
+        _savedCountry.trim().isNotEmpty;
+  }
+
+  String get _lookupCity {
+    if (_hasManualLookupContext) {
+      return _savedCity.trim();
+    }
+    return _currentLocation?.city.trim().isNotEmpty == true
+        ? _currentLocation!.city.trim()
+        : _savedCity.trim();
+  }
+
+  String get _lookupCountry {
+    if (_hasManualLookupContext) {
+      return _savedCountry.trim();
+    }
+    return _currentLocation?.country.trim().isNotEmpty == true
+        ? _currentLocation!.country.trim()
+        : _savedCountry.trim();
+  }
+
+  String? get _lookupState {
+    if (_hasManualLookupContext) {
+      final value = _savedState.trim();
+      return value.isEmpty ? null : value;
+    }
+    final value = _currentLocation?.state.trim() ?? _savedState.trim();
+    return value.isEmpty ? null : value;
+  }
+
+  String? get _lookupDistrict {
+    if (_hasManualLookupContext) {
+      final value = _savedDistrict.trim();
+      return value.isEmpty ? null : value;
+    }
+    final value = _currentLocation?.district.trim() ?? _savedDistrict.trim();
+    return value.isEmpty ? null : value;
+  }
+
   Future<void> initialize() async {
     try {
       _prefs = await SharedPreferences.getInstance();
@@ -89,6 +132,7 @@ class PrayerProvider extends ChangeNotifier {
       _savedCity = _prefs.getString('city') ?? '';
       _savedState = _prefs.getString('state') ?? '';
       _savedCountry = _prefs.getString('country') ?? '';
+      _savedDistrict = _prefs.getString('district') ?? '';
       _useAutomaticLocation = _prefs.getBool('use_automatic_location') ?? true;
 
       print('📱 PrayerProvider initializing...');
@@ -113,14 +157,17 @@ class PrayerProvider extends ChangeNotifier {
           city: 'Istanbul',
           state: 'Istanbul',
           country: 'Turkey',
+          district: '',
         );
         _savedCity = 'Istanbul';
         _savedState = 'Istanbul';
         _savedCountry = 'Turkey';
+        _savedDistrict = '';
         _useAutomaticLocation = false;
         await _prefs.setString('city', 'Istanbul');
         await _prefs.setString('state', 'Istanbul');
         await _prefs.setString('country', 'Turkey');
+        await _prefs.setString('district', '');
         await _prefs.setDouble('latitude', 41.0082);
         await _prefs.setDouble('longitude', 28.9784);
         await _prefs.setBool('use_automatic_location', false);
@@ -163,6 +210,7 @@ class PrayerProvider extends ChangeNotifier {
       final city = _prefs.getString('city') ?? '';
       final country = _prefs.getString('country') ?? '';
       final state = _prefs.getString('state') ?? '';
+      final district = _prefs.getString('district') ?? '';
 
       if (lat != null && lon != null && city.isNotEmpty) {
         _currentLocation = GeoLocation(
@@ -171,10 +219,12 @@ class PrayerProvider extends ChangeNotifier {
           city: city,
           state: state.isNotEmpty ? state : city,
           country: country,
+          district: district,
         );
         _savedCity = city;
         _savedState = state;
         _savedCountry = country;
+        _savedDistrict = district;
         print('✅ Loaded location from cache: $city, $country');
       } else {
         print(
@@ -198,6 +248,7 @@ class PrayerProvider extends ChangeNotifier {
         await _prefs.setString('city', location.city);
         await _prefs.setString('state', location.state);
         await _prefs.setString('country', location.country);
+        await _prefs.setString('district', location.district);
         await _prefs.setBool('use_automatic_location', true);
         await _prefs.setDouble('latitude', location.latitude);
         await _prefs.setDouble('longitude', location.longitude);
@@ -205,6 +256,7 @@ class PrayerProvider extends ChangeNotifier {
         _savedCity = location.city;
         _savedState = location.state;
         _savedCountry = location.country;
+        _savedDistrict = location.district;
         _useAutomaticLocation = true;
         await _prefs.setBool('use_automatic_location', true);
       } else {
@@ -241,15 +293,22 @@ class PrayerProvider extends ChangeNotifier {
         return;
       }
 
+      final lookupCity = _lookupCity;
+      final lookupCountry = _lookupCountry;
+      final lookupState = _lookupState;
+      final lookupDistrict = _lookupDistrict;
+
       print(
-        '🔄 Fetching prayer times for: ${_currentLocation!.city} (${_currentLocation!.latitude}, ${_currentLocation!.longitude})',
+        '🔄 Fetching prayer times for: $lookupCity (${_currentLocation!.latitude}, ${_currentLocation!.longitude})',
       );
 
-      final prayerTimes = await AlAdhanService.getPrayerTimes(
+      final prayerTimes = await EmushafPrayerService.getPrayerTimes(
         latitude: _currentLocation!.latitude,
         longitude: _currentLocation!.longitude,
-        city: _currentLocation!.city,
-        country: _currentLocation!.country,
+        city: lookupCity,
+        country: lookupCountry,
+        state: lookupState,
+        district: lookupDistrict,
       );
 
       print(
@@ -327,6 +386,7 @@ class PrayerProvider extends ChangeNotifier {
     String city,
     String country, {
     String? district,
+    String? state,
   }) async {
     try {
       _isLoading = true;
@@ -334,31 +394,48 @@ class PrayerProvider extends ChangeNotifier {
       notifyListeners();
 
       final trimmedDistrict = district?.trim();
+      final trimmedState = state?.trim();
       final hasDistrict = trimmedDistrict != null && trimmedDistrict.isNotEmpty;
+      final hasState = trimmedState != null && trimmedState.isNotEmpty;
+      final hasDistinctState = hasState &&
+          _normalizeLookupValue(trimmedState!) != _normalizeLookupValue(country);
       final searchQuery = hasDistrict
           ? '$trimmedDistrict, $city, $country'
-          : '$city, $country';
+          : hasDistinctState
+              ? '$city, ${trimmedState!}, $country'
+              : '$city, $country';
       final locations = await LocationService.searchLocation(searchQuery);
 
       if (locations.isEmpty) {
         throw Exception('Konum bulunamadı');
       }
 
-      final normalizedCountry = country.toLowerCase();
+      final normalizedCountry = _normalizeCountryValue(country);
       _currentLocation = locations.firstWhere(
-        (location) => location.country.toLowerCase().contains(normalizedCountry),
+        (location) => _normalizeCountryValue(location.country) == normalizedCountry,
         orElse: () => locations.first,
       );
-      _savedCity = _currentLocation!.city;
-      _savedState = _currentLocation!.state;
-      _savedCountry = country;
+      final resolvedLocation = _currentLocation!;
+      _savedCity = city.trim();
+      _savedState = hasState ? trimmedState! : '';
+      _savedCountry = country.trim();
+      _savedDistrict = trimmedDistrict ?? '';
+      _currentLocation = GeoLocation(
+        latitude: resolvedLocation.latitude,
+        longitude: resolvedLocation.longitude,
+        city: _savedCity,
+        state: hasState ? trimmedState! : resolvedLocation.state,
+        country: _savedCountry,
+        district: hasDistrict ? trimmedDistrict! : resolvedLocation.district,
+      );
       _useAutomaticLocation = false;
       _lastFetchTime = null;
       _scheduledNotifications.clear();
 
-      await _prefs.setString('city', _currentLocation!.city);
-      await _prefs.setString('state', _currentLocation!.state);
-      await _prefs.setString('country', country);
+      await _prefs.setString('city', _savedCity);
+      await _prefs.setString('state', _savedState);
+      await _prefs.setString('country', _savedCountry);
+      await _prefs.setString('district', _savedDistrict);
       await _prefs.setBool('use_automatic_location', false);
       await _prefs.setDouble('latitude', _currentLocation!.latitude);
       await _prefs.setDouble('longitude', _currentLocation!.longitude);
@@ -594,11 +671,17 @@ class PrayerProvider extends ChangeNotifier {
 
     try {
       if (_currentLocation != null) {
-        final tomorrowPrayerTimes = await AlAdhanService.getPrayerTimes(
+        final lookupCity = _lookupCity;
+        final lookupCountry = _lookupCountry;
+        final lookupState = _lookupState;
+        final lookupDistrict = _lookupDistrict;
+        final tomorrowPrayerTimes = await EmushafPrayerService.getPrayerTimes(
           latitude: _currentLocation!.latitude,
           longitude: _currentLocation!.longitude,
-          city: _currentLocation!.city,
-          country: _currentLocation!.country,
+          city: lookupCity,
+          country: lookupCountry,
+          state: lookupState,
+          district: lookupDistrict,
           date: DateTime.now().add(const Duration(days: 1)),
         );
 
@@ -740,10 +823,14 @@ class PrayerProvider extends ChangeNotifier {
       if (location != null) {
         print('✅ New location: ${location.city}, ${location.country}');
         _currentLocation = location;
+        _useAutomaticLocation = true;
+        _savedDistrict = location.district;
         _savedState = location.state;
         await _prefs.setString('city', location.city);
         await _prefs.setString('state', location.state);
         await _prefs.setString('country', location.country);
+        await _prefs.setString('district', location.district);
+        await _prefs.setBool('use_automatic_location', true);
         await _prefs.setDouble('latitude', location.latitude);
         await _prefs.setDouble('longitude', location.longitude);
 
@@ -808,5 +895,35 @@ class PrayerProvider extends ChangeNotifier {
     } catch (e) {
       print('❌ Error muting adhan: $e');
     }
+  }
+
+  String _normalizeLookupValue(String value) {
+    return value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+  }
+
+  String _normalizeCountryValue(String value) {
+    final normalized = _normalizeLookupValue(value);
+    const aliases = <String, String>{
+      'turkiye': 'turkey',
+      'turkey': 'turkey',
+      'almanya': 'germany',
+      'deutschland': 'germany',
+      'germany': 'germany',
+      'hollanda': 'netherlands',
+      'netherlands': 'netherlands',
+      'amerika birlesik devletleri': 'usa',
+      'united states': 'usa',
+      'united states of america': 'usa',
+      'usa': 'usa',
+      'abd': 'usa',
+      'birlesik krallik': 'united kingdom',
+      'ingiltere': 'united kingdom',
+      'great britain': 'united kingdom',
+      'united kingdom': 'united kingdom',
+      'birlesik arap emirlikleri': 'united arab emirates',
+      'uae': 'united arab emirates',
+      'united arab emirates': 'united arab emirates',
+    };
+    return aliases[normalized] ?? normalized;
   }
 }

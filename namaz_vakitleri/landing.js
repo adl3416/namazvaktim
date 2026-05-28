@@ -1,10 +1,10 @@
 const prayerConfig = [
-  { key: 'Fajr', label: 'İmsak' },
-  { key: 'Sunrise', label: 'Güneş' },
-  { key: 'Dhuhr', label: 'Öğle' },
-  { key: 'Asr', label: 'İkindi' },
-  { key: 'Maghrib', label: 'Akşam' },
-  { key: 'Isha', label: 'Yatsı' },
+  { key: 'Fajr', label: 'Imsak' },
+  { key: 'Sunrise', label: 'Gunes' },
+  { key: 'Dhuhr', label: 'Ogle' },
+  { key: 'Asr', label: 'Ikindi' },
+  { key: 'Maghrib', label: 'Aksam' },
+  { key: 'Isha', label: 'Yatsi' },
 ];
 
 const locationInput = document.querySelector('#locationInput');
@@ -37,7 +37,7 @@ function formatLocationLabel(place) {
       .map((item) => item.trim())
       .filter(Boolean);
 
-  return parts.slice(0, 3).join(', ') || 'Seçilen konum';
+  return parts.slice(0, 3).join(', ') || 'Secilen konum';
 }
 
 function getDateString() {
@@ -82,7 +82,7 @@ function computeNextPrayer(timings, timeZone) {
 
   return {
     ...next,
-    remainingText: `${diffHours}s ${diffMinutes}dk kaldı`,
+    remainingText: `${diffHours}s ${diffMinutes}dk kaldi`,
   };
 }
 
@@ -93,10 +93,10 @@ function renderPrayerTimes(payload, locationLabel) {
   const nextPrayer = computeNextPrayer(timings, timezone);
 
   resultTitle.textContent = locationLabel;
-  resultMeta.textContent = `${gregorianDate} • Saat dilimi: ${timezone} • Yöntem: Diyanet / Method 13`;
+  resultMeta.textContent = `${gregorianDate} - Saat dilimi: ${timezone} - Yontem: Diyanet / Method 13`;
   nextPrayerBox.innerHTML = `
     <span>Sonraki vakit</span>
-    <strong>${nextPrayer.label} • ${nextPrayer.timeText}</strong>
+    <strong>${nextPrayer.label} - ${nextPrayer.timeText}</strong>
     <span>${nextPrayer.remainingText}</span>
   `;
 
@@ -115,22 +115,19 @@ function renderPrayerTimes(payload, locationLabel) {
 }
 
 async function fetchPrayerTimes(lat, lon, locationLabel) {
-  const dateString = getDateString();
-  const response = await fetch(
-      `https://api.aladhan.com/v1/timings/${dateString}?latitude=${lat}&longitude=${lon}&method=13`,
-  );
-
-  if (!response.ok) {
-    throw new Error('Namaz vakitleri servisine ulaşılamadı.');
-  }
-
-  const payload = await response.json();
-
-  if (!payload?.data?.timings) {
-    throw new Error('Namaz vakitleri alınamadı.');
-  }
-
-  renderPrayerTimes(payload, locationLabel);
+  // const dateString = getDateString();
+  // const response = await fetch(
+  //     `https://api.aladhan.com/v1/timings/${dateString}?latitude=${lat}&longitude=${lon}&method=13`,
+  // );
+  // if (!response.ok) {
+  //   throw new Error('Namaz vakitleri servisine ulasilamadi.');
+  // }
+  // const payload = await response.json();
+  // if (!payload?.data?.timings) {
+  //   throw new Error('Namaz vakitleri alinamadi.');
+  // }
+  // renderPrayerTimes(payload, locationLabel);
+  throw new Error('Namaz vakitleri API kullanimi gecici olarak yoruma alindi.');
 }
 
 async function searchLocation(query) {
@@ -139,13 +136,13 @@ async function searchLocation(query) {
   );
 
   if (!response.ok) {
-    throw new Error('Konum servisine ulaşılamadı.');
+    throw new Error('Konum servisine ulasilamadi.');
   }
 
   const results = await response.json();
 
   if (!Array.isArray(results) || results.length === 0) {
-    throw new Error('Bu konum bulunamadı. İlçe, şehir ve ülke ile tekrar deneyin.');
+    throw new Error('Bu konum bulunamadi. Ilce, sehir ve ulke ile tekrar deneyin.');
   }
 
   return results[0];
@@ -169,31 +166,31 @@ async function handleManualLookup() {
   const query = locationInput.value.trim();
 
   if (!query) {
-    showStatus('Lütfen ilçe, şehir veya ülke içeren bir konum girin.', 'error');
+    showStatus('Lutfen ilce, sehir veya ulke iceren bir konum girin.', 'error');
     locationInput.focus();
     return;
   }
 
   resultsBox.classList.remove('is-visible');
-  showStatus('Konum çözümleniyor ve namaz vakitleri getiriliyor...', 'info');
+  showStatus('Konum cozumleniyor...', 'info');
 
   try {
     const place = await searchLocation(query);
     await fetchPrayerTimes(place.lat, place.lon, formatLocationLabel(place));
-    showStatus('Namaz vakitleri güncellendi.', 'success');
+    showStatus('Namaz vakitleri guncellendi.', 'success');
   } catch (error) {
-    showStatus(error.message || 'Beklenmeyen bir hata oluştu.', 'error');
+    showStatus(error.message || 'Beklenmeyen bir hata olustu.', 'error');
   }
 }
 
 async function handleGeolocation() {
   if (!navigator.geolocation) {
-    showStatus('Bu tarayıcı konum özelliğini desteklemiyor.', 'error');
+    showStatus('Bu tarayici konum ozelligini desteklemiyor.', 'error');
     return;
   }
 
   resultsBox.classList.remove('is-visible');
-  showStatus('Cihaz konumu alınıyor...', 'info');
+  showStatus('Cihaz konumu aliniyor...', 'info');
 
   navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -205,11 +202,11 @@ async function handleGeolocation() {
           await fetchPrayerTimes(latitude, longitude, label);
           showStatus('Konumdan namaz vakitleri getirildi.', 'success');
         } catch (error) {
-          showStatus(error.message || 'Konumdan vakit alınamadı.', 'error');
+          showStatus(error.message || 'Konumdan vakit alinamadi.', 'error');
         }
       },
       () => {
-        showStatus('Konum izni verilmedi veya konum alınamadı.', 'error');
+        showStatus('Konum izni verilmedi veya konum alinamadi.', 'error');
       },
       {
         enableHighAccuracy: true,

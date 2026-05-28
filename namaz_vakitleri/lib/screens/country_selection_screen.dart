@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../config/color_system.dart';
 import '../config/localization.dart';
 import '../providers/app_settings.dart';
+import '../services/emushaf_prayer_service.dart';
 import 'city_selection_screen.dart';
 
 class CountrySelectionScreen extends StatefulWidget {
@@ -14,128 +16,86 @@ class CountrySelectionScreen extends StatefulWidget {
 
 class _CountrySelectionScreenState extends State<CountrySelectionScreen> {
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
 
-  final Map<String, String> _countries = {
-    'TR': 'Türkiye',
-    'US': 'Amerika Birleşik Devletleri',
-    'GB': 'Birleşik Krallık',
-    'DE': 'Almanya',
-    'FR': 'Fransa',
-    'IT': 'İtalya',
-    'ES': 'İspanya',
-    'NL': 'Hollanda',
-    'BE': 'Belçika',
-    'CH': 'İsviçre',
-    'AT': 'Avusturya',
-    'SE': 'İsveç',
-    'NO': 'Norveç',
-    'DK': 'Danimarka',
-    'FI': 'Finlandiya',
-    'PL': 'Polonya',
-    'CZ': 'Çekya',
-    'HU': 'Macaristan',
-    'SK': 'Slovakya',
-    'SI': 'Slovenya',
-    'HR': 'Hırvatistan',
-    'BA': 'Bosna Hersek',
-    'ME': 'Karadağ',
-    'MK': 'Kuzey Makedonya',
-    'AL': 'Arnavutluk',
-    'GR': 'Yunanistan',
-    'BG': 'Bulgaristan',
-    'RO': 'Romanya',
-    'MD': 'Moldova',
-    'UA': 'Ukrayna',
-    'BY': 'Belarus',
-    'RU': 'Rusya',
-    'LT': 'Litvanya',
-    'LV': 'Letonya',
-    'EE': 'Estonya',
-    'PT': 'Portekiz',
-    'IE': 'İrlanda',
-    'IS': 'İzlanda',
-    'CA': 'Kanada',
-    'MX': 'Meksika',
-    'BR': 'Brezilya',
-    'AR': 'Arjantin',
-    'CL': 'Şili',
-    'CO': 'Kolombiya',
-    'PE': 'Peru',
-    'VE': 'Venezuela',
-    'EC': 'Ekvador',
-    'BO': 'Bolivya',
-    'PY': 'Paraguay',
-    'UY': 'Uruguay',
-    'AU': 'Avustralya',
-    'NZ': 'Yeni Zelanda',
-    'JP': 'Japonya',
-    'KR': 'Güney Kore',
-    'CN': 'Çin',
-    'IN': 'Hindistan',
-    'PK': 'Pakistan',
-    'BD': 'Bangladeş',
-    'NP': 'Nepal',
-    'LK': 'Sri Lanka',
-    'TH': 'Tayland',
-    'MY': 'Malezya',
-    'SG': 'Singapur',
-    'ID': 'Endonezya',
-    'PH': 'Filipinler',
-    'VN': 'Vietnam',
-    'KH': 'Kamboçya',
-    'LA': 'Laos',
-    'MM': 'Myanmar',
-    'EG': 'Mısır',
-    'SA': 'Suudi Arabistan',
-    'AE': 'Birleşik Arap Emirlikleri',
-    'QA': 'Katar',
-    'KW': 'Kuveyt',
-    'BH': 'Bahreyn',
-    'OM': 'Umman',
-    'JO': 'Ürdün',
-    'LB': 'Lübnan',
-    'SY': 'Suriye',
-    'IQ': 'Irak',
-    'IR': 'İran',
-    'AF': 'Afganistan',
-    'UZ': 'Özbekistan',
-    'KZ': 'Kazakistan',
-    'KG': 'Kırgızistan',
-    'TJ': 'Tacikistan',
-    'TM': 'Türkmenistan',
-    'AZ': 'Azerbaycan',
-    'GE': 'Gürcistan',
-    'AM': 'Ermenistan',
-    'ZA': 'Güney Afrika',
-    'NG': 'Nijerya',
-    'KE': 'Kenya',
-    'TZ': 'Tanzanya',
-    'UG': 'Uganda',
-    'GH': 'Gana',
-    'CI': 'Fildişi Sahili',
-    'SN': 'Senegal',
-    'MA': 'Fas',
-    'TN': 'Tunus',
-    'DZ': 'Cezayir',
-    'LY': 'Libya',
-    'TN': 'Tunus',
-    'SD': 'Sudan',
-    'ET': 'Etiyopya',
-    'SO': 'Somali',
-    'DJ': 'Cibuti',
-    'ER': 'Eritre',
-  };
+  bool _isLoading = true;
+  String? _errorMessage;
+  List<EmushafCountry> _countries = const [];
 
-  List<MapEntry<String, String>> get _filteredCountries {
-    if (_searchQuery.isEmpty) {
-      return _countries.entries.toList();
+  @override
+  void initState() {
+    super.initState();
+    _loadCountries();
+  }
+
+  Future<void> _loadCountries() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final countries = await EmushafPrayerService.fetchCountries();
+      countries.sort((a, b) => _displayName(a).compareTo(_displayName(b)));
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _countries = countries;
+      });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    } finally {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isLoading = false;
+      });
     }
-    return _countries.entries
-        .where((entry) =>
-            entry.value.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            entry.key.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
+  }
+
+  List<EmushafCountry> get _filteredCountries {
+    final query = _normalize(_searchController.text);
+    if (query.isEmpty) {
+      return _countries;
+    }
+
+    return _countries.where((country) {
+      return _normalize(country.name).contains(query) ||
+          _normalize(country.englishName).contains(query) ||
+          _normalize(_displayName(country)).contains(query);
+    }).toList();
+  }
+
+  String _displayName(EmushafCountry country) {
+    final source = country.englishName.isNotEmpty ? country.englishName : country.name;
+    return _titleCase(source);
+  }
+
+  String _titleCase(String value) {
+    return value
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) {
+          if (part.length == 1) {
+            return part.toUpperCase();
+          }
+          return '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}';
+        })
+        .join(' ');
+  }
+
+  String _normalize(String value) {
+    return value.trim().toLowerCase();
   }
 
   String _text(
@@ -186,7 +146,6 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen> {
       ),
       body: Column(
         children: [
-          // Search Field
           Padding(
             padding: EdgeInsets.all(AppSpacing.lg),
             child: TextField(
@@ -195,7 +154,7 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen> {
               decoration: InputDecoration(
                 hintText: _text(
                   locale,
-                  tr: 'Ülke ara...',
+                  tr: 'Ulke ara...',
                   en: 'Search country...',
                   ar: 'ابحث عن دولة...',
                 ),
@@ -229,76 +188,103 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen> {
                     width: 2,
                   ),
                 ),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.md,
-                ),
               ),
               style: TextStyle(
-                color: isDark
-                    ? AppColors.darkTextPrimary
-                    : AppColors.textPrimary,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
               ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
+              onChanged: (_) => setState(() {}),
             ),
           ),
-
-          // Countries List
           Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              itemCount: _filteredCountries.length,
-              itemBuilder: (context, index) {
-                final country = _filteredCountries[index];
-                return ListTile(
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xs,
-                  ),
-                  title: Text(
-                    country.value,
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: isDark
-                          ? AppColors.darkTextPrimary
-                          : AppColors.textPrimary,
-                    ),
-                  ),
-                  subtitle: Text(
-                    country.key,
-                    style: AppTypography.bodySmall.copyWith(
-                      color: isDark
-                          ? AppColors.darkTextSecondary
-                          : AppColors.textSecondary,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CitySelectionScreen(
-                          countryCode: country.key,
-                          countryName: country.value,
-                        ),
-                      ),
-                    );
-                  },
-                  trailing: Icon(
-                    Icons.arrow_forward_ios,
-                    size: 14,
-                    color: isDark
-                        ? AppColors.darkTextSecondary
-                        : AppColors.textSecondary,
-                  ),
-                );
-              },
-            ),
+            child: _buildBody(isDark: isDark, locale: locale),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBody({
+    required bool isDark,
+    required String locale,
+  }) {
+    if (_isLoading) {
+      return Center(
+        child: CircularProgressIndicator(
+          color: isDark ? AppColors.darkAccentPrimary : AppColors.accentPrimary,
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacing.lg),
+          child: Text(
+            _text(
+              locale,
+              tr: 'Ulke listesi yuklenemedi.\n$_errorMessage',
+              en: 'Country list could not be loaded.\n$_errorMessage',
+              ar: 'تعذر تحميل قائمة الدول.\n$_errorMessage',
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    final filtered = _filteredCountries;
+    if (filtered.isEmpty) {
+      return Center(
+        child: Text(
+          _text(
+            locale,
+            tr: 'Aramana uygun ulke bulunamadi.',
+            en: 'No country matched your search.',
+            ar: 'لم يتم العثور على دولة مطابقة لبحثك.',
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      itemCount: filtered.length,
+      itemBuilder: (context, index) {
+        final country = filtered[index];
+        return ListTile(
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xs,
+          ),
+          title: Text(
+            _displayName(country),
+            style: AppTypography.bodyMedium.copyWith(
+              color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+            ),
+          ),
+          subtitle: Text(
+            country.name,
+            style: AppTypography.bodySmall.copyWith(
+              color: isDark
+                  ? AppColors.darkTextSecondary
+                  : AppColors.textSecondary,
+            ),
+          ),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => CitySelectionScreen(country: country),
+              ),
+            );
+          },
+          trailing: Icon(
+            Icons.arrow_forward_ios,
+            size: 14,
+            color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+          ),
+        );
+      },
     );
   }
 }

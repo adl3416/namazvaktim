@@ -1,20 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../config/color_system.dart';
 import '../config/localization.dart';
 import '../providers/app_settings.dart';
 import '../providers/prayer_provider.dart';
+import '../services/emushaf_prayer_service.dart';
 import 'district_selection_screen.dart';
 
 class CitySelectionScreen extends StatefulWidget {
-  final String countryCode;
-  final String countryName;
-
   const CitySelectionScreen({
     super.key,
-    required this.countryCode,
-    required this.countryName,
+    required this.country,
   });
+
+  final EmushafCountry country;
 
   @override
   State<CitySelectionScreen> createState() => _CitySelectionScreenState();
@@ -22,232 +24,266 @@ class CitySelectionScreen extends StatefulWidget {
 
 class _CitySelectionScreenState extends State<CitySelectionScreen> {
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
-  bool _isLoading = false;
 
-  static const List<String> _turkishCities = [
-    'Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Amasya', 'Ankara',
-    'Antalya', 'Artvin', 'Aydın', 'Balıkesir', 'Bilecik', 'Bingöl',
-    'Bitlis', 'Bolu', 'Burdur', 'Bursa', 'Çanakkale', 'Çankırı', 'Çorum',
-    'Denizli', 'Diyarbakır', 'Edirne', 'Elazığ', 'Erzincan', 'Erzurum',
-    'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkari', 'Hatay',
-    'Isparta', 'Mersin', 'İstanbul', 'İzmir', 'Kars', 'Kastamonu',
-    'Kayseri', 'Kırklareli', 'Kırşehir', 'Kocaeli', 'Konya', 'Kütahya',
-    'Malatya', 'Manisa', 'Kahramanmaraş', 'Mardin', 'Muğla', 'Muş',
-    'Nevşehir', 'Niğde', 'Ordu', 'Rize', 'Sakarya', 'Samsun', 'Siirt',
-    'Sinop', 'Sivas', 'Tekirdağ', 'Tokat', 'Trabzon', 'Tunceli',
-    'Şanlıurfa', 'Uşak', 'Van', 'Yozgat', 'Zonguldak', 'Aksaray',
-    'Bayburt', 'Karaman', 'Kırıkkale', 'Batman', 'Şırnak', 'Bartın',
-    'Ardahan', 'Iğdır', 'Yalova', 'Karabük', 'Kilis', 'Osmaniye', 'Düzce',
-  ];
+  bool _isLoading = true;
+  bool _isSelecting = false;
+  bool _isSearchingNested = false;
+  String? _errorMessage;
+  List<EmushafLookupItem> _items = const [];
+  List<_NestedMatch> _nestedMatches = const [];
+  Timer? _debounce;
+  int _searchVersion = 0;
 
-  final Map<String, List<String>> _citiesByCountry = {
-    'TR': [
-      'İstanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya', 'Adana', 'Gaziantep',
-      'Konya', 'Kayseri', 'Samsun', 'Denizli', 'Eskişehir', 'Sakarya', 'Trabzon',
-      'Erzurum', 'Malatya', 'Van', 'Diyarbakır', 'Şanlıurfa', 'Batman', 'Mardin',
-      'Siirt', 'Şırnak', 'Hakkari', 'Ağrı', 'Kars', 'Iğdır', 'Ardahan', 'Artvin',
-      'Rize', 'Giresun', 'Ordu', 'Amasya', 'Tokat', 'Çorum', 'Yozgat', 'Sivas',
-      'Kırşehir', 'Nevşehir', 'Niğde', 'Aksaray', 'Kırıkkale', 'Çankırı', 'Karabük',
-      'Bartın', 'Zonguldak', 'Düzce', 'Bolu', 'Yalova', 'Kocaeli', 'Sakarya',
-      'Tekirdağ', 'Edirne', 'Kırklareli', 'Çanakkale', 'Balıkesir', 'Çanakkale',
-      'Manisa', 'Kütahya', 'Uşak', 'Aydın', 'İzmir', 'Muğla', 'Denizli', 'Burdur',
-      'Isparta', 'Afyonkarahisar', 'Kütahya', 'Eskişehir', 'Bilecik', 'Sakarya'
-    ],
-    'DE': [
-      'Berlin', 'Hamburg', 'München', 'Köln', 'Frankfurt', 'Stuttgart', 'Düsseldorf',
-      'Dortmund', 'Essen', 'Leipzig', 'Bremen', 'Dresden', 'Hannover', 'Nürnberg',
-      'Duisburg', 'Bochum', 'Wuppertal', 'Bielefeld', 'Bonn', 'Münster', 'Karlsruhe',
-      'Mannheim', 'Augsburg', 'Wiesbaden', 'Gelsenkirchen', 'Mönchengladbach',
-      'Braunschweig', 'Chemnitz', 'Kiel', 'Aachen', 'Halle', 'Magdeburg', 'Freiburg',
-      'Krefeld', 'Lübeck', 'Oberhausen', 'Erfurt', 'Mainz', 'Rostock', 'Kassel',
-      'Hagen', 'Hamm', 'Saarbrücken', 'Mülheim', 'Potsdam', 'Ludwigshafen',
-      'Oldenburg', 'Leverkusen', 'Osnabrück', 'Solingen', 'Heidelberg', 'Herne',
-      'Neuss', 'Darmstadt', 'Paderborn', 'Regensburg', 'Ingolstadt', 'Würzburg',
-      'Fürth', 'Ulm', 'Heilbronn', 'Pforzheim', 'Wolfsburg', 'Göttingen', 'Bottrop',
-      'Reutlingen', 'Koblenz', 'Bremerhaven', 'Bergisch Gladbach', 'Jena', 'Remscheid',
-      'Erlangen', 'Moers', 'Siegen', 'Hildesheim', 'Salzgitter', 'Gütersloh', 'Kaiserslautern'
-    ],
-    'SA': [
-      'Riyad', 'Ceddah', 'Mekke', 'Medine', 'Dammam', 'Taif', 'Tabuk', 'Buraydah',
-      'Khamis Mushait', 'Hail', 'Al Kharj', 'Najran', 'Al Qatif', 'Jubail',
-      'Abha', 'Yanbu', 'Al Majma\'ah', 'Unayzah', 'Khobar', 'Dhahran', 'Arar',
-      'Sakakah', 'Jizan', 'Qurayyat', 'Rafha', 'Al Duwadimi', 'Bisha', 'Wadi ad-Dawasir',
-      'Al Bahah', 'Ad Dilam', 'Ad Diriyah', 'Afif', 'Al Mithnab', 'Al Ula', 'As Sulayyil',
-      'Az Zulfi', 'Badr Hunayn', 'Baljurashi', 'Birq', 'Duba', 'Farasan', 'Hawtat Bani Tamim',
-      'Hotat Sudair', 'Huraymila', 'Layla', 'Muzahmiyya', 'Qaisumah', 'Qatif', 'Rabigh',
-      'Rijal Alma', 'Rumah', 'Sabya', 'Safwa', 'Sajir', 'Samtah', 'Sharurah', 'Shaqra',
-      'Sulayyil', 'Tabarjal', 'Tamrah', 'Tanomah', 'Tarut', 'Tayma', 'Thadiq', 'Thar',
-      'Turaif', 'Umm Lajj', 'Umm as Sahik', 'Uyun al Jiwa', 'Wajh', 'Zahran al Janub'
-    ],
-    'AE': [
-      'Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah', 'Fujairah',
-      'Umm Al Quwain', 'Al Ain', 'Dibba Al-Fujairah', 'Dibba Al-Hisn', 'Khor Fakkan',
-      'Ar-Rams', 'Delma Island', 'Madinat Zayed', 'Ruwais', 'Liwa Oasis', 'Ghiyathi',
-      'Mirfa', 'Zayed City', 'Sweihan', 'Habshan', 'Al Madam', 'Al Jazirah Al Hamra',
-      'Al Khatim', 'Al Mirfa', 'Al Yahar', 'Al Falah', 'Al Quaa', 'Al Samha',
-      'Al Wathba', 'Al Rafaah', 'Al Hamriyah', 'Al Rafaah', 'Al Manama', 'Al Aryam',
-      'Al Dhaid', 'Al Hamriyah', 'Al Lisaili', 'Al Madam', 'Al Rafaah', 'Al Shahama',
-      'Al Yahar', 'Dafan Al Zafaran', 'Falaj Al Mualla', 'Ghayathi', 'Hatta',
-      'Kalba', 'Khatt', 'Masafi', 'Mileiha', 'Muzayri', 'Ras Al Khaimah City',
-      'Sila', 'Zayed City'
-    ],
-    'US': [
-      'New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia',
-      'San Antonio', 'San Diego', 'Dallas', 'San Jose', 'Austin', 'Jacksonville',
-      'Fort Worth', 'Columbus', 'Indianapolis', 'Charlotte', 'San Francisco',
-      'Seattle', 'Denver', 'Boston', 'El Paso', 'Detroit', 'Nashville', 'Portland',
-      'Memphis', 'Oklahoma City', 'Las Vegas', 'Louisville', 'Baltimore', 'Milwaukee',
-      'Albuquerque', 'Tucson', 'Fresno', 'Sacramento', 'Mesa', 'Kansas City',
-      'Atlanta', 'Long Beach', 'Colorado Springs', 'Raleigh', 'Miami', 'Virginia Beach',
-      'Omaha', 'Oakland', 'Minneapolis', 'Tulsa', 'Arlington', 'Tampa', 'New Orleans',
-      'Wichita', 'Cleveland', 'Bakersfield', 'Aurora', 'Anaheim', 'Honolulu', 'Santa Ana',
-      'Corpus Christi', 'Riverside', 'Lexington', 'Stockton', 'Henderson', 'Saint Paul',
-      'St. Louis', 'Cincinnati', 'Pittsburgh', 'Greensboro', 'Anchorage', 'Plano',
-      'Lincoln', 'Orlando', 'Irvine', 'Newark', 'Durham', 'Chula Vista', 'Toledo',
-      'Fort Wayne', 'St. Petersburg', 'Laredo', 'Jersey City', 'Chandler', 'Madison',
-      'Lubbock', 'Scottsdale', 'Reno', 'Buffalo', 'Gilbert', 'Glendale', 'North Las Vegas',
-      'Winston-Salem', 'Chesapeake', 'Norfolk', 'Fremont', 'Garland', 'Irving', 'Hialeah',
-      'Richmond', 'Boise', 'Spokane'
-    ],
-    'GB': [
-      'London', 'Birmingham', 'Manchester', 'Liverpool', 'Leeds', 'Sheffield',
-      'Bristol', 'Newcastle upon Tyne', 'Sunderland', 'Brighton', 'Hull', 'Plymouth',
-      'Stoke-on-Trent', 'Wolverhampton', 'Norwich', 'Swansea', 'Southampton',
-      'Reading', 'Dundee', 'Cardiff', 'Belfast', 'Derry', 'Lisburn', 'Newtownabbey',
-      'Bangor', 'Antrim', 'Downpatrick', 'Armagh', 'Londonderry', 'Coleraine',
-      'Ballymena', 'Newry', 'Craigavon', 'Bangor', 'Castlereagh', 'Glasgow',
-      'Edinburgh', 'Aberdeen', 'Dundee', 'Inverness', 'Stirling', 'Perth', 'Dundee',
-      'Ayr', 'Kilmarnock', 'Greenock', 'Coatbridge', 'Airdrie', 'Cumbernauld',
-      'Hamilton', 'East Kilbride', 'Livingston', 'Clydebank', 'Kirkintilloch',
-      'Rutherglen', 'Cambuslang', 'Wishaw', 'Motherwell', 'Bellshill', 'Coatbridge',
-      'Airdrie', 'Blantyre', 'Uddingston', 'Viewpark', 'Bothwell', 'Newarthill',
-      'Holytown', 'Newmains', 'Shotts', 'Fauldhouse', 'Breich', 'West Calder',
-      'Addiewell', 'Logan', 'Seafield', 'Blackridge', 'Armadale', 'Bathgate',
-      'Whitburn', 'Fauldhouse', 'Longridge', 'West Calder', 'East Calder', 'Kirknewton',
-      'Ratho', 'Queensferry', 'Dalmeny', 'South Queensferry', 'Edinburgh', 'Leith'
-    ],
-    'FR': [
-      'Paris', 'Marseille', 'Lyon', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg',
-      'Montpellier', 'Bordeaux', 'Lille', 'Rennes', 'Reims', 'Le Havre', 'Saint-Étienne',
-      'Toulon', 'Grenoble', 'Dijon', 'Angers', 'Nîmes', 'Villeurbanne', 'Le Mans',
-      'Aix-en-Provence', 'Clermont-Ferrand', 'Brest', 'Limoges', 'Tours', 'Amiens',
-      'Metz', 'Besançon', 'Orléans', 'Mulhouse', 'Rouen', 'Caen', 'Nancy', 'Saint-Denis',
-      'Argenteuil', 'Roubaix', 'Dunkerque', 'Tourcoing', 'Nanterre', 'Avignon',
-      'Créteil', 'Poitiers', 'Fort-de-France', 'Versailles', 'Colmar', 'Pau',
-      'La Rochelle', 'Valence', 'Saint-Paul', 'Ajaccio', 'Béziers', 'Troyes',
-      'Antibes', 'Cannes', 'Calais', 'Digne-les-Bains', 'Draguignan', 'Gap',
-      'Grasse', 'Hyères', 'Mandelieu-la-Napoule', 'Marignane', 'Martigues', 'Meyreuil',
-      'Miramas', 'Plan-de-Cuques', 'Port-de-Bouc', 'Rognac', 'Saintes-Maries-de-la-Mer',
-      'Salon-de-Provence', 'Sanary-sur-Mer', 'Septèmes-les-Vallons', 'Tarascon',
-      'Vitrolles', 'Velaux', 'Venelles', 'Berre-l\'Étang', 'Châteauneuf-les-Martigues',
-      'Fos-sur-Mer', 'Gignac-la-Narbonnaise', 'Graveson', 'Istres', 'Lambesc',
-      'Maillane', 'Meyrargues', 'Mouriès', 'Noves', 'Orgon', 'Pélissanne', 'Peyrolles-en-Provence',
-      'Port-Saint-Louis-du-Rhône', 'Puyloubier', 'Rognes', 'Rousset', 'Saint-Andiol',
-      'Saint-Cannat', 'Saint-Chamas', 'Saintes-Maries-de-la-Mer', 'Saint-Rémy-de-Provence',
-      'Saint-Victoret', 'Salin-de-Giraud', 'Sénas', 'Trets', 'Vauvenargues', 'Vernègues',
-      'Villelaure', 'Alleins', 'Ansouis', 'Aubagne', 'Auriol', 'Barbentane', 'Beaurecueil',
-      'Belcodène', 'Berre-l\'Étang', 'Bouc-Bel-Air', 'Cabriès', 'Cadolive', 'Carnoux-en-Provence',
-      'Carry-le-Rouet', 'Cassis', 'Ceyreste', 'Châteauneuf-le-Rouge', 'Châteauneuf-les-Martigues',
-      'La Ciotat', 'Cuges-les-Pins', 'Ensuès-la-Redonne', 'Fos-sur-Mer', 'Gardanne',
-      'Gignac-la-Narbonnaise', 'Graveson', 'Istres', 'Lambesc', 'Maillane', 'Meyrargues',
-      'Mouriès', 'Noves', 'Orgon', 'Pélissanne', 'Peyrolles-en-Provence', 'Port-Saint-Louis-du-Rhône',
-      'Puyloubier', 'Rognes', 'Rousset', 'Saint-Andiol', 'Saint-Cannat', 'Saint-Chamas',
-      'Saintes-Maries-de-la-Mer', 'Saint-Rémy-de-Provence', 'Saint-Victoret', 'Salin-de-Giraud',
-      'Sénas', 'Trets', 'Vauvenargues', 'Vernègues', 'Villelaure', 'Alleins', 'Ansouis',
-      'Aubagne', 'Auriol', 'Barbentane', 'Beaurecueil', 'Belcodène', 'Berre-l\'Étang',
-      'Bouc-Bel-Air', 'Cabriès', 'Cadolive', 'Carnoux-en-Provence', 'Carry-le-Rouet',
-      'Cassis', 'Ceyreste', 'Châteauneuf-le-Rouge', 'Châteauneuf-les-Martigues', 'La Ciotat',
-      'Cuges-les-Pins', 'Ensuès-la-Redonne', 'Fos-sur-Mer', 'Gardanne'
-    ],
-    'NL': [
-      'Amsterdam', 'Rotterdam', 'The Hague', 'Utrecht', 'Eindhoven', 'Tilburg',
-      'Groningen', 'Almere', 'Breda', 'Nijmegen', 'Enschede', 'Haarlem', 'Arnhem',
-      'Zaanstad', 'Amersfoort', 'Apeldoorn', 'Hoofddorp', 'Maastricht', 'Leiden',
-      'Dordrecht', 'Zoetermeer', 'Zwolle', 'Deventer', 'Delft', 'Alkmaar', 'Heerlen',
-      'Hilversum', 'Sittard', 'Roosendaal', 'Purmerend', 'Oss', 'Schiedam', 'Spijkenisse',
-      'Vlaardingen', 'Veenendaal', 'Bergen op Zoom', 'Capelle aan den IJssel', 'Assen',
-      'Velsen-Zuid', 'Nieuwegein', 'Zeist', 'Hardenberg', 'Kampen', 'Lelystad', 'Barendrecht',
-      'Midden-Delfland', 'Westland', 'Rijswijk', 'Papendrecht', 'Gouda', 'Culemborg',
-      'Woerden', 'IJsselstein', 'Huizen', 'Naarden', 'Bussum', 'Hilversum', 'Laren',
-      'Blaricum', 'Eemnes', 'Baarn', 'Soest', 'Amersfoort', 'Leusden', 'Woudenberg',
-      'Rhenen', 'Veenendaal', 'Ede', 'Barneveld', 'Apeldoorn', 'Voorst', 'Lochem',
-      'Berkelland', 'Bronckhorst', 'Doesburg', 'Duiven', 'Gelderland', 'Lingewaard',
-      'Nijmegen', 'Overbetuwe', 'Renkum', 'Rheden', 'Rozendaal', 'Wageningen', 'West Maas en Waal',
-      'Wijchen', 'Zevenaar', 'Zutphen', 'Aalten', 'Berkelland', 'Bronckhorst', 'Doetinchem',
-      'Doesburg', 'Duiven', 'Gelderland', 'Lingewaard', 'Montferland', 'Nijmegen', 'Oude IJsselstreek',
-      'Overbetuwe', 'Renkum', 'Rheden', 'Rozendaal', 'Wageningen', 'West Maas en Waal', 'Wijchen',
-      'Zevenaar', 'Zutphen', 'Aalten', 'Berkelland', 'Bronckhorst', 'Doetinchem'
-    ],
-    'CA': [
-      'Toronto', 'Montreal', 'Vancouver', 'Calgary', 'Edmonton', 'Ottawa', 'Winnipeg',
-      'Quebec City', 'Hamilton', 'Kitchener', 'London', 'Victoria', 'Halifax', 'Oshawa',
-      'Windsor', 'Saskatoon', 'Regina', 'Sherbrooke', 'Kingston', 'Thunder Bay', 'Sudbury',
-      'Abbotsford', 'Saguenay', 'Levis', 'Kelowna', 'Barrie', 'Trois-Rivières', 'Guelph',
-      'Moncton', 'Brantford', 'Saint John', 'Thunder Bay', 'Peterborough', 'Chatham-Kent',
-      'Belleville', 'Sarnia', 'Fredericton', 'Charlottetown', 'Yellowknife', 'Iqaluit',
-      'Whitehorse', 'St. John\'s', 'Happy Valley-Goose Bay', 'Corner Brook', 'Grand Falls-Windsor',
-      'Gander', 'Labrador City', 'Marystown', 'Stephenville', 'Wabush', 'Buchans', 'Carbonear',
-      'Clarenville', 'Deer Lake', 'Fogo Island', 'Harbour Breton', 'Harbour Grace', 'Heart\'s Content',
-      'Heart\'s Delight-Islington', 'Heart\'s Desire', 'Holyrood', 'Lewisporte', 'Mount Pearl',
-      'New-Wes-Valley', 'Old Perlican', 'Placentia', 'Port aux Basques', 'Port aux Choix',
-      'Port au Port East', 'Port au Port West', 'Port Blandford', 'Port Hope Simpson',
-      'Port Rexton', 'Port Saunders', 'Port Union', 'Portugal Cove-St. Philip\'s', 'Ramea',
-      'Red Bay', 'Rencontre East', 'Rencontre West', 'Rigolet', 'Rose Blanche-Harbour le Cou',
-      'St. Alban\'s', 'St. Anthony', 'St. Bride\'s', 'St. George\'s', 'St. Jacques-Coomb\'s Cove',
-      'St. John\'s', 'St. Lawrence', 'St. Lewis', 'St. Lunaire-Griquet', 'St. Mary\'s',
-      'St. Paul\'s River', 'St. Shott\'s', 'St. Vincent\'s-St. Stephen\'s-Peter\'s River',
-      'Sally\'s Cove', 'Sandringham', 'Seal Cove', 'South Brook', 'Springdale', 'St. Bernard\'s-Jacques Fontaine',
-      'St. Brendan\'s', 'St. Brendans', 'St. Bride\'s', 'St. George\'s', 'St. Jacques-Coomb\'s Cove',
-      'St. John\'s', 'St. Lawrence', 'St. Lewis', 'St. Lunaire-Griquet', 'St. Mary\'s',
-      'St. Paul\'s River', 'St. Shott\'s', 'St. Vincent\'s-St. Stephen\'s-Peter\'s-Peter\'s River',
-      'Sally\'s Cove', 'Sandringham', 'Seal Cove', 'South Brook', 'Springdale', 'Summerford',
-      'Terra Nova', 'Torbay', 'Trepassey', 'Trinity Bay North', 'Twillingate', 'Wabana',
-      'Wesleyville', 'Whitbourne', 'Winterton', 'Witless Bay', 'Woodstock', 'York Harbour'
-    ],
-    'AU': [
-      'Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Newcastle',
-      'Canberra', 'Wollongong', 'Logan City', 'Geelong', 'Hobart', 'Townsville', 'Ipswich',
-      'Cairns', 'Toowoomba', 'Darwin', 'Ballarat', 'Bendigo', 'Albury', 'Launceston',
-      'Mackay', 'Rockhampton', 'Bunbury', 'Bundaberg', 'Hervey Bay', 'Wagga Wagga',
-      'Coffs Harbour', 'Dubbo', 'Lismore', 'Mandurah', 'Kalgoorlie', 'Albany', 'Karratha',
-      'Mount Isa', 'Tennant Creek', 'Katherine', 'Palmerston', 'Alice Springs', 'Katherine',
-      'Tennant Creek', 'Yulara', 'Uluru', 'Coober Pedy', 'Woomera', 'Ceduna', 'Kimba',
-      'Kimba', 'Port Augusta', 'Whyalla', 'Port Lincoln', 'Kimba', 'Woomera', 'Roxby Downs',
-      'Andamooka', 'Leigh Creek', 'Copley', 'Hawker', 'Wilpena', 'Kimba', 'Port Augusta',
-      'Whyalla', 'Port Lincoln', 'Tumby Bay', 'Kimba', 'Woomera', 'Roxby Downs', 'Andamooka',
-      'Leigh Creek', 'Copley', 'Hawker', 'Wilpena', 'Marree', 'Oodnadatta', 'William Creek',
-      'Birdsville', 'Bedourie', 'Boulia', 'Burketown', 'Camoweal', 'Camooweal', 'Cloncurry',
-      'Dajarra', 'Dulkaninna', 'Gregory', 'Hughenden', 'Julia Creek', 'Karumba', 'Kynuna',
-      'McKinlay', 'Normanton', 'Richmond', 'Winton', 'Adelaide River', 'Batchelor', 'Berry Springs',
-      'Darwin River', 'Douglas-Daly', 'Dundee Beach', 'Dundee Forest', 'Dundee Beach', 'Dundee Forest',
-      'Humpty Doo', 'Katherine', 'Larrakeyah', 'Leanyer', 'Manton', 'McMinns Lagoon', 'Mickett Creek',
-      'Millner', 'Nightcliff', 'Palmerston', 'Parap', 'Pine Creek', 'Tennant Creek', 'The Gap',
-      'Tivendale', 'Wagait Beach', 'Wagaman', 'Woolner', 'Wulagi', 'Yulara', 'Uluru', 'Coober Pedy',
-      'Woomera', 'Ceduna', 'Kimba', 'Port Augusta', 'Whyalla', 'Port Lincoln', 'Tumby Bay',
-      'Kimba', 'Woomera', 'Roxby Downs', 'Andamooka', 'Leigh Creek', 'Copley', 'Hawker',
-      'Wilpena', 'Marree', 'Oodnadatta', 'William Creek', 'Birdsville', 'Bedourie', 'Boulia',
-      'Burketown', 'Camoweal', 'Camooweal', 'Cloncurry', 'Dajarra', 'Dulkaninna', 'Gregory',
-      'Hughenden', 'Julia Creek', 'Karumba', 'Kynuna', 'McKinlay', 'Normanton', 'Richmond',
-      'Winton', 'Adelaide River', 'Batchelor', 'Berry Springs', 'Darwin River', 'Douglas-Daly',
-      'Dundee Beach', 'Dundee Forest', 'Humpty Doo', 'Katherine', 'Larrakeyah', 'Leanyer',
-      'Manton', 'McMinns Lagoon', 'Mickett Creek', 'Millner', 'Nightcliff', 'Palmerston',
-      'Parap', 'Pine Creek', 'Tennant Creek', 'The Gap', 'Tivendale', 'Wagait Beach', 'Wagaman',
-      'Woolner', 'Wulagi'
-    ],
-  };
+  @override
+  void initState() {
+    super.initState();
+    _loadItems();
+  }
 
-  List<String> get _filteredCities {
-    final cities = widget.countryCode == 'TR'
-        ? _turkishCities
-        : (_citiesByCountry[widget.countryCode] ?? []);
-    if (_searchQuery.isEmpty) {
-      return cities;
+  Future<void> _loadItems() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final items = await EmushafPrayerService.fetchCities(widget.country.id);
+      items.sort((a, b) => _displayLookupName(a).compareTo(_displayLookupName(b)));
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _items = items;
+      });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    } finally {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isLoading = false;
+      });
     }
-    return cities
-        .where((city) =>
-            city.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
+  }
+
+  List<EmushafLookupItem> get _topLevelMatches {
+    final query = _normalize(_searchController.text);
+    if (query.isEmpty) {
+      return _items;
+    }
+
+    return _items.where((item) {
+      return _normalize(item.name).contains(query) ||
+          _normalize(item.englishName).contains(query) ||
+          _normalize(_displayLookupName(item)).contains(query);
+    }).toList();
+  }
+
+  Future<void> _onSearchChanged(String value) async {
+    setState(() {});
+    _debounce?.cancel();
+
+    final query = value.trim();
+    if (query.length < 2) {
+      setState(() {
+        _nestedMatches = const [];
+        _isSearchingNested = false;
+      });
+      return;
+    }
+
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      _searchNestedMatches(query);
+    });
+  }
+
+  Future<void> _searchNestedMatches(String query) async {
+    final version = ++_searchVersion;
+
+    setState(() {
+      _isSearchingNested = true;
+      _nestedMatches = const [];
+    });
+
+    final normalizedQuery = _normalize(query);
+    final matches = <_NestedMatch>[];
+
+    for (final item in _items) {
+      if (matches.length >= 60) {
+        break;
+      }
+
+      final children = await EmushafPrayerService.fetchDistricts(item.id);
+      if (!mounted || version != _searchVersion) {
+        return;
+      }
+
+      for (final child in children) {
+        final searchable = [
+          child.name,
+          child.englishName,
+          _displayLookupName(child),
+        ];
+
+        if (searchable.any((value) => _normalize(value).contains(normalizedQuery))) {
+          matches.add(_NestedMatch(parent: item, child: child));
+          if (matches.length >= 60) {
+            break;
+          }
+        }
+      }
+    }
+
+    if (!mounted || version != _searchVersion) {
+      return;
+    }
+
+    setState(() {
+      _nestedMatches = matches;
+      _isSearchingNested = false;
+    });
+  }
+
+  Future<void> _selectTopLevel(EmushafLookupItem item) async {
+    if (widget.country.isTurkey) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DistrictSelectionScreen(
+            country: widget.country,
+            parentItem: item,
+          ),
+        ),
+      );
+      return;
+    }
+
+    final children = await EmushafPrayerService.fetchDistricts(item.id);
+    if (!mounted) {
+      return;
+    }
+
+    if (children.isNotEmpty) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => DistrictSelectionScreen(
+            country: widget.country,
+            parentItem: item,
+          ),
+        ),
+      );
+      return;
+    }
+
+    await _applySelection(city: item.searchName);
+  }
+
+  Future<void> _selectNested(_NestedMatch match) async {
+    if (widget.country.isTurkey) {
+      await _applySelection(
+        city: match.parent.searchName,
+        district: match.child.searchName,
+      );
+      return;
+    }
+
+    await _applySelection(
+      city: match.child.searchName,
+      state: match.parent.searchName,
+    );
+  }
+
+  Future<void> _applySelection({
+    required String city,
+    String? district,
+    String? state,
+  }) async {
+    setState(() {
+      _isSelecting = true;
+    });
+
+    try {
+      final prayerProvider = context.read<PrayerProvider>();
+      await prayerProvider.setManualLocation(
+        city,
+        widget.country.searchName,
+        district: district,
+        state: state,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      final locale = context.read<AppSettings>().language;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _text(
+              locale,
+              tr: 'Secim uygulanamadi: $e',
+              en: 'Selection could not be applied: $e',
+              ar: 'تعذر تطبيق الاختيار: $e',
+            ),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isSelecting = false;
+      });
+    }
+  }
+
+  String _displayLookupName(EmushafLookupItem item) {
+    final source = item.englishName.isNotEmpty ? item.englishName : item.name;
+    return _titleCase(source);
+  }
+
+  String _displayCountryName() {
+    final source = widget.country.englishName.isNotEmpty
+        ? widget.country.englishName
+        : widget.country.name;
+    return _titleCase(source);
+  }
+
+  String _titleCase(String value) {
+    return value
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) {
+          if (part.length == 1) {
+            return part.toUpperCase();
+          }
+          return '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}';
+        })
+        .join(' ');
+  }
+
+  String _normalize(String value) {
+    return value.trim().toLowerCase();
   }
 
   String _text(
@@ -266,56 +302,9 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
     }
   }
 
-  Future<void> _selectCity(String city) async {
-    if (widget.countryCode == 'TR') {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => DistrictSelectionScreen(
-            city: city,
-            countryName: widget.countryName,
-          ),
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final prayerProvider = context.read<PrayerProvider>();
-
-      // Update prayer times for new location
-      await prayerProvider.setManualLocation(city, widget.countryName);
-
-      // Go back to home screen
-      Navigator.of(context).popUntil((route) => route.isFirst);
-    } catch (e) {
-      final locale = context.read<AppSettings>().language;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _text(
-              locale,
-              tr: 'Şehir güncellenirken hata oluştu: $e',
-              en: 'An error occurred while updating the city: $e',
-              ar: 'حدث خطأ أثناء تحديث المدينة: $e',
-            ),
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -338,7 +327,7 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          '${widget.countryName} - ${AppLocalizations.translate('search_city', locale)}',
+          '${_displayCountryName()} - ${AppLocalizations.translate('search_city', locale)}',
           style: AppTypography.h3.copyWith(
             color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
           ),
@@ -346,7 +335,6 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
       ),
       body: Column(
         children: [
-          // Search Field
           Padding(
             padding: EdgeInsets.all(AppSpacing.lg),
             child: TextField(
@@ -355,9 +343,9 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
               decoration: InputDecoration(
                 hintText: _text(
                   locale,
-                  tr: '${widget.countryName} şehrini ara...',
-                  en: 'Search a city in ${widget.countryName}...',
-                  ar: 'ابحث عن مدينة في ${widget.countryName}...',
+                  tr: '${_displayCountryName()} icin sehir veya bolge ara...',
+                  en: 'Search a city or region in ${_displayCountryName()}...',
+                  ar: 'ابحث عن مدينة أو منطقة في ${_displayCountryName()}...',
                 ),
                 hintStyle: TextStyle(
                   color: isDark ? AppColors.darkTextLight : AppColors.textLight,
@@ -389,65 +377,197 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
                     width: 2,
                   ),
                 ),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.md,
-                ),
               ),
               style: TextStyle(
-                color: isDark
-                    ? AppColors.darkTextPrimary
-                    : AppColors.textPrimary,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
               ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
+              onChanged: _onSearchChanged,
             ),
           ),
-
-          // Cities List
           Expanded(
-            child: _isLoading
-                ? Center(
-                    child: CircularProgressIndicator(
-                      color: isDark
-                          ? AppColors.darkAccentPrimary
-                          : AppColors.accentPrimary,
-                    ),
-                  )
-                : ListView.builder(
-                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                    itemCount: _filteredCities.length,
-                    itemBuilder: (context, index) {
-                      final city = _filteredCities[index];
-                      return ListTile(
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: AppSpacing.sm,
-                          vertical: AppSpacing.xs,
-                        ),
-                        title: Text(
-                          city,
-                          style: AppTypography.bodyMedium.copyWith(
-                            color: isDark
-                                ? AppColors.darkTextPrimary
-                                : AppColors.textPrimary,
-                          ),
-                        ),
-                        onTap: () => _selectCity(city),
-                        trailing: Icon(
-                          Icons.location_on,
-                          size: 16,
-                          color: isDark
-                              ? AppColors.darkTextSecondary
-                              : AppColors.textSecondary,
-                        ),
-                      );
-                    },
-                  ),
+            child: _buildBody(isDark: isDark, locale: locale),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildBody({
+    required bool isDark,
+    required String locale,
+  }) {
+    if (_isLoading) {
+      return Center(
+        child: CircularProgressIndicator(
+          color: isDark ? AppColors.darkAccentPrimary : AppColors.accentPrimary,
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacing.lg),
+          child: Text(
+            _text(
+              locale,
+              tr: 'Liste yuklenemedi.\n$_errorMessage',
+              en: 'The list could not be loaded.\n$_errorMessage',
+              ar: 'تعذر تحميل القائمة.\n$_errorMessage',
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    final query = _searchController.text.trim();
+    final topLevelMatches = _topLevelMatches;
+
+    if (query.isEmpty) {
+      return _buildTopLevelList(topLevelMatches, isDark);
+    }
+
+    return ListView(
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      children: [
+        if (topLevelMatches.isNotEmpty) ...[
+          _SectionHeader(
+            title: _text(
+              locale,
+              tr: 'Bolgeler / ust seviye yerler',
+              en: 'Regions / top-level places',
+              ar: 'المناطق / الأماكن الرئيسية',
+            ),
+          ),
+          ...topLevelMatches.map((item) => _buildTopLevelTile(item, isDark)),
+        ],
+        if (_isSearchingNested) ...[
+          const SizedBox(height: 12),
+          Center(
+            child: CircularProgressIndicator(
+              color: isDark ? AppColors.darkAccentPrimary : AppColors.accentPrimary,
+            ),
+          ),
+        ] else if (_nestedMatches.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _SectionHeader(
+            title: _text(
+              locale,
+              tr: 'Bulunan alt sehirler / ilceler',
+              en: 'Matching nested cities / districts',
+              ar: 'المدن / المناطق الفرعية المطابقة',
+            ),
+          ),
+          ..._nestedMatches.map((match) => _buildNestedTile(match, isDark)),
+        ] else if (topLevelMatches.isEmpty) ...[
+          Padding(
+            padding: EdgeInsets.only(top: AppSpacing.xl),
+            child: Center(
+              child: Text(
+                _text(
+                  locale,
+                  tr: 'Aramana uygun yer bulunamadi.',
+                  en: 'No place matched your search.',
+                  ar: 'لم يتم العثور على مكان مطابق لبحثك.',
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildTopLevelList(List<EmushafLookupItem> items, bool isDark) {
+    return ListView.builder(
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        return _buildTopLevelTile(items[index], isDark);
+      },
+    );
+  }
+
+  Widget _buildTopLevelTile(EmushafLookupItem item, bool isDark) {
+    return ListTile(
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      title: Text(
+        _displayLookupName(item),
+        style: AppTypography.bodyMedium.copyWith(
+          color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+        ),
+      ),
+      subtitle: Text(
+        item.name,
+        style: AppTypography.bodySmall.copyWith(
+          color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+        ),
+      ),
+      onTap: _isSelecting ? null : () => _selectTopLevel(item),
+      trailing: Icon(
+        Icons.arrow_forward_ios,
+        size: 14,
+        color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+      ),
+    );
+  }
+
+  Widget _buildNestedTile(_NestedMatch match, bool isDark) {
+    return ListTile(
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      title: Text(
+        _displayLookupName(match.child),
+        style: AppTypography.bodyMedium.copyWith(
+          color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+        ),
+      ),
+      subtitle: Text(
+        '${_displayLookupName(match.parent)} • ${match.child.name}',
+        style: AppTypography.bodySmall.copyWith(
+          color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+        ),
+      ),
+      onTap: _isSelecting ? null : () => _selectNested(match),
+      trailing: Icon(
+        Icons.location_on,
+        size: 16,
+        color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+      ),
+    );
+  }
+}
+
+class _NestedMatch {
+  const _NestedMatch({
+    required this.parent,
+    required this.child,
+  });
+
+  final EmushafLookupItem parent;
+  final EmushafLookupItem child;
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, bottom: 6),
+      child: Text(
+        title,
+        style: AppTypography.bodySmall.copyWith(
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

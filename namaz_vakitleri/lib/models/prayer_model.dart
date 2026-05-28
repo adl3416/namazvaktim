@@ -279,6 +279,7 @@ class GeoLocation {
   final String city;
   final String state;
   final String country;
+  final String district;
 
   GeoLocation({
     required this.latitude,
@@ -286,5 +287,6 @@ class GeoLocation {
     required this.city,
     required this.state,
     required this.country,
+    this.district = '',
   });
 }

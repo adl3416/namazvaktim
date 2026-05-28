@@ -1,222 +1,140 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../config/color_system.dart';
 import '../providers/app_settings.dart';
 import '../providers/prayer_provider.dart';
+import '../services/emushaf_prayer_service.dart';
 
 class DistrictSelectionScreen extends StatefulWidget {
   const DistrictSelectionScreen({
     super.key,
-    required this.city,
-    required this.countryName,
+    required this.country,
+    required this.parentItem,
   });
 
-  final String city;
-  final String countryName;
+  final EmushafCountry country;
+  final EmushafLookupItem parentItem;
 
   @override
   State<DistrictSelectionScreen> createState() => _DistrictSelectionScreenState();
 }
 
 class _DistrictSelectionScreenState extends State<DistrictSelectionScreen> {
-  static const Map<String, int> _plateByCity = {
-    'ADANA': 1,
-    'ADIYAMAN': 2,
-    'AFYONKARAHISAR': 3,
-    'AGRI': 4,
-    'AMASYA': 5,
-    'ANKARA': 6,
-    'ANTALYA': 7,
-    'ARTVIN': 8,
-    'AYDIN': 9,
-    'BALIKESIR': 10,
-    'BILECIK': 11,
-    'BINGOL': 12,
-    'BITLIS': 13,
-    'BOLU': 14,
-    'BURDUR': 15,
-    'BURSA': 16,
-    'CANAKKALE': 17,
-    'CANKIRI': 18,
-    'CORUM': 19,
-    'DENIZLI': 20,
-    'DIYARBAKIR': 21,
-    'EDIRNE': 22,
-    'ELAZIG': 23,
-    'ERZINCAN': 24,
-    'ERZURUM': 25,
-    'ESKISEHIR': 26,
-    'GAZIANTEP': 27,
-    'GIRESUN': 28,
-    'GUMUSHANE': 29,
-    'HAKKARI': 30,
-    'HATAY': 31,
-    'ISPARTA': 32,
-    'MERSIN': 33,
-    'ISTANBUL': 34,
-    'IZMIR': 35,
-    'KARS': 36,
-    'KASTAMONU': 37,
-    'KAYSERI': 38,
-    'KIRKLARELI': 39,
-    'KIRSEHIR': 40,
-    'KOCAELI': 41,
-    'KONYA': 42,
-    'KUTAHYA': 43,
-    'MALATYA': 44,
-    'MANISA': 45,
-    'KAHRAMANMARAS': 46,
-    'MARDIN': 47,
-    'MUGLA': 48,
-    'MUS': 49,
-    'NEVSEHIR': 50,
-    'NIGDE': 51,
-    'ORDU': 52,
-    'RIZE': 53,
-    'SAKARYA': 54,
-    'SAMSUN': 55,
-    'SIIRT': 56,
-    'SINOP': 57,
-    'SIVAS': 58,
-    'TEKIRDAG': 59,
-    'TOKAT': 60,
-    'TRABZON': 61,
-    'TUNCELI': 62,
-    'SANLIURFA': 63,
-    'USAK': 64,
-    'VAN': 65,
-    'YOZGAT': 66,
-    'ZONGULDAK': 67,
-    'AKSARAY': 68,
-    'BAYBURT': 69,
-    'KARAMAN': 70,
-    'KIRIKKALE': 71,
-    'BATMAN': 72,
-    'SIRNAK': 73,
-    'BARTIN': 74,
-    'ARDAHAN': 75,
-    'IGDIR': 76,
-    'YALOVA': 77,
-    'KARABUK': 78,
-    'KILIS': 79,
-    'OSMANIYE': 80,
-    'DUZCE': 81,
-  };
+  final TextEditingController _controller = TextEditingController();
 
-  static const Map<String, String> _textFixes = {
-    'Ä°': 'İ',
-    'Ä±': 'ı',
-    'Ã‡': 'Ç',
-    'Ã§': 'ç',
-    'Ã–': 'Ö',
-    'Ã¶': 'ö',
-    'Ãœ': 'Ü',
-    'Ã¼': 'ü',
-    'Äž': 'Ğ',
-    'ÄŸ': 'ğ',
-    'Åž': 'Ş',
-    'ÅŸ': 'ş',
-  };
-
-  final TextEditingController _districtController = TextEditingController();
-
-  bool _isLoading = false;
-  bool _isDistrictsLoading = true;
-  String? _districtLoadError;
-  List<String> _districts = const [];
+  bool _isLoading = true;
+  bool _isSelecting = false;
+  String? _errorMessage;
+  List<EmushafLookupItem> _items = const [];
 
   @override
   void initState() {
     super.initState();
-    _loadDistricts();
+    _loadItems();
   }
 
-  List<String> get _filteredDistricts {
-    final query = _normalizeLookupValue(_districtController.text);
-    if (query.isEmpty) {
-      return _districts;
-    }
+  Future<void> _loadItems() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-    return _districts
-        .where((district) => _normalizeLookupValue(district).contains(query))
-        .toList();
-  }
+    try {
+      final items = await EmushafPrayerService.fetchDistricts(widget.parentItem.id);
+      items.sort((a, b) => _displayLookupName(a).compareTo(_displayLookupName(b)));
 
-  String _text(
-    String locale, {
-    required String tr,
-    required String en,
-    required String ar,
-  }) {
-    switch (locale) {
-      case 'tr':
-        return tr;
-      case 'ar':
-        return ar;
-      default:
-        return en;
-    }
-  }
+      if (!mounted) {
+        return;
+      }
 
-  Future<void> _loadDistricts() async {
-    final plateCode = _plateByCity[_normalizeLookupValue(widget.city)];
-
-    if (plateCode == null) {
       setState(() {
-        _isDistrictsLoading = false;
+        _items = items;
       });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    } finally {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<EmushafLookupItem> get _filteredItems {
+    final query = _normalize(_controller.text);
+    if (query.isEmpty) {
+      return _items;
+    }
+
+    return _items.where((item) {
+      return _normalize(item.name).contains(query) ||
+          _normalize(item.englishName).contains(query) ||
+          _normalize(_displayLookupName(item)).contains(query);
+    }).toList();
+  }
+
+  Future<void> _selectItem(EmushafLookupItem item) async {
+    if (widget.country.isTurkey) {
+      await _applySelection(
+        city: widget.parentItem.searchName,
+        district: item.searchName,
+      );
       return;
     }
 
-    try {
-      final rawJson = await rootBundle.loadString('lib/data/tr_districts_raw.json');
-      final decoded = jsonDecode(rawJson) as List<dynamic>;
-      final districts = decoded
-          .whereType<Map<String, dynamic>>()
-          .where((entry) => entry['il_plaka'] == plateCode)
-          .map((entry) => _cleanText(entry['ilce_adi']?.toString() ?? ''))
-          .where((district) => district.isNotEmpty)
-          .toSet()
-          .toList()
-        ..sort((a, b) =>
-            _normalizeLookupValue(a).compareTo(_normalizeLookupValue(b)));
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _districts = districts;
-        _isDistrictsLoading = false;
-        _districtLoadError = null;
-      });
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _isDistrictsLoading = false;
-        _districtLoadError = 'load_failed';
-      });
-    }
+    await _applySelection(
+      city: item.searchName,
+      state: widget.parentItem.searchName,
+    );
   }
 
-  Future<void> _continue({String? district}) async {
+  Future<void> _continueWithText() async {
+    final input = _controller.text.trim();
+
+    if (widget.country.isTurkey) {
+      await _applySelection(
+        city: widget.parentItem.searchName,
+        district: input.isEmpty ? null : input,
+      );
+      return;
+    }
+
+    if (input.isEmpty && _items.isNotEmpty) {
+      return;
+    }
+
+    await _applySelection(
+      city: input.isEmpty ? widget.parentItem.searchName : input,
+      state: input.isEmpty ? null : widget.parentItem.searchName,
+    );
+  }
+
+  Future<void> _applySelection({
+    required String city,
+    String? district,
+    String? state,
+  }) async {
     setState(() {
-      _isLoading = true;
+      _isSelecting = true;
     });
 
     try {
       final prayerProvider = context.read<PrayerProvider>();
       await prayerProvider.setManualLocation(
-        widget.city,
-        widget.countryName,
-        district: district ?? _districtController.text.trim(),
+        city,
+        widget.country.searchName,
+        district: district,
+        state: state,
       );
 
       if (!mounted) {
@@ -235,9 +153,9 @@ class _DistrictSelectionScreenState extends State<DistrictSelectionScreen> {
           content: Text(
             _text(
               locale,
-              tr: 'İlçe güncellenirken hata oluştu: $e',
-              en: 'An error occurred while updating the district: $e',
-              ar: 'حدث خطأ أثناء تحديث المنطقة: $e',
+              tr: 'Secim uygulanamadi: $e',
+              en: 'Selection could not be applied: $e',
+              ar: 'تعذر تطبيق الاختيار: $e',
             ),
           ),
           backgroundColor: Colors.red,
@@ -249,14 +167,120 @@ class _DistrictSelectionScreenState extends State<DistrictSelectionScreen> {
       }
 
       setState(() {
-        _isLoading = false;
+        _isSelecting = false;
       });
+    }
+  }
+
+  String _displayLookupName(EmushafLookupItem item) {
+    final source = item.englishName.isNotEmpty ? item.englishName : item.name;
+    return _titleCase(source);
+  }
+
+  String _titleCase(String value) {
+    return value
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) {
+          if (part.length == 1) {
+            return part.toUpperCase();
+          }
+          return '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}';
+        })
+        .join(' ');
+  }
+
+  String _normalize(String value) {
+    return value.trim().toLowerCase();
+  }
+
+  String _levelTitle(String locale) {
+    if (widget.country.isTurkey) {
+      return _text(
+        locale,
+        tr: '${_displayLookupName(widget.parentItem)} ilceleri',
+        en: '${_displayLookupName(widget.parentItem)} districts',
+        ar: 'مناطق ${_displayLookupName(widget.parentItem)}',
+      );
+    }
+
+    return _text(
+      locale,
+      tr: '${_displayLookupName(widget.parentItem)} sehirleri',
+      en: '${_displayLookupName(widget.parentItem)} cities',
+      ar: 'مدن ${_displayLookupName(widget.parentItem)}',
+    );
+  }
+
+  String _inputHint(String locale) {
+    if (widget.country.isTurkey) {
+      return _text(
+        locale,
+        tr: 'Ilce ara veya yaz',
+        en: 'Search or type a district',
+        ar: 'ابحث عن منطقة أو اكتبها',
+      );
+    }
+
+    return _text(
+      locale,
+      tr: 'Sehir ara veya yaz',
+      en: 'Search or type a city',
+      ar: 'ابحث عن مدينة أو اكتبها',
+    );
+  }
+
+  String _buttonLabel(String locale) {
+    if (widget.country.isTurkey) {
+      return _controller.text.trim().isEmpty
+          ? _text(
+              locale,
+              tr: 'Secilen sehir ile devam et',
+              en: 'Continue with selected city',
+              ar: 'المتابعة بالمدينة المحددة',
+            )
+          : _text(
+              locale,
+              tr: 'Ilce ile devam et',
+              en: 'Continue with district',
+              ar: 'المتابعة بالمنطقة',
+            );
+    }
+
+    return _controller.text.trim().isEmpty
+        ? _text(
+            locale,
+            tr: 'Sehir sec',
+            en: 'Choose a city',
+            ar: 'اختر مدينة',
+          )
+        : _text(
+            locale,
+            tr: 'Sehir ile devam et',
+            en: 'Continue with city',
+            ar: 'المتابعة بالمدينة',
+          );
+  }
+
+  String _text(
+    String locale, {
+    required String tr,
+    required String en,
+    required String ar,
+  }) {
+    switch (locale) {
+      case 'tr':
+        return tr;
+      case 'ar':
+        return ar;
+      default:
+        return en;
     }
   }
 
   @override
   void dispose() {
-    _districtController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -264,7 +288,6 @@ class _DistrictSelectionScreenState extends State<DistrictSelectionScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = context.read<AppSettings>().language;
-    final filteredDistricts = _filteredDistricts;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
@@ -279,12 +302,7 @@ class _DistrictSelectionScreenState extends State<DistrictSelectionScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          _text(
-            locale,
-            tr: '${widget.city} ilçeleri',
-            en: '${widget.city} districts',
-            ar: 'مناطق ${widget.city}',
-          ),
+          _levelTitle(locale),
           style: AppTypography.h3.copyWith(
             color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
           ),
@@ -295,30 +313,11 @@ class _DistrictSelectionScreenState extends State<DistrictSelectionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              _text(
-                locale,
-                tr: 'İlçe seçebilir ya da boş bırakıp şehir ile devam edebilirsin.',
-                en: 'You can choose a district or leave it empty to continue with the city.',
-                ar: 'يمكنك اختيار منطقة أو تركها فارغة والمتابعة بالمدينة.',
-              ),
-              style: AppTypography.bodyMedium.copyWith(
-                color: isDark
-                    ? AppColors.darkTextSecondary
-                    : AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 12),
             TextField(
-              controller: _districtController,
+              controller: _controller,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                hintText: _text(
-                  locale,
-                  tr: 'İlçe ara veya yaz',
-                  en: 'Search or type a district',
-                  ar: 'ابحث عن منطقة أو اكتبها',
-                ),
+                hintText: _inputHint(locale),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
@@ -341,31 +340,19 @@ class _DistrictSelectionScreenState extends State<DistrictSelectionScreen> {
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: _buildDistrictSection(
-                locale: locale,
-                isDark: isDark,
-                filteredDistricts: filteredDistricts,
-              ),
+              child: _buildBody(isDark: isDark, locale: locale),
             ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: _isLoading ? null : _continue,
-                child: Text(
-                  _text(
-                    locale,
-                    tr: _districtController.text.trim().isEmpty
-                        ? 'Şehir ile devam et'
-                        : 'İlçe ile devam et',
-                    en: _districtController.text.trim().isEmpty
-                        ? 'Continue with city'
-                        : 'Continue with district',
-                    ar: _districtController.text.trim().isEmpty
-                        ? 'المتابعة بالمدينة'
-                        : 'المتابعة بالمنطقة',
-                  ),
-                ),
+                onPressed: _isSelecting ||
+                        (!widget.country.isTurkey &&
+                            _controller.text.trim().isEmpty &&
+                            _items.isNotEmpty)
+                    ? null
+                    : _continueWithText,
+                child: Text(_buttonLabel(locale)),
               ),
             ),
           ],
@@ -374,154 +361,92 @@ class _DistrictSelectionScreenState extends State<DistrictSelectionScreen> {
     );
   }
 
-  Widget _buildDistrictSection({
-    required String locale,
+  Widget _buildBody({
     required bool isDark,
-    required List<String> filteredDistricts,
+    required String locale,
   }) {
-    if (_isDistrictsLoading) {
+    if (_isLoading) {
       return Center(
         child: CircularProgressIndicator(
-          color: isDark
-              ? AppColors.darkAccentPrimary
-              : AppColors.accentPrimary,
+          color: isDark ? AppColors.darkAccentPrimary : AppColors.accentPrimary,
         ),
       );
     }
 
-    if (_districtLoadError != null) {
-      return _buildInfoText(
-        isDark: isDark,
-        text: _text(
-          locale,
-          tr: 'İlçe listesi yüklenemedi. İstersen ilçeyi yazarak devam edebilirsin.',
-          en: 'The district list could not be loaded. You can still type a district and continue.',
-          ar: 'تعذر تحميل قائمة المناطق. ما زال بإمكانك كتابة المنطقة والمتابعة.',
-        ),
-      );
-    }
-
-    if (_districts.isEmpty) {
-      return _buildInfoText(
-        isDark: isDark,
-        text: _text(
-          locale,
-          tr: 'Bu şehir için ilçe listesi bulunamadı. İstersen ilçeyi elle yazabilirsin.',
-          en: 'No district list was found for this city. You can still type the district manually.',
-          ar: 'لم يتم العثور على قائمة مناطق لهذه المدينة. ما زال بإمكانك كتابة المنطقة يدويًا.',
-        ),
-      );
-    }
-
-    if (filteredDistricts.isEmpty) {
-      return _buildInfoText(
-        isDark: isDark,
-        text: _text(
-          locale,
-          tr: 'Aramana uyan ilçe bulunamadı.',
-          en: 'No district matched your search.',
-          ar: 'لم يتم العثور على منطقة مطابقة لبحثك.',
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
+    if (_errorMessage != null) {
+      return Center(
+        child: Text(
           _text(
             locale,
-            tr: 'Tüm ilçeler',
-            en: 'All districts',
-            ar: 'كل المناطق',
+            tr: 'Liste yuklenemedi.\n$_errorMessage',
+            en: 'The list could not be loaded.\n$_errorMessage',
+            ar: 'تعذر تحميل القائمة.\n$_errorMessage',
           ),
-          style: AppTypography.bodyMedium.copyWith(
-            fontWeight: FontWeight.w700,
-            color: isDark
-                ? AppColors.darkTextPrimary
-                : AppColors.textPrimary,
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+
+    if (_items.isEmpty) {
+      return Align(
+        alignment: Alignment.topLeft,
+        child: Text(
+          _text(
+            locale,
+            tr: 'Bu seviye icin alt liste bulunamadi. Elle yazarak devam edebilirsin.',
+            en: 'No child list was found for this level. You can continue by typing manually.',
+            ar: 'لم يتم العثور على قائمة فرعية لهذا المستوى. يمكنك المتابعة بالكتابة اليدوية.',
           ),
         ),
-        const SizedBox(height: 10),
-        Expanded(
-          child: SingleChildScrollView(
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: filteredDistricts.map((district) {
-                return ActionChip(
-                  label: Text(district),
-                  onPressed: _isLoading ? null : () => _continue(district: district),
-                );
-              }).toList(),
+      );
+    }
+
+    final filtered = _filteredItems;
+    if (filtered.isEmpty) {
+      return Align(
+        alignment: Alignment.topLeft,
+        child: Text(
+          _text(
+            locale,
+            tr: 'Aramana uygun sonuc bulunamadi.',
+            en: 'No result matched your search.',
+            ar: 'لم يتم العثور على نتيجة مطابقة لبحثك.',
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: filtered.length,
+      itemBuilder: (context, index) {
+        final item = filtered[index];
+        return ListTile(
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xs,
+          ),
+          title: Text(
+            _displayLookupName(item),
+            style: AppTypography.bodyMedium.copyWith(
+              color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
             ),
           ),
-        ),
-      ],
+          subtitle: Text(
+            item.name,
+            style: AppTypography.bodySmall.copyWith(
+              color: isDark
+                  ? AppColors.darkTextSecondary
+                  : AppColors.textSecondary,
+            ),
+          ),
+          onTap: _isSelecting ? null : () => _selectItem(item),
+          trailing: Icon(
+            Icons.location_on,
+            size: 16,
+            color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+          ),
+        );
+      },
     );
-  }
-
-  Widget _buildInfoText({
-    required bool isDark,
-    required String text,
-  }) {
-    return Align(
-      alignment: Alignment.topLeft,
-      child: Text(
-        text,
-        style: AppTypography.bodyMedium.copyWith(
-          color: isDark
-              ? AppColors.darkTextSecondary
-              : AppColors.textSecondary,
-        ),
-      ),
-    );
-  }
-
-  static String _cleanText(String value) {
-    var cleaned = value.trim();
-    _textFixes.forEach((broken, fixed) {
-      cleaned = cleaned.replaceAll(broken, fixed);
-    });
-    return cleaned;
-  }
-
-  static String _normalizeLookupValue(String value) {
-    var normalized = _cleanText(value).toUpperCase();
-
-    const replacements = {
-      'İ': 'I',
-      'I': 'I',
-      'ı': 'I',
-      'Ş': 'S',
-      'ş': 'S',
-      'Ğ': 'G',
-      'ğ': 'G',
-      'Ü': 'U',
-      'ü': 'U',
-      'Ö': 'O',
-      'ö': 'O',
-      'Ç': 'C',
-      'ç': 'C',
-      'Â': 'A',
-      'â': 'A',
-      'Î': 'I',
-      'î': 'I',
-      'Û': 'U',
-      'û': 'U',
-      "'": '',
-      '`': '',
-      '(': ' ',
-      ')': ' ',
-      '-': ' ',
-      '.': ' ',
-      ',': ' ',
-    };
-
-    replacements.forEach((from, to) {
-      normalized = normalized.replaceAll(from, to);
-    });
-
-    return normalized.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 }

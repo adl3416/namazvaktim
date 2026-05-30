@@ -69,8 +69,8 @@ class PrayerProvider extends ChangeNotifier {
     final city = _savedCity.trim();
     final country = _savedCountry.trim();
 
-    if (city.isEmpty) {
-      return country.isNotEmpty ? country : 'Istanbul';
+    if (!_isMeaningfulLocationValue(city)) {
+      return _isMeaningfulLocationValue(country) ? country : 'Istanbul';
     }
 
     return city;
@@ -85,22 +85,35 @@ class PrayerProvider extends ChangeNotifier {
         _savedCountry.trim().isNotEmpty;
   }
 
+  bool _isMeaningfulLocationValue(String? value) {
+    final normalized = value?.trim().toLowerCase() ?? '';
+    return normalized.isNotEmpty && normalized != 'unknown';
+  }
+
   String get _lookupCity {
     if (_hasManualLookupContext) {
       return _savedCity.trim();
     }
-    return _currentLocation?.city.trim().isNotEmpty == true
-        ? _currentLocation!.city.trim()
-        : _savedCity.trim();
+    if (_isMeaningfulLocationValue(_currentLocation?.city)) {
+      return _currentLocation!.city.trim();
+    }
+    if (_isMeaningfulLocationValue(_savedCity)) {
+      return _savedCity.trim();
+    }
+    return 'Istanbul';
   }
 
   String get _lookupCountry {
     if (_hasManualLookupContext) {
       return _savedCountry.trim();
     }
-    return _currentLocation?.country.trim().isNotEmpty == true
-        ? _currentLocation!.country.trim()
-        : _savedCountry.trim();
+    if (_isMeaningfulLocationValue(_currentLocation?.country)) {
+      return _currentLocation!.country.trim();
+    }
+    if (_isMeaningfulLocationValue(_savedCountry)) {
+      return _savedCountry.trim();
+    }
+    return 'Turkey';
   }
 
   String? get _lookupState {
@@ -108,7 +121,9 @@ class PrayerProvider extends ChangeNotifier {
       final value = _savedState.trim();
       return value.isEmpty ? null : value;
     }
-    final value = _currentLocation?.state.trim() ?? _savedState.trim();
+    final value = _isMeaningfulLocationValue(_currentLocation?.state)
+        ? _currentLocation!.state.trim()
+        : _savedState.trim();
     return value.isEmpty ? null : value;
   }
 
@@ -117,7 +132,9 @@ class PrayerProvider extends ChangeNotifier {
       final value = _savedDistrict.trim();
       return value.isEmpty ? null : value;
     }
-    final value = _currentLocation?.district.trim() ?? _savedDistrict.trim();
+    final value = _isMeaningfulLocationValue(_currentLocation?.district)
+        ? _currentLocation!.district.trim()
+        : _savedDistrict.trim();
     return value.isEmpty ? null : value;
   }
 
@@ -245,18 +262,28 @@ class PrayerProvider extends ChangeNotifier {
         print('✅ Got location: ${location.city}, ${location.country}');
         _currentLocation = location;
         _useAutomaticLocation = true;
-        await _prefs.setString('city', location.city);
-        await _prefs.setString('state', location.state);
-        await _prefs.setString('country', location.country);
-        await _prefs.setString('district', location.district);
         await _prefs.setBool('use_automatic_location', true);
         await _prefs.setDouble('latitude', location.latitude);
         await _prefs.setDouble('longitude', location.longitude);
 
-        _savedCity = location.city;
-        _savedState = location.state;
-        _savedCountry = location.country;
-        _savedDistrict = location.district;
+        if (_isMeaningfulLocationValue(location.city) &&
+            _isMeaningfulLocationValue(location.country)) {
+          await _prefs.setString('city', location.city);
+          await _prefs.setString('state', location.state);
+          await _prefs.setString('country', location.country);
+          await _prefs.setString('district', location.district);
+
+          _savedCity = location.city;
+          _savedState = location.state;
+          _savedCountry = location.country;
+          _savedDistrict = location.district;
+        } else {
+          print(
+            '⚠️ Current location text is incomplete, keeping saved lookup context: '
+            'city=${location.city}, state=${location.state}, country=${location.country}, district=${location.district}',
+          );
+        }
+
         _useAutomaticLocation = true;
         await _prefs.setBool('use_automatic_location', true);
       } else {
@@ -380,6 +407,12 @@ class PrayerProvider extends ChangeNotifier {
       _isFetching = false;
       notifyListeners();
     }
+  }
+
+  Future<void> refreshPrayerTimes() async {
+    _lastFetchTime = null;
+    _scheduledNotifications.clear();
+    await fetchPrayerTimes();
   }
 
   Future<void> setManualLocation(
@@ -824,19 +857,28 @@ class PrayerProvider extends ChangeNotifier {
         print('✅ New location: ${location.city}, ${location.country}');
         _currentLocation = location;
         _useAutomaticLocation = true;
-        _savedDistrict = location.district;
-        _savedState = location.state;
-        await _prefs.setString('city', location.city);
-        await _prefs.setString('state', location.state);
-        await _prefs.setString('country', location.country);
-        await _prefs.setString('district', location.district);
         await _prefs.setBool('use_automatic_location', true);
         await _prefs.setDouble('latitude', location.latitude);
         await _prefs.setDouble('longitude', location.longitude);
 
-        _savedCity = location.city;
-        _savedState = location.state;
-        _savedCountry = location.country;
+        if (_isMeaningfulLocationValue(location.city) &&
+            _isMeaningfulLocationValue(location.country)) {
+          _savedDistrict = location.district;
+          _savedState = location.state;
+          await _prefs.setString('city', location.city);
+          await _prefs.setString('state', location.state);
+          await _prefs.setString('country', location.country);
+          await _prefs.setString('district', location.district);
+
+          _savedCity = location.city;
+          _savedState = location.state;
+          _savedCountry = location.country;
+        } else {
+          print(
+            '⚠️ Refreshed coordinates are valid but placemark text is incomplete; '
+            'continuing with saved city/country fallback',
+          );
+        }
 
         // Reset last fetch time to force prayer times refresh
         _lastFetchTime = null;

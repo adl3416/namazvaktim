@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -5,9 +7,10 @@ import '../config/localization.dart';
 import '../models/prayer_model.dart';
 import '../providers/app_settings.dart';
 import '../providers/prayer_provider.dart';
+import 'zikirmatik_screen.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -15,142 +18,92 @@ class HomeScreen extends StatelessWidget {
       builder: (context, settings, prayerProvider, _) {
         final locale = settings.language;
         final isDark = Theme.of(context).brightness == Brightness.dark;
-        final scheme = _paletteForPrayer(
-          prayerProvider.activePrayer?.name,
-          isDark,
-        );
-        final nextPrayer = prayerProvider.nextPrayer;
-        final countdown = prayerProvider.countdownDuration;
         final prayerTimes =
             prayerProvider.currentPrayerTimes?.prayerTimesList ?? const <PrayerTime>[];
-        final completedCount = prayerTimes
-            .where((prayer) => prayer.time.isBefore(DateTime.now()))
-            .length;
-        final progress = prayerTimes.isEmpty
-            ? 0.0
-            : completedCount / prayerTimes.length;
-        final locationLabel = prayerProvider.savedLocationLabel;
+        final activePrayer = prayerProvider.activePrayer;
+        final nextPrayer = prayerProvider.nextPrayer;
+        final prayerKey = activePrayer?.name ?? nextPrayer?.name;
+        final theme = _homeThemeForPrayer(prayerKey, isDark);
+        final vird = _virdForPrayer(prayerKey, locale);
+        final today = prayerProvider.currentPrayerTimes?.date ?? DateTime.now();
 
         return Scaffold(
-          backgroundColor: scheme.background,
+          backgroundColor: theme.pageBackground,
           body: Stack(
             children: [
-              Container(
+              DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                     colors: [
-                      scheme.background,
-                      scheme.backgroundAccent,
-                      scheme.backgroundSoft,
+                      theme.pageBackground,
+                      theme.pageBackgroundSoft,
+                      const Color(0xFFF7F9FF),
                     ],
                   ),
                 ),
+                child: const SizedBox.expand(),
               ),
-              Positioned(
-                top: -100,
-                right: -80,
-                child: Container(
-                  width: 240,
-                  height: 240,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.10),
+              RefreshIndicator(
+                color: theme.accent,
+                onRefresh: prayerProvider.refreshPrayerTimes,
+                child: CustomScrollView(
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
                   ),
-                ),
-              ),
-              SafeArea(
-                top: false,
-                child: RefreshIndicator(
-                  color: scheme.primary,
-                  onRefresh: prayerProvider.fetchPrayerTimes,
-                  child: CustomScrollView(
-                    physics: const BouncingScrollPhysics(
-                      parent: AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: _HeroSection(
+                        theme: theme,
+                        locale: locale,
+                        activePrayer: activePrayer,
+                        nextPrayer: nextPrayer,
+                        countdown: prayerProvider.countdownDuration,
+                        locationLabel: prayerProvider.savedLocationLabel,
+                        today: today,
+                        isLoading: prayerProvider.isLoading,
+                        errorMessage: prayerProvider.errorMessage,
+                        vird: vird,
+                        onRefreshLocation: () =>
+                            _refreshLocationLocalized(context, prayerProvider),
+                        onStartDhikr: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => ZikirmatikScreen(
+                                initialZikirName: vird.title,
+                                initialTargetCount: vird.targetCount,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                    slivers: [
-                      SliverPersistentHeader(
-                        pinned: true,
-                        delegate: _StickyTopHeaderDelegate(
-                          scheme: scheme,
-                            city: prayerProvider.savedCity.isNotEmpty
-                              ? prayerProvider.savedCity
-                              : 'Istanbul',
-                          locationLabel: locationLabel,
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(14, 18, 14, 24),
+                      sliver: SliverToBoxAdapter(
+                        child: _PrayerTimesCard(
+                          theme: theme,
                           locale: locale,
-                          onRefreshLocation: () =>
-                              _refreshLocationLocalized(context, prayerProvider),
+                          prayerTimes: prayerTimes,
+                          activePrayer: activePrayer,
                         ),
                       ),
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(0, 0, 0, 14),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _HeroCountdownCard(
-                                scheme: scheme,
-                                isDark: isDark,
-                                locale: locale,
-                                nextPrayer: nextPrayer,
-                                countdown: countdown,
-                                errorMessage: prayerProvider.errorMessage,
-                                isLoading: prayerProvider.isLoading,
-                                progress: progress,
-                                completedCount: completedCount,
-                                totalCount: prayerTimes.length,
-                                activePrayerName: prayerProvider.activePrayer?.name,
-                                locationLabel: locationLabel,
-                              ),
-                              const SizedBox(height: 6),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SliverPadding(
-                        padding: const EdgeInsets.fromLTRB(0, 0, 0, 20),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate((context, index) {
-                            final prayer = prayerTimes[index];
-                            final isActive =
-                                prayerProvider.activePrayer?.name == prayer.name;
-                            final isNext =
-                                prayerProvider.nextPrayer?.name == prayer.name;
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 3),
-                              child: _LocalizedPrayerTile(
-                                prayer: prayer,
-                                label: AppLocalizations.prayerName(
-                                  prayer.name,
-                                  locale,
-                                ),
-                                locale: locale,
-                                scheme: scheme,
-                                isActive: isActive,
-                                isNext: isNext,
-                                isCompleted: prayer.time.isBefore(DateTime.now()),
-                              ),
-                            );
-                          }, childCount: prayerTimes.length),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
-              // Floating "stop adhan" bar — visible only while adhan is playing
               if (prayerProvider.isAdhanPlaying)
                 Positioned(
-                  left: 24,
-                  right: 24,
-                  bottom: MediaQuery.of(context).padding.bottom + 110,
-                  child: _LocalizedAdhanStopBar(
-                    scheme: scheme,
+                  left: 16,
+                  right: 16,
+                  bottom: MediaQuery.of(context).padding.bottom + 96,
+                  child: _AdhanControlBar(
+                    theme: theme,
                     locale: locale,
-                    onLower: () => prayerProvider.lowerAdhanVolume(),
-                    onMute: () => prayerProvider.muteAdhan(),
-                    onStop: () => prayerProvider.stopAdhan(),
+                    onLower: prayerProvider.lowerAdhanVolume,
+                    onMute: prayerProvider.muteAdhan,
+                    onStop: prayerProvider.stopAdhan,
                   ),
                 ),
             ],
@@ -160,53 +113,21 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _refreshLocation(
-    BuildContext context,
-    PrayerProvider prayerProvider,
-  ) async {
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Konum yenileniyor...')),
-    );
-
-    try {
-      await prayerProvider.refreshLocation();
-      if (!context.mounted) return;
-      messenger.hideCurrentSnackBar();
-        messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            'Konum güncellendi: ${prayerProvider.savedCity.isNotEmpty ? prayerProvider.savedCity : 'Bilinmiyor'}',
-          ),
-          backgroundColor: const Color(0xFF0F766E),
-        ),
-      );
-    } catch (_) {
-      if (!context.mounted) return;
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Konum alinamadi'),
-          backgroundColor: Color(0xFFB42318),
-        ),
-      );
-    }
-  }
-
   Future<void> _refreshLocationLocalized(
     BuildContext context,
     PrayerProvider prayerProvider,
   ) async {
     final locale = context.read<AppSettings>().language;
     final messenger = ScaffoldMessenger.of(context);
+
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          _homeText(
+          _text(
             locale,
             tr: 'Konum yenileniyor...',
             en: 'Refreshing location...',
-            ar: 'جارٍ تحديث الموقع...',
+            ar: 'Refreshing location...',
           ),
         ),
       ),
@@ -218,15 +139,15 @@ class HomeScreen extends StatelessWidget {
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         SnackBar(
+          backgroundColor: const Color(0xFF0F766E),
           content: Text(
-            _homeText(
+            _text(
               locale,
-              tr: 'Konum güncellendi: ${prayerProvider.savedCity.isNotEmpty ? prayerProvider.savedCity : 'Bilinmiyor'}',
-              en: 'Location updated: ${prayerProvider.savedCity.isNotEmpty ? prayerProvider.savedCity : 'Unknown'}',
-              ar: 'تم تحديث الموقع: ${prayerProvider.savedCity.isNotEmpty ? prayerProvider.savedCity : 'غير معروف'}',
+              tr: 'Konum guncellendi: ${prayerProvider.savedLocationLabel}',
+              en: 'Location updated: ${prayerProvider.savedLocationLabel}',
+              ar: 'Location updated: ${prayerProvider.savedLocationLabel}',
             ),
           ),
-          backgroundColor: const Color(0xFF0F766E),
         ),
       );
     } catch (_) {
@@ -234,354 +155,255 @@ class HomeScreen extends StatelessWidget {
       messenger.hideCurrentSnackBar();
       messenger.showSnackBar(
         SnackBar(
+          backgroundColor: const Color(0xFFB42318),
           content: Text(
-            _homeText(
+            _text(
               locale,
-              tr: 'Konum alınamadı',
+              tr: 'Konum alinamadi',
               en: 'Location could not be fetched',
-              ar: 'تعذر الحصول على الموقع',
+              ar: 'Location could not be fetched',
             ),
           ),
-          backgroundColor: const Color(0xFFB42318),
         ),
       );
     }
   }
 }
 
-class _TopHeader extends StatelessWidget {
-  const _TopHeader({
-    required this.scheme,
-    required this.city,
-    required this.locationLabel,
+class _HeroSection extends StatelessWidget {
+  const _HeroSection({
+    required this.theme,
     required this.locale,
-    required this.onRefreshLocation,
-    this.compact = false,
-  });
-
-  final _HomePalette scheme;
-  final String city;
-  final String locationLabel;
-  final String locale;
-  final VoidCallback onRefreshLocation;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (!compact) const SizedBox(height: 18),
-              InkWell(
-                onTap: onRefreshLocation,
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Text(
-                    compact ? city : locationLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: compact ? 14 : 16,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: compact ? -0.2 : -0.4,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: EdgeInsets.only(
-            top: compact ? 0 : 24,
-            bottom: compact ? 0 : 4,
-          ),
-          child: Material(
-            color: Colors.white.withOpacity(compact ? 0.14 : 0.18),
-            borderRadius: BorderRadius.circular(14),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(14),
-              onTap: onRefreshLocation,
-              child: Padding(
-                padding: EdgeInsets.all(compact ? 8 : 9),
-                child: Icon(
-                  Icons.my_location_rounded,
-                  color: Colors.white,
-                  size: compact ? 16 : 17,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StickyTopHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _StickyTopHeaderDelegate({
-    required this.scheme,
-    required this.city,
-    required this.locationLabel,
-    required this.locale,
-    required this.onRefreshLocation,
-  });
-
-  final _HomePalette scheme;
-  final String city;
-  final String locationLabel;
-  final String locale;
-  final VoidCallback onRefreshLocation;
-
-  @override
-  double get minExtent => 58;
-
-  @override
-  double get maxExtent => 76;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    final progress =
-        (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
-    final compact = progress > 0.45;
-
-    return Container(
-      clipBehavior: Clip.antiAlias,
-      padding: EdgeInsets.fromLTRB(
-        20,
-        10,
-        20,
-        0,
-      ),
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.elliptical(26, 20),
-          topRight: Radius.elliptical(26, 20),
-        ),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color.lerp(scheme.primary, scheme.secondary, progress * 0.35)!
-                .withOpacity(0.92),
-            Color.lerp(scheme.secondary, scheme.tertiary, progress * 0.35)!
-                .withOpacity(0.88),
-          ],
-        ),
-        border: overlapsContent
-            ? Border(
-                bottom: BorderSide(
-                  color: Colors.white.withOpacity(0.10),
-                  width: 1,
-                ),
-              )
-            : null,
-      ),
-      child: SafeArea(
-        top: false,
-        bottom: false,
-        child: _TopHeader(
-          scheme: scheme,
-          city: city,
-          locationLabel: locationLabel,
-          locale: locale,
-          onRefreshLocation: onRefreshLocation,
-          compact: compact,
-        ),
-      ),
-    );
-  }
-
-  @override
-  bool shouldRebuild(covariant _StickyTopHeaderDelegate oldDelegate) {
-    return oldDelegate.scheme != scheme ||
-        oldDelegate.city != city ||
-        oldDelegate.locationLabel != locationLabel ||
-        oldDelegate.locale != locale ||
-        oldDelegate.onRefreshLocation != onRefreshLocation;
-  }
-}
-
-class _HeroCountdownCard extends StatelessWidget {
-  const _HeroCountdownCard({
-    required this.scheme,
-    required this.isDark,
-    required this.locale,
+    required this.activePrayer,
     required this.nextPrayer,
     required this.countdown,
-    required this.errorMessage,
-    required this.isLoading,
-    required this.progress,
-    required this.completedCount,
-    required this.totalCount,
-    required this.activePrayerName,
     required this.locationLabel,
+    required this.today,
+    required this.isLoading,
+    required this.errorMessage,
+    required this.vird,
+    required this.onRefreshLocation,
+    required this.onStartDhikr,
   });
 
-  final _HomePalette scheme;
-  final bool isDark;
+  final _HomeTheme theme;
   final String locale;
+  final PrayerTime? activePrayer;
   final PrayerTime? nextPrayer;
   final Duration? countdown;
-  final String errorMessage;
-  final bool isLoading;
-  final double progress;
-  final int completedCount;
-  final int totalCount;
-  final String? activePrayerName;
   final String locationLabel;
+  final DateTime today;
+  final bool isLoading;
+  final String errorMessage;
+  final _VirdModel vird;
+  final VoidCallback onRefreshLocation;
+  final VoidCallback onStartDhikr;
 
   @override
   Widget build(BuildContext context) {
-    final hours = countdown?.inHours ?? 0;
-    final minutes = (countdown?.inMinutes ?? 0) % 60;
-    final seconds = (countdown?.inSeconds ?? 0) % 60;
+    final topInset = MediaQuery.of(context).padding.top;
+    final targetPrayer = nextPrayer ?? activePrayer;
+    final prayerLabel = targetPrayer == null
+        ? _text(
+            locale,
+            tr: 'Namaz vakti',
+            en: 'Prayer time',
+            ar: 'Prayer time',
+          )
+        : AppLocalizations.prayerName(targetPrayer.name, locale);
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-      decoration: BoxDecoration(
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(30),
-          bottomRight: Radius.circular(30),
-        ),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            scheme.primary,
-            scheme.secondary,
-            scheme.tertiary,
-          ],
-        ),
-        boxShadow: [],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+    return SizedBox(
+      height: 400,
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final title = nextPrayer != null
-                  ? '${AppLocalizations.prayerName(nextPrayer!.name, locale)} ${AppLocalizations.translate('prayer_time_label', locale)}'
-                  : _homeText(
-                      locale,
-                      tr: 'Vakit Bilgisi Bekleniyor',
-                      en: 'Waiting for prayer info',
-                      ar: 'بانتظار معلومات الوقت',
-                    );
-              final isShortTitle = title.length <= 16;
-              final fontSize = isShortTitle ? 20.0 : 16.0;
-
-              return FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.88),
-                    fontSize: fontSize,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.4,
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                bottom: Radius.circular(34),
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.asset(
+                    _backgroundAssetForPrayer(activePrayer?.name ?? nextPrayer?.name),
+                    fit: BoxFit.cover,
+                    alignment: const Alignment(0, 0.42),
+                  ),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.16),
+                          theme.overlayTop,
+                          theme.overlayBottom,
+                        ],
+                        stops: const [0.0, 0.36, 1.0],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    height: 160,
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.white.withOpacity(0.10),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, topInset + 12, 16, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _HeroTopBar(
+                  locale: locale,
+                  locationLabel: locationLabel,
+                  onRefreshLocation: onRefreshLocation,
+                ),
+                const SizedBox(height: 22),
+                Text(
+                  '$prayerLabel ${_text(locale, tr: 'Vaktine', en: 'Time', ar: 'Time')}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
                   ),
                 ),
-              );
-            },
+                const SizedBox(height: 10),
+                Text(
+                  _formatCountdown(countdown),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 52,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                    height: 0.98,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _text(
+                    locale,
+                    tr: 'Geri sayım',
+                    en: 'Countdown',
+                    ar: 'Countdown',
+                  ),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.92),
+                    fontSize: 17,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _DateChip(
+                      icon: Icons.calendar_today_rounded,
+                      label: _formatMiladiDate(locale, today),
+                    ),
+                    const SizedBox(width: 10),
+                    _DateChip(
+                      icon: Icons.nightlight_round,
+                      label: _formatHijriDate(locale, today),
+                    ),
+                  ],
+                ),
+                if (isLoading || errorMessage.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: errorMessage.isNotEmpty
+                            ? const Color(0xFF991B1B).withOpacity(0.72)
+                            : Colors.white.withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.18),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isLoading)
+                            const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
+                          else
+                            const Icon(
+                              Icons.info_outline_rounded,
+                              size: 15,
+                              color: Colors.white,
+                            ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              errorMessage.isNotEmpty
+                                  ? errorMessage
+                                  : _text(
+                                      locale,
+                                      tr: 'Veriler yenileniyor',
+                                      en: 'Refreshing data',
+                                      ar: 'Refreshing data',
+                                    ),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-          const SizedBox(height: 4),
-          // Active prayer pill
-          if (false && activePrayerName != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.14),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                'Şu an: ${_prayerNameTr(activePrayerName!)}',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.80),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          const SizedBox(height: 8),
-          if (isLoading)
-            const SizedBox(
-              height: 60,
-              child: Center(
-                child: LinearProgressIndicator(
-                  minHeight: 4,
-                  backgroundColor: Color(0x33FFFFFF),
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              ),
-            )
-          else ...[
-            _LocalizedCountdownDisplay(
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: -6,
+            child: _VirdPanel(
+              theme: theme,
               locale: locale,
-              hours: hours,
-              minutes: minutes,
-              seconds: seconds,
+              vird: vird,
+              onTap: onStartDhikr,
             ),
-            const SizedBox(height: 6),
-            if (nextPrayer != null)
-              Text(
-                _formatTime(nextPrayer!.time),
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.60),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 1.5,
-                ),
-              ),
-          ],
-          if (errorMessage.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Text(
-              errorMessage,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.85),
-                height: 1.35,
-                fontSize: 13,
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(
-                child: _DateBadge(
-                  icon: Icons.calendar_today_rounded,
-                  label: _localizedMiladiDate(locale),
-                  scheme: scheme,
-                  useLightStyle: !isDark,
-                  alignment: Alignment.centerLeft,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Flexible(
-                child: _DateBadge(
-                  icon: Icons.brightness_3_rounded,
-                  label: _localizedHijriDate(locale),
-                  scheme: scheme,
-                  useLightStyle: !isDark,
-                  alignment: Alignment.centerRight,
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -589,314 +411,171 @@ class _HeroCountdownCard extends StatelessWidget {
   }
 }
 
-class _DateRow extends StatelessWidget {
-  const _DateRow({required this.scheme});
+class _HeroTopBar extends StatelessWidget {
+  const _HeroTopBar({
+    required this.locale,
+    required this.locationLabel,
+    required this.onRefreshLocation,
+  });
 
-  final _HomePalette scheme;
+  final String locale;
+  final String locationLabel;
+  final VoidCallback onRefreshLocation;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _DateBadge(
-          icon: Icons.calendar_today_rounded,
-          label: _miladiDate(),
-          scheme: scheme,
+        _TopIconButton(
+          icon: Icons.menu_rounded,
+          onTap: () {},
         ),
         const SizedBox(width: 10),
-        _DateBadge(
-          icon: Icons.brightness_3_rounded,
-          label: _hijriDate(),
-          scheme: scheme,
+        Expanded(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onRefreshLocation,
+              borderRadius: BorderRadius.circular(999),
+              child: Container(
+                height: 40,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.16),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.18),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.14),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on_rounded,
+                      size: 17,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        locationLabel,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.refresh_rounded,
+                      size: 16,
+                      color: Colors.white.withOpacity(0.88),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        _TopIconButton(
+          icon: Icons.notifications_none_rounded,
+          onTap: onRefreshLocation,
+        ),
+        const SizedBox(width: 8),
+        _TopIconButton(
+          icon: Icons.person_outline_rounded,
+          onTap: () {},
         ),
       ],
     );
   }
 }
 
-class _DateBadge extends StatelessWidget {
-  const _DateBadge({
+class _TopIconButton extends StatelessWidget {
+  const _TopIconButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withOpacity(0.14),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: Colors.white.withOpacity(0.18)),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Icon(
+            icon,
+            color: Colors.white,
+            size: 23,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DateChip extends StatelessWidget {
+  const _DateChip({
     required this.icon,
     required this.label,
-    required this.scheme,
-    this.useLightStyle = false,
-    this.alignment = Alignment.center,
   });
 
   final IconData icon;
   final String label;
-  final _HomePalette scheme;
-  final bool useLightStyle;
-  final Alignment alignment;
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: alignment,
+    return Flexible(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          color: useLightStyle
-              ? Colors.white.withOpacity(0.16)
-              : scheme.primary.withOpacity(0.10),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: useLightStyle
-                ? Colors.white.withOpacity(0.22)
-                : scheme.primary.withOpacity(0.18),
-          ),
+          color: Colors.white.withOpacity(0.18),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white.withOpacity(0.16)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.16),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 12,
-              color: useLightStyle ? Colors.white : scheme.primary,
-            ),
-            const SizedBox(width: 5),
+            Icon(icon, size: 15, color: Colors.white),
+            const SizedBox(width: 8),
             Flexible(
               child: Text(
                 label,
                 overflow: TextOverflow.ellipsis,
-                softWrap: false,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: useLightStyle ? Colors.white : scheme.textPrimary,
-                  letterSpacing: 0,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Floating adhan stop bar
-// ---------------------------------------------------------------------------
-class _AdhanStopBar extends StatelessWidget {
-  const _AdhanStopBar({
-    required this.scheme,
-    required this.onLower,
-    required this.onMute,
-    required this.onStop,
-  });
-  final _HomePalette scheme;
-  final VoidCallback onLower;
-  final VoidCallback onMute;
-  final VoidCallback onStop;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 430;
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            decoration: BoxDecoration(
-              color: scheme.primary,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: scheme.primary.withOpacity(0.45),
-                  blurRadius: 20,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.graphic_eq_rounded, color: Colors.white, size: 22),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Ezan okunuyor...',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: compact ? 10 : 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _actionButton(
-                      icon: Icons.volume_down_rounded,
-                      label: 'Kıs',
-                      onTap: onLower,
-                    ),
-                    _actionButton(
-                      icon: Icons.volume_off_rounded,
-                      label: 'Sessiz',
-                      onTap: onMute,
-                    ),
-                    _actionButton(
-                      icon: Icons.stop_rounded,
-                      label: 'Durdur',
-                      onTap: onStop,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        decoration: BoxDecoration(
-          color: scheme.primary,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: scheme.primary.withOpacity(0.45),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.graphic_eq_rounded, color: Colors.white, size: 22),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Ezan okunuyor…',
                 style: const TextStyle(
                   color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
                 ),
-              ),
-            ),
-            GestureDetector(
-              onTap: onLower,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.volume_down_rounded, color: Colors.white, size: 16),
-                    SizedBox(width: 4),
-                    Text(
-                      'Kis',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            GestureDetector(
-              onTap: onMute,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.volume_off_rounded, color: Colors.white, size: 16),
-                    SizedBox(width: 4),
-                    Text(
-                      'Sessiz',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            GestureDetector(
-              onTap: onStop,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.25),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.stop_rounded, color: Colors.white, size: 16),
-                    SizedBox(width: 4),
-                    Text(
-                      'Durdur',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _actionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.25),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: Colors.white, size: 16),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
               ),
             ),
           ],
@@ -906,141 +585,263 @@ class _AdhanStopBar extends StatelessWidget {
   }
 }
 
-class _LocalizedAdhanStopBar extends StatelessWidget {
-  const _LocalizedAdhanStopBar({
-    required this.scheme,
+class _VirdPanel extends StatelessWidget {
+  const _VirdPanel({
+    required this.theme,
     required this.locale,
-    required this.onLower,
-    required this.onMute,
-    required this.onStop,
+    required this.vird,
+    required this.onTap,
   });
 
-  final _HomePalette scheme;
+  final _HomeTheme theme;
   final String locale;
-  final VoidCallback onLower;
-  final VoidCallback onMute;
-  final VoidCallback onStop;
+  final _VirdModel vird;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 430;
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            decoration: BoxDecoration(
-              color: scheme.primary,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: scheme.primary.withOpacity(0.45),
-                  blurRadius: 20,
-                  offset: const Offset(0, 6),
-                ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(28),
+        onTap: onTap,
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withOpacity(0.95),
+                Colors.white.withOpacity(0.90),
+                theme.cardTint.withOpacity(0.92),
               ],
+              stops: const [0.0, 0.42, 1.0],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
+            boxShadow: [
+              BoxShadow(
+                color: theme.shadow.withOpacity(0.32),
+                blurRadius: 26,
+                offset: const Offset(0, 16),
+              ),
+            ],
+            border: Border.all(
+              color: Colors.white.withOpacity(0.70),
+              width: 1.1,
+            ),
+          ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(28),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.white.withOpacity(0.34),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: -2,
+                top: 8,
+                bottom: 8,
+                width: 124,
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _CardOrnamentPainter(
+                      color: theme.accent.withOpacity(0.12),
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Icon(
-                      Icons.graphic_eq_rounded,
-                      color: Colors.white,
-                      size: 22,
+                    Container(
+                      width: 68,
+                      height: 68,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            theme.accent.withOpacity(0.96),
+                            theme.accentDark,
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: theme.accent.withOpacity(0.34),
+                            blurRadius: 18,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.56),
+                          width: 1.4,
+                        ),
+                      ),
+                      child: ClipOval(
+                        child: SizedBox.expand(
+                          child: Image.asset(
+                            'assets/images/tesbih.png',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(
-                        _homeText(
-                          locale,
-                          tr: 'Ezan okunuyor...',
-                          en: 'Adhan is playing...',
-                          ar: 'يتم تشغيل الأذان...',
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _text(
+                              locale,
+                              tr: 'VAKTİN VİRDİ',
+                              en: 'CURRENT DHIKR',
+                              ar: 'CURRENT DHIKR',
+                            ),
+                            style: TextStyle(
+                              color: theme.accentDark.withOpacity(0.82),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.7,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            vird.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF15203B),
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              height: 1.05,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.accent.withOpacity(0.16),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              '${vird.targetCount} ${_text(locale, tr: 'Defa', en: 'Times', ar: 'Times')}',
+                              style: TextStyle(
+                                color: theme.accentDark,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            vird.description,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF43506D),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              height: 1.15,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Align(
+                            alignment: Alignment.bottomRight,
+                            child: _StartDhikrButton(
+                              theme: theme,
+                              locale: locale,
+                              onTap: onTap,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: compact ? 10 : 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _localizedActionButton(
-                      icon: Icons.volume_down_rounded,
-                      label: _homeText(
-                        locale,
-                        tr: 'Kıs',
-                        en: 'Lower',
-                        ar: 'اخفض',
-                      ),
-                      onTap: onLower,
-                    ),
-                    _localizedActionButton(
-                      icon: Icons.volume_off_rounded,
-                      label: _homeText(
-                        locale,
-                        tr: 'Sessiz',
-                        en: 'Mute',
-                        ar: 'صامت',
-                      ),
-                      onTap: onMute,
-                    ),
-                    _localizedActionButton(
-                      icon: Icons.stop_rounded,
-                      label: _homeText(
-                        locale,
-                        tr: 'Durdur',
-                        en: 'Stop',
-                        ar: 'إيقاف',
-                      ),
-                      onTap: onStop,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
+}
 
-  Widget _localizedActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
+class _StartDhikrButton extends StatelessWidget {
+  const _StartDhikrButton({
+    required this.theme,
+    required this.locale,
+    required this.onTap,
+  });
+
+  final _HomeTheme theme;
+  final String locale;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        height: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 11),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.25),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(999),
+          gradient: LinearGradient(
+            colors: [
+              theme.accent,
+              theme.accentDark,
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: theme.accent.withOpacity(0.32),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: Colors.white, size: 16),
-            const SizedBox(width: 6),
             Text(
-              label,
+              _text(locale, tr: 'Zikre Başla', en: 'Start Dhikr', ar: 'Start'),
               style: const TextStyle(
                 color: Colors.white,
-                fontWeight: FontWeight.w700,
                 fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              width: 22,
+              height: 22,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+              ),
+              child: Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 12,
+                color: theme.accentDark,
               ),
             ),
           ],
@@ -1050,270 +851,160 @@ class _LocalizedAdhanStopBar extends StatelessWidget {
   }
 }
 
-class _PrayerTile extends StatelessWidget {
-  const _PrayerTile({
-    required this.prayer,
-    required this.label,
-    required this.scheme,
-    required this.isActive,
-    required this.isNext,
-    required this.isCompleted,
+class _PrayerTimesCard extends StatelessWidget {
+  const _PrayerTimesCard({
+    required this.theme,
+    required this.locale,
+    required this.prayerTimes,
+    required this.activePrayer,
   });
 
-  final PrayerTime prayer;
-  final String label;
-  final _HomePalette scheme;
-  final bool isActive;
-  final bool isNext;
-  final bool isCompleted;
+  final _HomeTheme theme;
+  final String locale;
+  final List<PrayerTime> prayerTimes;
+  final PrayerTime? activePrayer;
 
   @override
   Widget build(BuildContext context) {
-    final badgeLabel = isActive
-        ? 'Şu an'
-        : isNext
-            ? 'Sıradaki'
-            : isCompleted
-                ? 'Tamamlandı'
-                : _slotLabel(prayer.time);
+    final now = DateTime.now();
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: isActive
-            ? scheme.surfaceStrong
-            : Colors.white.withOpacity(isCompleted ? 0.58 : 0.76),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: isActive
-              ? scheme.primary.withOpacity(0.55)
-              : Colors.white.withOpacity(0.62),
-          width: isActive ? 1.4 : 1,
-        ),
+        color: Colors.white.withOpacity(0.96),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: scheme.shadow.withOpacity(isActive ? 0.26 : 0.10),
-            blurRadius: isActive ? 18 : 13,
-            offset: const Offset(0, 8),
+            color: const Color(0xFF243B6B).withOpacity(0.10),
+            blurRadius: 30,
+            offset: const Offset(0, 14),
           ),
         ],
       ),
-        child: Row(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+        child: Column(
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: isActive
-                    ? scheme.primary
-                    : isCompleted
-                        ? scheme.textSecondary.withOpacity(0.10)
-                        : scheme.primary.withOpacity(0.10),
-                borderRadius: BorderRadius.circular(12),
+            for (var index = 0; index < prayerTimes.length; index++) ...[
+              _PrayerTimeRow(
+                theme: theme,
+                locale: locale,
+                prayer: prayerTimes[index],
+                isActive: activePrayer?.name == prayerTimes[index].name,
+                isCompleted: now.isAfter(prayerTimes[index].time) &&
+                    activePrayer?.name != prayerTimes[index].name,
               ),
-              child: Icon(
-                _iconForPrayer(prayer.name),
-                color: isActive
-                    ? Colors.white
-                    : isCompleted
-                        ? scheme.textSecondary
-                        : scheme.primary,
-                size: 19,
-              ),
-            ),
-            const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: scheme.textPrimary,
-                      fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
+              if (index != prayerTimes.length - 1)
+                Divider(
+                  height: 18,
+                  thickness: 1,
+                  color: const Color(0xFFE8EDF8),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  badgeLabel,
-                  style: TextStyle(
-                    color: isNext ? scheme.primary : scheme.textSecondary,
-                      fontSize: 8,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ],
-            ),
-          ),
-           const SizedBox(width: 8),
-           Container(
-             width: 7,
-             height: 7,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isActive
-                  ? scheme.primary
-                  : isNext
-                      ? scheme.secondary
-                      : isCompleted
-                          ? scheme.textSecondary.withOpacity(0.35)
-                          : Colors.white,
-              border: Border.all(
-                color: isCompleted
-                    ? scheme.textSecondary.withOpacity(0.25)
-                    : scheme.primary.withOpacity(0.22),
-              ),
-            ),
-          ),
-           const SizedBox(width: 8),
-           Text(
-             _formatTime(prayer.time),
-             style: TextStyle(
-               color: scheme.textPrimary,
-               fontSize: 19,
-               fontWeight: FontWeight.w900,
-               letterSpacing: -0.8,
-             ),
-          ),
-        ],
+            ],
+          ],
+        ),
       ),
     );
   }
 }
 
-class _LocalizedPrayerTile extends StatelessWidget {
-  const _LocalizedPrayerTile({
-    required this.prayer,
-    required this.label,
+class _PrayerTimeRow extends StatelessWidget {
+  const _PrayerTimeRow({
+    required this.theme,
     required this.locale,
-    required this.scheme,
+    required this.prayer,
     required this.isActive,
-    required this.isNext,
     required this.isCompleted,
   });
 
-  final PrayerTime prayer;
-  final String label;
+  final _HomeTheme theme;
   final String locale;
-  final _HomePalette scheme;
+  final PrayerTime prayer;
   final bool isActive;
-  final bool isNext;
   final bool isCompleted;
 
   @override
   Widget build(BuildContext context) {
-    final badgeLabel = isActive
-        ? _homeText(locale, tr: 'Şu an', en: 'Now', ar: 'الآن')
-        : isNext
-            ? _homeText(locale, tr: 'Sıradaki', en: 'Next', ar: 'التالي')
-            : isCompleted
-                ? _homeText(
-                    locale,
-                    tr: 'Tamamlandı',
-                    en: 'Completed',
-                    ar: 'اكتمل',
-                  )
-                : _localizedSlotLabel(prayer.time, locale);
+    final localizedName = AppLocalizations.prayerName(prayer.name, locale);
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: isActive
-            ? scheme.surfaceStrong
-            : Colors.white.withOpacity(isCompleted ? 0.58 : 0.76),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(18),
+        gradient: isActive
+            ? LinearGradient(
+                colors: [
+                  theme.accent.withOpacity(0.12),
+                  theme.accent.withOpacity(0.05),
+                ],
+              )
+            : null,
         border: Border.all(
           color: isActive
-              ? scheme.primary.withOpacity(0.55)
-              : Colors.white.withOpacity(0.62),
-          width: isActive ? 1.4 : 1,
+              ? theme.accent.withOpacity(0.26)
+              : Colors.transparent,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: scheme.shadow.withOpacity(isActive ? 0.26 : 0.10),
-            blurRadius: isActive ? 18 : 13,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: isActive
-                  ? scheme.primary
-                  : isCompleted
-                      ? scheme.textSecondary.withOpacity(0.10)
-                      : scheme.primary.withOpacity(0.10),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              _iconForPrayer(prayer.name),
-              color: isActive
-                  ? Colors.white
-                  : isCompleted
-                      ? scheme.textSecondary
-                      : scheme.primary,
-              size: 19,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: scheme.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  badgeLabel,
-                  style: TextStyle(
-                    color: isNext ? scheme.primary : scheme.textSecondary,
-                    fontSize: 8,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            width: 7,
-            height: 7,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: isActive
-                  ? scheme.primary
-                  : isNext
-                      ? scheme.secondary
-                      : isCompleted
-                          ? scheme.textSecondary.withOpacity(0.35)
-                          : Colors.white,
-              border: Border.all(
-                color: isCompleted
-                    ? scheme.textSecondary.withOpacity(0.25)
-                    : scheme.primary.withOpacity(0.22),
-              ),
+                  ? theme.accent.withOpacity(0.16)
+                  : const Color(0xFFF3F6FC),
+            ),
+            child: Icon(
+              _iconForPrayer(prayer.name),
+              color: isActive ? theme.accentDark : const Color(0xFF7C8AA8),
+              size: 19,
             ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            _formatTime(prayer.time),
-            style: TextStyle(
-              color: scheme.textPrimary,
-              fontSize: 19,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.8,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    localizedName,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: isActive ? theme.accentDark : const Color(0xFF1C2841),
+                      fontSize: 17,
+                      fontWeight: isActive ? FontWeight.w800 : FontWeight.w700,
+                    ),
+                  ),
+                ),
+                if (isActive) ...[
+                  const SizedBox(width: 10),
+                  Text(
+                    _text(locale, tr: 'Su an', en: 'Now', ar: 'Now'),
+                    style: TextStyle(
+                      color: theme.accentDark,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
             ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            _formatClock(prayer.time),
+            style: TextStyle(
+              color: isActive ? theme.accentDark : const Color(0xFF1D2A44),
+              fontSize: 17,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(width: 10),
+          _StatusDot(
+            theme: theme,
+            isActive: isActive,
+            isCompleted: isCompleted,
           ),
         ],
       ),
@@ -1321,412 +1012,596 @@ class _LocalizedPrayerTile extends StatelessWidget {
   }
 }
 
-class _DailyProgressBar extends StatelessWidget {
-  const _DailyProgressBar({
-    required this.progress,
-    required this.completedCount,
-    required this.totalCount,
+class _StatusDot extends StatelessWidget {
+  const _StatusDot({
+    required this.theme,
+    required this.isActive,
+    required this.isCompleted,
   });
 
-  final double progress;
-  final int completedCount;
-  final int totalCount;
+  final _HomeTheme theme;
+  final bool isActive;
+  final bool isCompleted;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    if (isCompleted) {
+      return Container(
+        width: 18,
+        height: 18,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0xFFE7F7EE),
+          border: Border.all(color: const Color(0xFFCDEBD9)),
+        ),
+        child: const Icon(
+          Icons.check_rounded,
+          size: 13,
+          color: Color(0xFF17844E),
+        ),
+      );
+    }
+
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: isActive ? theme.accent : const Color(0xFFD6DCE9),
+      ),
+    );
+  }
+}
+
+class _AdhanControlBar extends StatelessWidget {
+  const _AdhanControlBar({
+    required this.theme,
+    required this.locale,
+    required this.onLower,
+    required this.onMute,
+    required this.onStop,
+  });
+
+  final _HomeTheme theme;
+  final String locale;
+  final VoidCallback onLower;
+  final VoidCallback onMute;
+  final VoidCallback onStop;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF111827).withOpacity(0.92),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.22),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
           children: [
-            const Text(
-              'Günlük İlerleme',
-              style: TextStyle(
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: theme.accent.withOpacity(0.22),
+              ),
+              child: const Icon(
+                Icons.volume_up_rounded,
                 color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
               ),
             ),
-            const Spacer(),
-            Text(
-              '$completedCount/$totalCount',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.75),
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _text(
+                  locale,
+                  tr: 'Ezan caliyor',
+                  en: 'Adhan is playing',
+                  ar: 'Adhan is playing',
+                ),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
+            ),
+            _MiniActionChip(
+              label: _text(locale, tr: 'Azalt', en: 'Lower', ar: 'Lower'),
+              onTap: onLower,
+            ),
+            const SizedBox(width: 8),
+            _MiniActionChip(
+              label: _text(locale, tr: 'Sessiz', en: 'Mute', ar: 'Mute'),
+              onTap: onMute,
+            ),
+            const SizedBox(width: 8),
+            _MiniActionChip(
+              label: _text(locale, tr: 'Kapat', en: 'Stop', ar: 'Stop'),
+              onTap: onStop,
+              emphasis: true,
             ),
           ],
-        ),
-        const SizedBox(height: 10),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(999),
-          child: LinearProgressIndicator(
-            value: progress.clamp(0.0, 1.0),
-            minHeight: 8,
-            backgroundColor: Colors.white.withOpacity(0.18),
-            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CountdownDisplay extends StatelessWidget {
-  const _CountdownDisplay({
-    required this.hours,
-    required this.minutes,
-    required this.seconds,
-  });
-
-  final int hours;
-  final int minutes;
-  final int seconds;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        _TimeUnit(value: hours, label: 'SA'),
-        const _Separator(),
-        _TimeUnit(value: minutes, label: 'DK'),
-        const _Separator(),
-        _TimeUnit(value: seconds, label: 'SN'),
-      ],
-    );
-  }
-}
-
-class _LocalizedCountdownDisplay extends StatelessWidget {
-  const _LocalizedCountdownDisplay({
-    required this.locale,
-    required this.hours,
-    required this.minutes,
-    required this.seconds,
-  });
-
-  final String locale;
-  final int hours;
-  final int minutes;
-  final int seconds;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        _TimeUnit(
-          value: hours,
-          label: AppLocalizations.translate('hour', locale),
-        ),
-        const _Separator(),
-        _TimeUnit(
-          value: minutes,
-          label: AppLocalizations.translate('minute', locale),
-        ),
-        const _Separator(),
-        _TimeUnit(
-          value: seconds,
-          label: AppLocalizations.translate('second', locale),
-        ),
-      ],
-    );
-  }
-}
-
-class _Separator extends StatelessWidget {
-  const _Separator();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 30, left: 4, right: 4),
-      child: Text(
-        ':',
-        style: TextStyle(
-          color: Colors.white.withOpacity(0.50),
-          fontSize: 34,
-          fontWeight: FontWeight.w900,
-          height: 1.0,
         ),
       ),
     );
   }
 }
 
-class _TimeUnit extends StatelessWidget {
-  const _TimeUnit({required this.value, required this.label});
+class _MiniActionChip extends StatelessWidget {
+  const _MiniActionChip({
+    required this.label,
+    required this.onTap,
+    this.emphasis = false,
+  });
 
-  final int value;
   final String label;
+  final VoidCallback onTap;
+  final bool emphasis;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          value.toString().padLeft(2, '0'),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 52,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -2.0,
-            height: 1.0,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          margin: const EdgeInsets.only(bottom: 6),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.14),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.16),
-            ),
-          ),
+    return Material(
+      color: emphasis ? const Color(0xFFF04A4A) : Colors.white.withOpacity(0.12),
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Text(
             label,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.82),
-              fontSize: 9,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.1,
-              height: 1.0,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 }
 
-class _HomePalette {
-  const _HomePalette({
-    required this.background,
-    required this.backgroundAccent,
-    required this.backgroundSoft,
-    required this.primary,
-    required this.secondary,
-    required this.tertiary,
-    required this.surfaceStrong,
-    required this.textPrimary,
-    required this.textSecondary,
+class _CardOrnamentPainter extends CustomPainter {
+  const _CardOrnamentPainter({
+    required this.color,
+  });
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+    final fillPaint = Paint()
+      ..color = color.withOpacity(0.18)
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    final centerX = size.width * 0.72;
+    final centerY = size.height * 0.50;
+    final width = size.width * 0.46;
+    final height = size.height * 0.64;
+
+    path.moveTo(centerX, centerY - height / 2);
+    path.quadraticBezierTo(
+      centerX + width / 2,
+      centerY - height / 4,
+      centerX + width / 2,
+      centerY + height / 7,
+    );
+    path.quadraticBezierTo(
+      centerX + width / 3,
+      centerY + height / 2,
+      centerX,
+      centerY + height / 2,
+    );
+    path.quadraticBezierTo(
+      centerX - width / 3,
+      centerY + height / 2,
+      centerX - width / 2,
+      centerY + height / 7,
+    );
+    path.quadraticBezierTo(
+      centerX - width / 2,
+      centerY - height / 4,
+      centerX,
+      centerY - height / 2,
+    );
+
+    canvas.drawPath(path, fillPaint);
+    canvas.drawPath(path, paint);
+
+    for (var i = 0; i < 3; i++) {
+      final inset = 10.0 + i * 12;
+      final inner = Rect.fromLTWH(
+        centerX - width / 2 + inset,
+        centerY - height / 2 + inset,
+        width - inset * 2,
+        height - inset * 2,
+      );
+      canvas.drawArc(inner, math.pi, math.pi, false, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _CardOrnamentPainter oldDelegate) {
+    return oldDelegate.color != color;
+  }
+}
+
+class _HomeTheme {
+  const _HomeTheme({
+    required this.pageBackground,
+    required this.pageBackgroundSoft,
+    required this.accent,
+    required this.accentDark,
+    required this.overlayTop,
+    required this.overlayBottom,
+    required this.cardTint,
     required this.shadow,
   });
 
-  final Color background;
-  final Color backgroundAccent;
-  final Color backgroundSoft;
-  final Color primary;
-  final Color secondary;
-  final Color tertiary;
-  final Color surfaceStrong;
-  final Color textPrimary;
-  final Color textSecondary;
+  final Color pageBackground;
+  final Color pageBackgroundSoft;
+  final Color accent;
+  final Color accentDark;
+  final Color overlayTop;
+  final Color overlayBottom;
+  final Color cardTint;
   final Color shadow;
 }
 
-_HomePalette _paletteForPrayer(String? prayerName, bool isDark) {
-  final normalized = prayerName?.toLowerCase() ?? '';
+class _VirdModel {
+  const _VirdModel({
+    required this.title,
+    required this.targetCount,
+    required this.description,
+  });
 
-  // İmsak / Fajr — derin lacivert-indigo (gece sonu)
-  if (normalized.contains('fajr') || normalized.contains('imsak')) {
-    return _shadeHomePalette(const _HomePalette(
-      background: Color(0xFFEEF2FF),
-      backgroundAccent: Color(0xFFE0E7FF),
-      backgroundSoft: Color(0xFFF8F9FF),
-      primary: Color(0xFF4338CA),
-      secondary: Color(0xFF6366F1),
-      tertiary: Color(0xFF818CF8),
-      surfaceStrong: Color(0xFFF0F2FF),
-      textPrimary: Color(0xFF1E1B4B),
-      textSecondary: Color(0xFF6B72A8),
-      shadow: Color(0xFF4338CA),
-    ), isDark);
-  }
-
-  // Güneş / Sunrise — turuncu-altın (şafak)
-  if (normalized.contains('sunrise') || normalized.contains('gunes')) {
-    return _shadeHomePalette(const _HomePalette(
-      background: Color(0xFFFFF7ED),
-      backgroundAccent: Color(0xFFFFEDD5),
-      backgroundSoft: Color(0xFFFFFBF5),
-      primary: Color(0xFFC2410C),
-      secondary: Color(0xFFEA580C),
-      tertiary: Color(0xFFFB923C),
-      surfaceStrong: Color(0xFFFFF8F0),
-      textPrimary: Color(0xFF431407),
-      textSecondary: Color(0xFF9A4A25),
-      shadow: Color(0xFFC2410C),
-    ), isDark);
-  }
-
-  // Öğle / Dhuhr — gökyüzü mavisi (öğlen)
-  if (normalized.contains('dhuhr') || normalized.contains('ogle')) {
-    return _shadeHomePalette(const _HomePalette(
-      background: Color(0xFFEFF6FF),
-      backgroundAccent: Color(0xFFDCEEFB),
-      backgroundSoft: Color(0xFFF5FAFF),
-      primary: Color(0xFF1D4ED8),
-      secondary: Color(0xFF3B82F6),
-      tertiary: Color(0xFF60A5FA),
-      surfaceStrong: Color(0xFFF0F8FF),
-      textPrimary: Color(0xFF1E3A5F),
-      textSecondary: Color(0xFF4A7AA8),
-      shadow: Color(0xFF1D4ED8),
-    ), isDark);
-  }
-
-  // İkindi / Asr — kehribar-amber (ikindi güneşi)
-  if (normalized.contains('asr') || normalized.contains('ikindi')) {
-    return _shadeHomePalette(const _HomePalette(
-      background: Color(0xFFFFFBEB),
-      backgroundAccent: Color(0xFFFEF3C7),
-      backgroundSoft: Color(0xFFFFFDF5),
-      primary: Color(0xFFB45309),
-      secondary: Color(0xFFD97706),
-      tertiary: Color(0xFFF59E0B),
-      surfaceStrong: Color(0xFFFFF8EA),
-      textPrimary: Color(0xFF451A03),
-      textSecondary: Color(0xFF92520A),
-      shadow: Color(0xFFB45309),
-    ), isDark);
-  }
-
-  // Akşam / Maghrib — kızıl-pembe (gün batımı)
-  if (normalized.contains('maghrib') || normalized.contains('aksam')) {
-    return _shadeHomePalette(const _HomePalette(
-      background: Color(0xFFFFF1F2),
-      backgroundAccent: Color(0xFFFFE4E6),
-      backgroundSoft: Color(0xFFFFF8F9),
-      primary: Color(0xFF9F1239),
-      secondary: Color(0xFFE11D48),
-      tertiary: Color(0xFFFB7185),
-      surfaceStrong: Color(0xFFFFF0F2),
-      textPrimary: Color(0xFF4C0519),
-      textSecondary: Color(0xFFAD5162),
-      shadow: Color(0xFF9F1239),
-    ), isDark);
-  }
-
-  // Yatsı / Isha — mor-violet (gece)
-  return _shadeHomePalette(const _HomePalette(
-    background: Color(0xFFF5F3FF),
-    backgroundAccent: Color(0xFFEDE9FE),
-    backgroundSoft: Color(0xFFFAF9FF),
-    primary: Color(0xFF5B21B6),
-    secondary: Color(0xFF7C3AED),
-    tertiary: Color(0xFF8B5CF6),
-    surfaceStrong: Color(0xFFF2EEFF),
-    textPrimary: Color(0xFF2E1065),
-    textSecondary: Color(0xFF7C5AC3),
-    shadow: Color(0xFF5B21B6),
-  ), isDark);
+  final String title;
+  final int targetCount;
+  final String description;
 }
 
-_HomePalette _shadeHomePalette(_HomePalette palette, bool isDark) {
-  if (!isDark) return palette;
-  return _HomePalette(
-    background: Color.lerp(palette.background, const Color(0xFF0F172A), 0.86)!,
-    backgroundAccent:
-        Color.lerp(palette.backgroundAccent, const Color(0xFF111827), 0.80)!,
-    backgroundSoft:
-        Color.lerp(palette.backgroundSoft, const Color(0xFF1E293B), 0.72)!,
-    primary: palette.primary,
-    secondary: palette.secondary,
-    tertiary: palette.tertiary,
-    surfaceStrong:
-        Color.lerp(palette.surfaceStrong, const Color(0xFF1E293B), 0.72)!,
-    textPrimary: const Color(0xFFF8FAFC),
-    textSecondary: const Color(0xFFCBD5E1),
-    shadow: Color.lerp(palette.shadow, Colors.black, 0.25)!,
+_HomeTheme _homeThemeForPrayer(String? prayerName, bool isDark) {
+  final normalized = (prayerName ?? '').toLowerCase();
+
+  if (normalized.contains('sunrise') || normalized.contains('gunes')) {
+    return const _HomeTheme(
+      pageBackground: Color(0xFFF7E7B2),
+      pageBackgroundSoft: Color(0xFFFFF4D6),
+      accent: Color(0xFFF4B61D),
+      accentDark: Color(0xFFC98900),
+      overlayTop: Color(0x2B573100),
+      overlayBottom: Color(0xBB6B3A00),
+      cardTint: Color(0xFFFFD770),
+      shadow: Color(0xFF8B5B00),
+    );
+  }
+
+  if (normalized.contains('dhuhr') || normalized.contains('ogle')) {
+    return const _HomeTheme(
+      pageBackground: Color(0xFFDDEEFF),
+      pageBackgroundSoft: Color(0xFFF1F8FF),
+      accent: Color(0xFF3A89FF),
+      accentDark: Color(0xFF1E5EDB),
+      overlayTop: Color(0x1F0D4F9A),
+      overlayBottom: Color(0x8F0A5AB5),
+      cardTint: Color(0xFF81B6FF),
+      shadow: Color(0xFF164A9C),
+    );
+  }
+
+  if (normalized.contains('asr') || normalized.contains('ikindi')) {
+    return const _HomeTheme(
+      pageBackground: Color(0xFFFFE2C5),
+      pageBackgroundSoft: Color(0xFFFFF0E0),
+      accent: Color(0xFFFF8A1E),
+      accentDark: Color(0xFFDB5D00),
+      overlayTop: Color(0x2B7A2D00),
+      overlayBottom: Color(0xA36F2700),
+      cardTint: Color(0xFFFFB263),
+      shadow: Color(0xFFA34E00),
+    );
+  }
+
+  if (normalized.contains('maghrib') || normalized.contains('aksam')) {
+    return const _HomeTheme(
+      pageBackground: Color(0xFFFFD1CB),
+      pageBackgroundSoft: Color(0xFFFFF0EE),
+      accent: Color(0xFFFF4C36),
+      accentDark: Color(0xFFCB1E13),
+      overlayTop: Color(0x290C0000),
+      overlayBottom: Color(0xB07D1208),
+      cardTint: Color(0xFFFF8577),
+      shadow: Color(0xFF8A1810),
+    );
+  }
+
+  if (normalized.contains('isha') || normalized.contains('yatsi')) {
+    return const _HomeTheme(
+      pageBackground: Color(0xFFE1DAFF),
+      pageBackgroundSoft: Color(0xFFF2EEFF),
+      accent: Color(0xFF7E4DFF),
+      accentDark: Color(0xFF5A29D9),
+      overlayTop: Color(0x22040024),
+      overlayBottom: Color(0xB0240B64),
+      cardTint: Color(0xFFB69EFF),
+      shadow: Color(0xFF361378),
+    );
+  }
+
+  return _HomeTheme(
+    pageBackground: isDark ? const Color(0xFF0D1730) : const Color(0xFFD7E3FF),
+    pageBackgroundSoft: isDark ? const Color(0xFF111E3F) : const Color(0xFFEDF3FF),
+    accent: const Color(0xFF2F6BFF),
+    accentDark: const Color(0xFF1C3FA2),
+    overlayTop: const Color(0x26010016),
+    overlayBottom: const Color(0xBA071735),
+    cardTint: const Color(0xFF84A6FF),
+    shadow: const Color(0xFF1A2B60),
   );
 }
 
-String _formatTime(DateTime time) {
-  return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
-}
+_VirdModel _virdForPrayer(String? prayerName, String locale) {
+  final normalized = (prayerName ?? '').toLowerCase();
 
-String _miladiDate() {
-  const months = [
-    'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
-    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık',
-  ];
-  final now = DateTime.now();
-  return '${now.day} ${months[now.month - 1]} ${now.year}';
-}
-
-String _hijriDate() {
-  final now = DateTime.now();
-  int y = now.year, m = now.month, d = now.day;
-  if (m <= 2) {
-    y--;
-    m += 12;
+  if (normalized.contains('sunrise') || normalized.contains('gunes')) {
+    return _VirdModel(
+      title: _text(locale, tr: 'Subhanallah', en: 'Subhanallah', ar: 'Subhanallah'),
+      targetCount: 100,
+      description: _text(
+        locale,
+        tr: 'Allah\'ı her türlü eksiklikten uzak tutmak için.',
+        en: 'To glorify Allah beyond all imperfection.',
+        ar: 'To glorify Allah beyond all imperfection.',
+      ),
+    );
   }
-  final a = y ~/ 100;
-  final b = 2 - a + a ~/ 4;
-  final jd = (365.25 * (y + 4716)).floor() +
-      (30.6001 * (m + 1)).floor() +
-      d +
-      b -
-      1524;
-  final l = jd - 1948440 + 10632;
-  final n = (l - 1) ~/ 10631;
-  final l2 = l - 10631 * n + 354;
-  final j = ((10985 - l2) ~/ 5316) * ((50 * l2) ~/ 17719) +
-      (l2 ~/ 5670) * ((43 * l2) ~/ 15238);
-  final l3 = l2 -
-      ((30 - j) ~/ 15) * ((17719 * j) ~/ 50) -
-      (j ~/ 16) * ((15238 * j) ~/ 43) +
+
+  if (normalized.contains('dhuhr') || normalized.contains('ogle')) {
+    return _VirdModel(
+      title: _text(locale, tr: 'Ya Allah', en: 'Ya Allah', ar: 'Ya Allah'),
+      targetCount: 66,
+      description: _text(
+        locale,
+        tr: 'Kalbi Allah\'a yöneltmek ve O\'na sığınmak için.',
+        en: 'To turn the heart toward Allah and seek His shelter.',
+        ar: 'To turn the heart toward Allah and seek His shelter.',
+      ),
+    );
+  }
+
+  if (normalized.contains('asr') || normalized.contains('ikindi')) {
+    return _VirdModel(
+      title: _text(locale, tr: 'Ya Latif', en: 'Ya Latif', ar: 'Ya Latif'),
+      targetCount: 129,
+      description: _text(
+        locale,
+        tr: 'Allah\'ın lütfunu ve ince rahmetini hatırlamak için.',
+        en: 'To remember Allah\'s subtle kindness and mercy.',
+        ar: 'To remember Allah\'s subtle kindness and mercy.',
+      ),
+    );
+  }
+
+  if (normalized.contains('maghrib') || normalized.contains('aksam')) {
+    return _VirdModel(
+      title: _text(
+        locale,
+        tr: 'La ilahe illallah',
+        en: 'La ilaha illallah',
+        ar: 'La ilaha illallah',
+      ),
+      targetCount: 100,
+      description: _text(
+        locale,
+        tr: 'Kalbi huzura ve imana güçlendirmek için.',
+        en: 'To strengthen the heart with peace and faith.',
+        ar: 'To strengthen the heart with peace and faith.',
+      ),
+    );
+  }
+
+  if (normalized.contains('isha') || normalized.contains('yatsi')) {
+    return _VirdModel(
+      title: _text(
+        locale,
+        tr: 'Salavat-i Serife',
+        en: 'Salawat',
+        ar: 'Salawat',
+      ),
+      targetCount: 100,
+      description: _text(
+        locale,
+        tr: 'Peygamber Efendimiz\'e salat ve selam getirmek için.',
+        en: 'To send blessings and peace upon the Prophet.',
+        ar: 'To send blessings and peace upon the Prophet.',
+      ),
+    );
+  }
+
+  return _VirdModel(
+    title: _text(
+      locale,
+      tr: 'Estagfirullah',
+      en: 'Astaghfirullah',
+      ar: 'Astaghfirullah',
+    ),
+    targetCount: 100,
+    description: _text(
+      locale,
+      tr: 'Günaha tövbe ve kalbi arındırmak için.',
+      en: 'To seek forgiveness and purify the heart.',
+      ar: 'To seek forgiveness and purify the heart.',
+    ),
+  );
+}
+
+String _backgroundAssetForPrayer(String? prayerName) {
+  final normalized = (prayerName ?? '').toLowerCase();
+
+  if (normalized.contains('sunrise') || normalized.contains('gunes')) {
+    return 'assets/images/gunes_bg.png';
+  }
+  if (normalized.contains('dhuhr') || normalized.contains('ogle')) {
+    return 'assets/images/ogle_bg.png';
+  }
+  if (normalized.contains('asr') || normalized.contains('ikindi')) {
+    return 'assets/images/ikindi_bg.png';
+  }
+  if (normalized.contains('maghrib') || normalized.contains('aksam')) {
+    return 'assets/images/aksam_bg.png';
+  }
+  if (normalized.contains('isha') || normalized.contains('yatsi')) {
+    return 'assets/images/yatsi_bg.png';
+  }
+  return 'assets/images/imsak_bg.png';
+}
+
+String _formatCountdown(Duration? duration) {
+  if (duration == null) return '--:--:--';
+  final totalSeconds = duration.inSeconds.abs();
+  final hours = (totalSeconds ~/ 3600).toString().padLeft(2, '0');
+  final minutes = ((totalSeconds % 3600) ~/ 60).toString().padLeft(2, '0');
+  final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
+  return '$hours:$minutes:$seconds';
+}
+
+String _formatClock(DateTime dateTime) {
+  final hour = dateTime.hour.toString().padLeft(2, '0');
+  final minute = dateTime.minute.toString().padLeft(2, '0');
+  return '$hour:$minute';
+}
+
+String _formatMiladiDate(String locale, DateTime date) {
+  const trMonths = <String>[
+    'Ocak',
+    'Subat',
+    'Mart',
+    'Nisan',
+    'Mayis',
+    'Haziran',
+    'Temmuz',
+    'Agustos',
+    'Eylul',
+    'Ekim',
+    'Kasim',
+    'Aralik',
+  ];
+  const enMonths = <String>[
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+
+  final months = locale == 'tr' ? trMonths : enMonths;
+  return '${date.day} ${months[date.month - 1]} ${date.year}';
+}
+
+String _formatHijriDate(String locale, DateTime date) {
+  final hijri = _toHijri(date);
+  const trMonths = <String>[
+    'Muharrem',
+    'Safer',
+    'Rebiulevvel',
+    'Rebiulahir',
+    'Cemaziyelevvel',
+    'Cemaziyelahir',
+    'Recep',
+    'Saban',
+    'Ramazan',
+    'Sevval',
+    'Zilkade',
+    'Zilhicce',
+  ];
+  const enMonths = <String>[
+    'Muharram',
+    'Safar',
+    'Rabi al-Awwal',
+    'Rabi al-Thani',
+    'Jumada al-Awwal',
+    'Jumada al-Thani',
+    'Rajab',
+    'Shaban',
+    'Ramadan',
+    'Shawwal',
+    'Dhul Qadah',
+    'Dhul Hijjah',
+  ];
+  final months = locale == 'tr' ? trMonths : enMonths;
+  return '${hijri.day} ${months[hijri.month - 1]} ${hijri.year}';
+}
+
+_HijriDate _toHijri(DateTime date) {
+  final julianDay = _gregorianToJulian(date.year, date.month, date.day);
+  var l = julianDay - 1948440 + 10632;
+  final n = ((l - 1) / 10631).floor();
+  l = l - 10631 * n + 354;
+  final j = (((10985 - l) / 5316).floor()) *
+          (((50 * l) / 17719).floor()) +
+      ((l / 5670).floor()) * (((43 * l) / 15238).floor());
+  l = l -
+      (((30 - j) / 15).floor()) * (((17719 * j) / 50).floor()) -
+      ((j / 16).floor()) * (((15238 * j) / 43).floor()) +
       29;
-  final hMonth = (24 * l3) ~/ 709;
-  final hDay = l3 - (709 * hMonth) ~/ 24;
-  final hYear = 30 * n + j - 30;
-  const hijriMonths = [
-    'Muharrem', 'Safer', 'Rebiülevvel', 'Rebiülahir',
-    'Cemaziyelevvel', 'Cemaziyelahir', 'Recep', 'Şaban',
-    'Ramazan', 'Şevval', 'Zilkade', 'Zilhicce',
-  ];
-  return '$hDay ${hijriMonths[(hMonth - 1).clamp(0, 11)]} $hYear';
+  final month = ((24 * l) / 709).floor();
+  final day = l - ((709 * month) / 24).floor();
+  final year = 30 * n + j - 30;
+  return _HijriDate(day: day, month: month, year: year);
 }
 
-String _weekdayLabel(int weekday) {
-  switch (weekday) {
-    case DateTime.monday:
-      return 'Pazartesi';
-    case DateTime.tuesday:
-      return 'Sali';
-    case DateTime.wednesday:
-      return 'Carsamba';
-    case DateTime.thursday:
-      return 'Persembe';
-    case DateTime.friday:
-      return 'Cuma';
-    case DateTime.saturday:
-      return 'Cumartesi';
-    default:
-      return 'Pazar';
-  }
+int _gregorianToJulian(int year, int month, int day) {
+  final a = ((14 - month) / 12).floor();
+  final y = year + 4800 - a;
+  final m = month + 12 * a - 3;
+  return day +
+      (((153 * m) + 2) / 5).floor() +
+      365 * y +
+      (y / 4).floor() -
+      (y / 100).floor() +
+      (y / 400).floor() -
+      32045;
 }
 
-String _slotLabel(DateTime time) {
-  if (time.hour < 8) return 'Sabah';
-  if (time.hour < 12) return 'Gündüz';
-  if (time.hour < 17) return 'Öğleden Sonra';
-  if (time.hour < 21) return 'Akşam';
-  return 'Gece';
+class _HijriDate {
+  const _HijriDate({
+    required this.day,
+    required this.month,
+    required this.year,
+  });
+
+  final int day;
+  final int month;
+  final int year;
 }
 
-IconData _iconForPrayer(String name) {
-  final normalized = name.toLowerCase();
+IconData _iconForPrayer(String prayerName) {
+  final normalized = prayerName.toLowerCase();
+
   if (normalized.contains('fajr') || normalized.contains('imsak')) {
-    return Icons.nightlight_round;
+    return Icons.dark_mode_rounded;
   }
   if (normalized.contains('sunrise') || normalized.contains('gunes')) {
     return Icons.wb_sunny_rounded;
@@ -1740,113 +1615,10 @@ IconData _iconForPrayer(String name) {
   if (normalized.contains('maghrib') || normalized.contains('aksam')) {
     return Icons.wb_twilight_rounded;
   }
-  return Icons.brightness_2_rounded;
+  return Icons.nightlight_round;
 }
 
-String _prayerNameTr(String name) {
-  final normalized = name.toLowerCase();
-  if (normalized.contains('fajr') || normalized.contains('imsak')) return 'İmsak';
-  if (normalized.contains('sunrise') || normalized.contains('gunes')) return 'Güneş';
-  if (normalized.contains('dhuhr') || normalized.contains('ogle')) return 'Öğle';
-  if (normalized.contains('asr') || normalized.contains('ikindi')) return 'İkindi';
-  if (normalized.contains('maghrib') || normalized.contains('aksam')) return 'Akşam';
-  if (normalized.contains('isha') || normalized.contains('yatsi')) return 'Yatsı';
-  return name;
-}
-
-String _localizedMiladiDate(String locale) {
-  const monthsTr = [
-    'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
-    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık',
-  ];
-  const monthsEn = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-  ];
-  const monthsAr = [
-    'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-    'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
-  ];
-  final months = locale == 'ar'
-      ? monthsAr
-      : locale == 'tr'
-          ? monthsTr
-          : monthsEn;
-  final now = DateTime.now();
-  return '${now.day} ${months[now.month - 1]} ${now.year}';
-}
-
-String _localizedHijriDate(String locale) {
-  final now = DateTime.now();
-  int y = now.year, m = now.month, d = now.day;
-  if (m <= 2) {
-    y--;
-    m += 12;
-  }
-  final a = y ~/ 100;
-  final b = 2 - a + a ~/ 4;
-  final jd = (365.25 * (y + 4716)).floor() +
-      (30.6001 * (m + 1)).floor() +
-      d +
-      b -
-      1524;
-  final l = jd - 1948440 + 10632;
-  final n = (l - 1) ~/ 10631;
-  final l2 = l - 10631 * n + 354;
-  final j = ((10985 - l2) ~/ 5316) * ((50 * l2) ~/ 17719) +
-      (l2 ~/ 5670) * ((43 * l2) ~/ 15238);
-  final l3 = l2 -
-      ((30 - j) ~/ 15) * ((17719 * j) ~/ 50) -
-      (j ~/ 16) * ((15238 * j) ~/ 43) +
-      29;
-  final hMonth = (24 * l3) ~/ 709;
-  final hDay = l3 - (709 * hMonth) ~/ 24;
-  final hYear = 30 * n + j - 30;
-  const hijriMonthsTr = [
-    'Muharrem', 'Safer', 'Rebiülevvel', 'Rebiülahir',
-    'Cemaziyelevvel', 'Cemaziyelahir', 'Recep', 'Şaban',
-    'Ramazan', 'Şevval', 'Zilkade', 'Zilhicce',
-  ];
-  const hijriMonthsEn = [
-    'Muharram', 'Safar', 'Rabi al-Awwal', 'Rabi al-Thani',
-    'Jumada al-Awwal', 'Jumada al-Thani', 'Rajab', 'Shaban',
-    'Ramadan', 'Shawwal', 'Dhul Qadah', 'Dhul Hijjah',
-  ];
-  const hijriMonthsAr = [
-    'محرم', 'صفر', 'ربيع الأول', 'ربيع الآخر',
-    'جمادى الأولى', 'جمادى الآخرة', 'رجب', 'شعبان',
-    'رمضان', 'شوال', 'ذو القعدة', 'ذو الحجة',
-  ];
-  final hijriMonths = locale == 'ar'
-      ? hijriMonthsAr
-      : locale == 'tr'
-          ? hijriMonthsTr
-          : hijriMonthsEn;
-  return '$hDay ${hijriMonths[(hMonth - 1).clamp(0, 11)]} $hYear';
-}
-
-String _localizedSlotLabel(DateTime time, String locale) {
-  if (time.hour < 8) {
-    return _homeText(locale, tr: 'Sabah', en: 'Morning', ar: 'الصباح');
-  }
-  if (time.hour < 12) {
-    return _homeText(locale, tr: 'Gündüz', en: 'Daytime', ar: 'النهار');
-  }
-  if (time.hour < 17) {
-    return _homeText(
-      locale,
-      tr: 'Öğleden Sonra',
-      en: 'Afternoon',
-      ar: 'بعد الظهر',
-    );
-  }
-  if (time.hour < 21) {
-    return _homeText(locale, tr: 'Akşam', en: 'Evening', ar: 'المساء');
-  }
-  return _homeText(locale, tr: 'Gece', en: 'Night', ar: 'الليل');
-}
-
-String _homeText(
+String _text(
   String locale, {
   required String tr,
   required String en,

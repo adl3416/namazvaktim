@@ -7,7 +7,10 @@ import '../models/prayer_model.dart';
 
 class EmushafPrayerService {
   static const String _baseUrl = 'https://ezanvakti.emushaf.net';
-  static const String _cacheKeyPrefix = 'prayer_times_';
+  static const String _cacheKeyPrefix = 'emushaf_prayer_times_v1_';
+  static const String _legacyCacheKeyPrefix = 'prayer_times_';
+  static const String _cacheSource = 'emushaf';
+  static const String _cacheMigrationKey = 'emushaf_cache_migrated_v1';
 
   static List<_Country>? _countryCache;
   static final Map<String, List<_City>> _cityCache = {};
@@ -23,6 +26,7 @@ class EmushafPrayerService {
     DateTime? date,
   }) async {
     final targetDate = date ?? DateTime.now();
+    await _migrateLegacyCacheIfNeeded();
     final cached = await _getCachedPrayerTimes(city, targetDate);
     if (cached != null) {
       print('Using cached prayer times for $city');
@@ -131,6 +135,7 @@ class EmushafPrayerService {
     required int year,
   }) async {
     try {
+      await _migrateLegacyCacheIfNeeded();
       final countryMatch = await _resolveCountry(country);
       if (countryMatch == null) {
         return [];
@@ -239,6 +244,20 @@ class EmushafPrayerService {
       }
     }
 
+    if (monthItems.isNotEmpty) {
+      monthItems.sort(
+        (a, b) => a.date.difference(targetDate).abs().compareTo(
+              b.date.difference(targetDate).abs(),
+            ),
+      );
+      final fallback = monthItems.first;
+      print(
+        'No exact prayer time entry found for $targetDate; '
+        'using nearest available date ${fallback.date}',
+      );
+      return fallback;
+    }
+
     return null;
   }
 
@@ -340,6 +359,11 @@ class EmushafPrayerService {
         item['MiladiTarihKisa']?.toString();
     if (shortDate == null || shortDate.isEmpty) {
       return null;
+    }
+
+    final isoShort = DateTime.tryParse(shortDate);
+    if (isoShort != null) {
+      return DateTime(isoShort.year, isoShort.month, isoShort.day);
     }
 
     final parts = shortDate.split('.');
@@ -631,6 +655,7 @@ class EmushafPrayerService {
       final cacheKey = '$_cacheKeyPrefix${prayerTimes.city}_$dateKey';
 
       final cacheData = {
+        'source': _cacheSource,
         'date': prayerTimes.date.toIso8601String(),
         'latitude': prayerTimes.latitude,
         'longitude': prayerTimes.longitude,
@@ -663,6 +688,9 @@ class EmushafPrayerService {
       }
 
       final json = jsonDecode(cached) as Map<String, dynamic>;
+      if (json['source'] != _cacheSource) {
+        return null;
+      }
       final Map<String, DateTime> times = {};
       final timesJson = json['times'] as Map<String, dynamic>? ?? {};
       timesJson.forEach((key, value) {
@@ -683,6 +711,24 @@ class EmushafPrayerService {
       print('Error retrieving cached prayer times: $e');
       return null;
     }
+  }
+
+  static Future<void> _migrateLegacyCacheIfNeeded() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_cacheMigrationKey) ?? false) {
+      return;
+    }
+
+    final legacyKeys = prefs
+        .getKeys()
+        .where((key) => key.startsWith(_legacyCacheKeyPrefix))
+        .toList();
+
+    for (final key in legacyKeys) {
+      await prefs.remove(key);
+    }
+
+    await prefs.setBool(_cacheMigrationKey, true);
   }
 
   static bool _isSameDay(DateTime a, DateTime b) {

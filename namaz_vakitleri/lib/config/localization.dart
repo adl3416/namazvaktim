@@ -1,5 +1,5 @@
-import 'package:intl/intl.dart';
 import 'package:flutter/widgets.dart';
+import 'package:intl/intl.dart';
 
 class AppLocalizations {
   static const supportedLanguages = <String>['tr', 'en', 'ar'];
@@ -174,7 +174,8 @@ class AppLocalizations {
       }
     }
 
-    final systemLocale = WidgetsBinding.instance.platformDispatcher.locale.languageCode.toLowerCase();
+    final systemLocale =
+        WidgetsBinding.instance.platformDispatcher.locale.languageCode.toLowerCase();
     return supportedLanguages.contains(systemLocale) ? systemLocale : 'en';
   }
 
@@ -196,8 +197,7 @@ class AppLocalizations {
         normalizedPrayer.contains('zuhr')) {
       return translate('dhuhr', locale);
     }
-    if (normalizedPrayer.contains('asr') ||
-        normalizedPrayer.contains('ikindi')) {
+    if (normalizedPrayer.contains('asr') || normalizedPrayer.contains('ikindi')) {
       return translate('asr', locale);
     }
     if (normalizedPrayer.contains('maghrib') ||

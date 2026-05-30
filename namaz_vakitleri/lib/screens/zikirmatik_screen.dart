@@ -9,7 +9,14 @@ import '../config/color_system.dart';
 import '../providers/app_settings.dart';
 
 class ZikirmatikScreen extends StatefulWidget {
-  const ZikirmatikScreen({super.key});
+  const ZikirmatikScreen({
+    super.key,
+    this.initialZikirName,
+    this.initialTargetCount,
+  });
+
+  final String? initialZikirName;
+  final int? initialTargetCount;
 
   @override
   State<ZikirmatikScreen> createState() => _ZikirmatikScreenState();
@@ -102,18 +109,49 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
 
-    final saved = _decodeSavedZikirler(prefs.getStringList(_savedZikirListKey));
-    final currentZikir = prefs.getString(_currentZikirKey) ?? 'Subhanallah';
+    final requestedZikir = widget.initialZikirName?.trim();
+    final requestedTarget =
+        (widget.initialTargetCount != null && widget.initialTargetCount! > 0)
+            ? widget.initialTargetCount!
+            : null;
+    var saved = _decodeSavedZikirler(prefs.getStringList(_savedZikirListKey));
+    var currentZikir = prefs.getString(_currentZikirKey) ?? 'Subhanallah';
     final zikirCounts = _decodeZikirCounts(prefs.getString(_zikirCountsKey));
+
+    if (requestedZikir != null && requestedZikir.isNotEmpty) {
+      final existingIndex = saved.indexWhere(
+        (item) => item.name.toLowerCase() == requestedZikir.toLowerCase(),
+      );
+
+      if (existingIndex >= 0) {
+        if (requestedTarget != null &&
+            saved[existingIndex].target != requestedTarget) {
+          saved = List<_SavedZikir>.from(saved);
+          saved[existingIndex] = _SavedZikir(
+            name: saved[existingIndex].name,
+            target: requestedTarget,
+          );
+        }
+        currentZikir = saved[existingIndex].name;
+      } else {
+        saved = [
+          _SavedZikir(name: requestedZikir, target: requestedTarget ?? 33),
+          ...saved,
+        ].take(8).toList();
+        currentZikir = requestedZikir;
+      }
+    }
+
     final active = saved.firstWhere(
       (item) => item.name == currentZikir,
       orElse: () => saved.first,
     );
+    final target = requestedTarget ?? prefs.getInt(_targetKey) ?? active.target;
 
     setState(() {
       _zikirCounts = zikirCounts;
       _count = zikirCounts[active.name] ?? prefs.getInt(_countKey) ?? 0;
-      _target = prefs.getInt(_targetKey) ?? active.target;
+      _target = target;
       _hapticMode = _ZikirHapticMode.values.byName(
         prefs.getString(_hapticModeKey) ?? _ZikirHapticMode.everyTap.name,
       );
@@ -122,6 +160,10 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
       _zikirTargetController.text = _target.toString();
       _isLoading = false;
     });
+
+    if (requestedZikir != null && requestedZikir.isNotEmpty) {
+      await _saveState();
+    }
   }
 
   Future<void> _saveState() async {

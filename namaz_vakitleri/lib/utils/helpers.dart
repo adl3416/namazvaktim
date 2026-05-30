@@ -262,7 +262,7 @@ class CacheManager {
   /// Generate cache key for prayer times
   static String generatePrayerTimeCacheKey(String city, DateTime date) {
     final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    return 'prayer_times_${city}_$dateStr';
+    return 'emushaf_prayer_times_v1_${city}_$dateStr';
   }
 
   /// Generate cache key for location

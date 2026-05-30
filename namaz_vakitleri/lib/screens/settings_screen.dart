@@ -381,19 +381,24 @@ class _SettingsHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 300,
+      height: 120,
       decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.darkBgSecondary.withOpacity(0.92)
+            : Colors.white.withOpacity(0.72),
         borderRadius: BorderRadius.circular(26),
         border: Border.all(
           color: isDark
               ? Colors.white.withOpacity(0.08)
               : Colors.white.withOpacity(0.86),
         ),
-        image: const DecorationImage(
-          image: AssetImage('assets/images/arkafon.png'),
-          fit: BoxFit.contain,
-          alignment: Alignment.center,
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.18 : 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(26),
@@ -419,11 +424,12 @@ class _SettingsHero extends StatelessWidget {
               ),
             ),
             Align(
-              alignment: Alignment.topCenter,
+              alignment: Alignment.center,
               child: Padding(
-                padding: const EdgeInsets.only(top: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
                   title,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w900,

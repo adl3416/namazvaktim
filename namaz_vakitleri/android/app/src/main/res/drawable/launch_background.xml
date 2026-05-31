@@ -3,8 +3,11 @@
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/splash_background" />
     <item
-        android:drawable="@drawable/ic_launcher_foreground"
+        android:drawable="@drawable/splash_emblem_backdrop"
+        android:gravity="center" />
+    <item
+        android:drawable="@mipmap/launcher_icon"
         android:gravity="center"
-        android:width="170dp"
-        android:height="170dp" />
+        android:width="132dp"
+        android:height="132dp" />
 </layer-list>

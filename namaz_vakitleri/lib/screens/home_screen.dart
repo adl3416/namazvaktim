@@ -86,7 +86,9 @@ class HomeScreen extends StatelessWidget {
                         onOpenZikirmatik: () {
                           Navigator.of(context).push(
                             MaterialPageRoute<void>(
-                              builder: (_) => const ZikirmatikScreen(),
+                              builder: (_) => const ZikirmatikScreen(
+                                openLibraryFirst: true,
+                              ),
                             ),
                           );
                         },

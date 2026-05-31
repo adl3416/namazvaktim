@@ -137,6 +137,9 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
       final prefs = await SharedPreferences.getInstance();
       if (!mounted) return;
 
+      final shouldStartWithEmptyDraft =
+          widget.openLibraryFirst &&
+          !(widget.initialZikirName?.trim().isNotEmpty ?? false);
       final requestedZikir = _normalizeLegacyZikirName(
         widget.initialZikirName?.trim(),
       );
@@ -189,7 +192,9 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
         );
         _currentZikir = active.name;
         _savedZikirler = saved;
-        _zikirTargetController.text = _target.toString();
+        _zikirController.clear();
+        _zikirTargetController.text =
+            shouldStartWithEmptyDraft ? '' : _target.toString();
         _isLoading = false;
       });
 

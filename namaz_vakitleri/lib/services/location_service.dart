@@ -24,7 +24,7 @@ class LocationService {
             place?.locality ??
             place?.subLocality ??
             '')
-        : (place?.subLocality ?? place?.subAdministrativeArea ?? '');
+        : (place?.subLocality ?? '');
     final city = isTurkey
         ? (district.isNotEmpty
             ? district

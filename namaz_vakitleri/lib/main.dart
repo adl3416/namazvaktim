@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -14,9 +16,6 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  tz.initializeTimeZones();
-
   runApp(const MyApp());
 }
 
@@ -71,7 +70,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       print('Initializing app settings...');
       await _appSettings.initialize();
       print('App settings initialized');
-      await _finishBackgroundInitialization();
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+      unawaited(_finishBackgroundInitialization());
     } catch (e) {
       print('Error initializing app: $e');
       if (mounted) {
@@ -84,6 +88,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   Future<void> _finishBackgroundInitialization() async {
     try {
+      print('Initializing timezone data...');
+      tz.initializeTimeZones();
+      print('Timezone data initialized');
+
       print('Initializing notifications...');
       await NotificationService.initialize();
       print('Notifications initialized');
@@ -92,18 +100,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       await _prayerProvider.initialize();
       print('Prayer provider initialized');
 
-      if (mounted) {
-        setState(() {
-          _isInitialized = true;
+      if (mounted &&
+          (_appSettings.hasAnyPrayerNotificationEnabled ||
+              _appSettings.hasAnyPrayerSoundEnabled)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          await Future.delayed(const Duration(milliseconds: 800));
+          await NotificationService.checkAndRequestCriticalPermissions();
         });
-
-        if (_appSettings.hasAnyPrayerNotificationEnabled ||
-            _appSettings.hasAnyPrayerSoundEnabled) {
-          WidgetsBinding.instance.addPostFrameCallback((_) async {
-            await Future.delayed(const Duration(milliseconds: 800));
-            await NotificationService.checkAndRequestCriticalPermissions();
-          });
-        }
       }
 
       print('App initialization complete');

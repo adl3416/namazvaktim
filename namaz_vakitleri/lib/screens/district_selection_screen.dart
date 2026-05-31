@@ -88,6 +88,8 @@ class _DistrictSelectionScreenState extends State<DistrictSelectionScreen> {
       await _applySelection(
         city: widget.parentItem.searchName,
         district: item.searchName,
+        cityId: widget.parentItem.id,
+        districtId: item.id,
       );
       return;
     }
@@ -95,6 +97,8 @@ class _DistrictSelectionScreenState extends State<DistrictSelectionScreen> {
     await _applySelection(
       city: item.searchName,
       state: widget.parentItem.searchName,
+      cityId: widget.parentItem.id,
+      districtId: item.id,
     );
   }
 
@@ -123,6 +127,8 @@ class _DistrictSelectionScreenState extends State<DistrictSelectionScreen> {
     required String city,
     String? district,
     String? state,
+    String? cityId,
+    String? districtId,
   }) async {
     setState(() {
       _isSelecting = true;
@@ -135,6 +141,9 @@ class _DistrictSelectionScreenState extends State<DistrictSelectionScreen> {
         widget.country.searchName,
         district: district,
         state: state,
+        countryId: widget.country.id,
+        cityId: cityId,
+        districtId: districtId,
       );
 
       if (!mounted) {
@@ -191,7 +200,40 @@ class _DistrictSelectionScreenState extends State<DistrictSelectionScreen> {
   }
 
   String _normalize(String value) {
-    return value.trim().toLowerCase();
+    var normalized = value.trim().toLowerCase();
+    const replacements = <String, String>{
+      'ç': 'c',
+      'Ç': 'c',
+      'ğ': 'g',
+      'Ğ': 'g',
+      'ı': 'i',
+      'I': 'i',
+      'İ': 'i',
+      'i̇': 'i',
+      'ö': 'o',
+      'Ö': 'o',
+      'ş': 's',
+      'Ş': 's',
+      'ü': 'u',
+      'Ü': 'u',
+      'Ã§': 'c',
+      'ÄŸ': 'g',
+      'Ä±': 'i',
+      'Ã¶': 'o',
+      'ÅŸ': 's',
+      'Ã¼': 'u',
+      '-': ' ',
+      '\'': ' ',
+      '.': ' ',
+      ',': ' ',
+      '(': ' ',
+      ')': ' ',
+      '/': ' ',
+    };
+    replacements.forEach((from, to) {
+      normalized = normalized.replaceAll(from, to);
+    });
+    return normalized.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
   String _levelTitle(String locale) {

@@ -38,10 +38,20 @@ class SettingsScreen extends StatelessWidget {
         final locale = settings.language;
         final currentCity = prayerProvider.savedLocationLabel.isNotEmpty
           ? prayerProvider.savedLocationLabel
-          : 'Istanbul';
+          : _text(
+              locale,
+              tr: 'Secilmedi',
+              en: 'Not selected',
+              ar: 'Not selected',
+            );
         final currentCountry = prayerProvider.savedCountry.isNotEmpty
             ? prayerProvider.savedCountry
-            : 'Turkey';
+            : _text(
+                locale,
+                tr: 'Secilmedi',
+                en: 'Not selected',
+                ar: 'Not selected',
+              );
         final locationModeText = prayerProvider.useAutomaticLocation
             ? _text(
                 locale,
@@ -76,9 +86,11 @@ class SettingsScreen extends StatelessWidget {
                       ],
               ),
             ),
-            child: SafeArea(
+            child: MediaQuery.removePadding(
+              context: context,
+              removeTop: true,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(0, 16, 0, 28),
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, 28),
                 children: [
                   _SettingsHero(
                     title: AppLocalizations.translate('settings', locale),
@@ -381,7 +393,7 @@ class _SettingsHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 120,
+      height: 176,
       decoration: BoxDecoration(
         color: isDark
             ? AppColors.darkBgSecondary.withOpacity(0.92)
@@ -391,6 +403,11 @@ class _SettingsHero extends StatelessWidget {
           color: isDark
               ? Colors.white.withOpacity(0.08)
               : Colors.white.withOpacity(0.86),
+        ),
+        image: const DecorationImage(
+          image: AssetImage('assets/images/aksam_bg.png'),
+          fit: BoxFit.cover,
+          alignment: Alignment.center,
         ),
         boxShadow: [
           BoxShadow(

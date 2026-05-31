@@ -7,6 +7,8 @@ import '../config/localization.dart';
 import '../models/prayer_model.dart';
 import '../providers/app_settings.dart';
 import '../providers/prayer_provider.dart';
+import 'country_selection_screen.dart';
+import 'notification_settings_screen.dart';
 import 'zikirmatik_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -24,8 +26,8 @@ class HomeScreen extends StatelessWidget {
         final nextPrayer = prayerProvider.nextPrayer;
         final prayerKey = activePrayer?.name ?? nextPrayer?.name;
         final theme = _homeThemeForPrayer(prayerKey, isDark);
-        final vird = _virdForPrayer(prayerKey, locale);
         final today = prayerProvider.currentPrayerTimes?.date ?? DateTime.now();
+        final vird = _virdForPrayer(prayerKey, today, locale);
 
         return Scaffold(
           backgroundColor: theme.pageBackground,
@@ -65,8 +67,31 @@ class HomeScreen extends StatelessWidget {
                         isLoading: prayerProvider.isLoading,
                         errorMessage: prayerProvider.errorMessage,
                         vird: vird,
+                        onOpenLocationSettings: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const CountrySelectionScreen(),
+                            ),
+                          );
+                        },
                         onRefreshLocation: () =>
                             _refreshLocationLocalized(context, prayerProvider),
+                        onOpenNotifications: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const NotificationSettingsScreen(),
+                            ),
+                          );
+                        },
+                        onOpenZikirmatik: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const ZikirmatikScreen(),
+                            ),
+                          );
+                        },
+                        onOpenPrivacyPolicy: () =>
+                            _showPrivacyPolicyDialog(context),
                         onStartDhikr: () {
                           Navigator.of(context).push(
                             MaterialPageRoute<void>(
@@ -106,6 +131,13 @@ class HomeScreen extends StatelessWidget {
                     onStop: prayerProvider.stopAdhan,
                   ),
                 ),
+              if (prayerProvider.requiresManualLocationSelection)
+                Positioned.fill(
+                  child: _ManualLocationSetupOverlay(
+                    theme: theme,
+                    locale: locale,
+                  ),
+                ),
             ],
           ),
         );
@@ -125,9 +157,9 @@ class HomeScreen extends StatelessWidget {
         content: Text(
           _text(
             locale,
-            tr: 'Konum yenileniyor...',
-            en: 'Refreshing location...',
-            ar: 'Refreshing location...',
+            tr: 'Sehir verisi guncelleniyor...',
+            en: 'Refreshing city data...',
+            ar: 'Refreshing city data...',
           ),
         ),
       ),
@@ -141,11 +173,11 @@ class HomeScreen extends StatelessWidget {
         SnackBar(
           backgroundColor: const Color(0xFF0F766E),
           content: Text(
-            _text(
-              locale,
-              tr: 'Konum guncellendi: ${prayerProvider.savedLocationLabel}',
-              en: 'Location updated: ${prayerProvider.savedLocationLabel}',
-              ar: 'Location updated: ${prayerProvider.savedLocationLabel}',
+              _text(
+                locale,
+                tr: 'Sehir verisi guncellendi: ${prayerProvider.savedLocationLabel}',
+                en: 'City data updated: ${prayerProvider.savedLocationLabel}',
+                ar: 'City data updated: ${prayerProvider.savedLocationLabel}',
             ),
           ),
         ),
@@ -168,6 +200,201 @@ class HomeScreen extends StatelessWidget {
       );
     }
   }
+
+  Future<void> _showPrivacyPolicyDialog(BuildContext context) async {
+    final locale = context.read<AppSettings>().language;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(
+            _text(
+              locale,
+              tr: 'Gizlilik Politikasi',
+              en: 'Privacy Policy',
+              ar: 'Privacy Policy',
+            ),
+          ),
+          content: Text(
+            _text(
+              locale,
+              tr: 'Bu uygulamada kisisel verileriniz saklanmaz veya depolanmaz. '
+                  'Gizliliginiz bizim icin cok onemlidir ve verileriniz cihazinizda kalir.',
+              en: 'This app does not store or persist your personal data. '
+                  'Your privacy is very important to us and your data stays on your device.',
+              ar: 'This app does not store or persist your personal data. '
+                  'Your privacy is very important to us and your data stays on your device.',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(
+                _text(
+                  locale,
+                  tr: 'Tamam',
+                  en: 'OK',
+                  ar: 'OK',
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ManualLocationSetupOverlay extends StatelessWidget {
+  const _ManualLocationSetupOverlay({
+    required this.theme,
+    required this.locale,
+  });
+
+  final _HomeTheme theme;
+  final String locale;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: theme.pageBackground.withOpacity(0.96),
+      child: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.accent.withOpacity(0.18),
+                      blurRadius: 36,
+                      offset: const Offset(0, 18),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.accent.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: theme.accent.withOpacity(0.22),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.mosque_rounded,
+                              size: 18,
+                              color: theme.accent,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _text(
+                                locale,
+                                tr: 'Ezanlar',
+                                en: 'Ezanlar',
+                                ar: 'Ezanlar',
+                              ),
+                              style: TextStyle(
+                                color: theme.accentDark,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 14,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Icon(
+                        Icons.location_on_rounded,
+                        size: 42,
+                        color: theme.accent,
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        _text(
+                          locale,
+                          tr: 'Namaz vakitlerini gormek icin once sehrinizi secin',
+                          en: 'Select your city before viewing prayer times',
+                          ar: 'Select your city before viewing prayer times',
+                        ),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: theme.accentDark,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _text(
+                          locale,
+                          tr: 'Ilk kurulumda konum otomatik alinmaz. Devam etmek icin ulke ve sehir secmeniz gerekir.',
+                          en: 'Location is not filled automatically on first install. Choose your country and city to continue.',
+                          ar: 'Location is not filled automatically on first install. Choose your country and city to continue.',
+                        ),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: const Color(0xFF5B6476),
+                          height: 1.45,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: theme.accent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                          ),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => const CountrySelectionScreen(canPop: false),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            _text(
+                              locale,
+                              tr: 'Ulke ve Sehir Sec',
+                              en: 'Choose Country and City',
+                              ar: 'Choose Country and City',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _HeroSection extends StatelessWidget {
@@ -182,7 +409,11 @@ class _HeroSection extends StatelessWidget {
     required this.isLoading,
     required this.errorMessage,
     required this.vird,
+    required this.onOpenLocationSettings,
     required this.onRefreshLocation,
+    required this.onOpenNotifications,
+    required this.onOpenZikirmatik,
+    required this.onOpenPrivacyPolicy,
     required this.onStartDhikr,
   });
 
@@ -196,7 +427,11 @@ class _HeroSection extends StatelessWidget {
   final bool isLoading;
   final String errorMessage;
   final _VirdModel vird;
+  final VoidCallback onOpenLocationSettings;
   final VoidCallback onRefreshLocation;
+  final VoidCallback onOpenNotifications;
+  final VoidCallback onOpenZikirmatik;
+  final VoidCallback onOpenPrivacyPolicy;
   final VoidCallback onStartDhikr;
 
   @override
@@ -225,23 +460,46 @@ class _HeroSection extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.asset(
-                    _backgroundAssetForPrayer(activePrayer?.name ?? nextPrayer?.name),
-                    fit: BoxFit.cover,
-                    alignment: const Alignment(0, 0.42),
-                  ),
-                  DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withOpacity(0.16),
-                          theme.overlayTop,
-                          theme.overlayBottom,
-                        ],
-                        stops: const [0.0, 0.36, 1.0],
-                      ),
+                  ShaderMask(
+                    blendMode: BlendMode.dstIn,
+                    shaderCallback: (bounds) => LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white,
+                        Colors.white.withOpacity(0.92),
+                        Colors.white.withOpacity(0.74),
+                        Colors.white.withOpacity(0.46),
+                        Colors.white.withOpacity(0.22),
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.38, 0.6, 0.78, 0.9, 1.0],
+                    ).createShader(bounds),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.asset(
+                          _backgroundAssetForPrayer(
+                            activePrayer?.name ?? nextPrayer?.name,
+                          ),
+                          fit: BoxFit.cover,
+                          alignment: const Alignment(0, 0.42),
+                        ),
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black.withOpacity(0.16),
+                                theme.overlayTop,
+                                theme.overlayBottom,
+                              ],
+                              stops: const [0.0, 0.36, 1.0],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Positioned(
@@ -276,7 +534,11 @@ class _HeroSection extends StatelessWidget {
                 _HeroTopBar(
                   locale: locale,
                   locationLabel: locationLabel,
+                  onOpenLocationSettings: onOpenLocationSettings,
                   onRefreshLocation: onRefreshLocation,
+                  onOpenNotifications: onOpenNotifications,
+                  onOpenZikirmatik: onOpenZikirmatik,
+                  onOpenPrivacyPolicy: onOpenPrivacyPolicy,
                 ),
                 const SizedBox(height: 22),
                 Text(
@@ -290,31 +552,9 @@ class _HeroSection extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-                Text(
-                  _formatCountdown(countdown),
+                RichText(
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 52,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.2,
-                    height: 0.98,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _text(
-                    locale,
-                    tr: 'Geri sayım',
-                    en: 'Countdown',
-                    ar: 'Countdown',
-                  ),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.92),
-                    fontSize: 17,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  text: _buildCountdownText(countdown),
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -415,12 +655,20 @@ class _HeroTopBar extends StatelessWidget {
   const _HeroTopBar({
     required this.locale,
     required this.locationLabel,
+    required this.onOpenLocationSettings,
     required this.onRefreshLocation,
+    required this.onOpenNotifications,
+    required this.onOpenZikirmatik,
+    required this.onOpenPrivacyPolicy,
   });
 
   final String locale;
   final String locationLabel;
+  final VoidCallback onOpenLocationSettings;
   final VoidCallback onRefreshLocation;
+  final VoidCallback onOpenNotifications;
+  final VoidCallback onOpenZikirmatik;
+  final VoidCallback onOpenPrivacyPolicy;
 
   @override
   Widget build(BuildContext context) {
@@ -428,14 +676,59 @@ class _HeroTopBar extends StatelessWidget {
       children: [
         _TopIconButton(
           icon: Icons.menu_rounded,
-          onTap: () {},
+          onTap: () async {
+            final selected = await showModalBottomSheet<String>(
+              context: context,
+              backgroundColor: Colors.white,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              builder: (context) => SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.touch_app_rounded),
+                      title: Text(
+                        _text(
+                          locale,
+                          tr: 'Zikir Sayaci',
+                          en: 'Dhikr Counter',
+                          ar: 'Dhikr Counter',
+                        ),
+                      ),
+                      onTap: () => Navigator.of(context).pop('counter'),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.privacy_tip_outlined),
+                      title: Text(
+                        _text(
+                          locale,
+                          tr: 'Gizlilik Politikasi',
+                          en: 'Privacy Policy',
+                          ar: 'Privacy Policy',
+                        ),
+                      ),
+                      onTap: () => Navigator.of(context).pop('privacy'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+
+            if (selected == 'counter') {
+              onOpenZikirmatik();
+            } else if (selected == 'privacy') {
+              onOpenPrivacyPolicy();
+            }
+          },
         ),
         const SizedBox(width: 10),
         Expanded(
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: onRefreshLocation,
+              onTap: onOpenLocationSettings,
               borderRadius: BorderRadius.circular(999),
               child: Container(
                 height: 40,
@@ -477,7 +770,7 @@ class _HeroTopBar extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Icon(
-                      Icons.refresh_rounded,
+                      Icons.settings_rounded,
                       size: 16,
                       color: Colors.white.withOpacity(0.88),
                     ),
@@ -490,12 +783,7 @@ class _HeroTopBar extends StatelessWidget {
         const SizedBox(width: 10),
         _TopIconButton(
           icon: Icons.notifications_none_rounded,
-          onTap: onRefreshLocation,
-        ),
-        const SizedBox(width: 8),
-        _TopIconButton(
-          icon: Icons.person_outline_rounded,
-          onTap: () {},
+          onTap: onOpenNotifications,
         ),
       ],
     );
@@ -618,13 +906,6 @@ class _VirdPanel extends StatelessWidget {
               ],
               stops: const [0.0, 0.42, 1.0],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: theme.shadow.withOpacity(0.32),
-                blurRadius: 26,
-                offset: const Offset(0, 16),
-              ),
-            ],
             border: Border.all(
               color: Colors.white.withOpacity(0.70),
               width: 1.1,
@@ -678,13 +959,6 @@ class _VirdPanel extends StatelessWidget {
                             theme.accentDark,
                           ],
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: theme.accent.withOpacity(0.34),
-                            blurRadius: 18,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
                         border: Border.all(
                           color: Colors.white.withOpacity(0.56),
                           width: 1.4,
@@ -720,6 +994,26 @@ class _VirdPanel extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 2),
+                          Align(
+                            alignment: Alignment.center,
+                            child: Text(
+                              _text(
+                                locale,
+                                tr: 'VAKTIN VIRDI',
+                                en: 'CURRENT DHIKR',
+                                ar: 'CURRENT DHIKR',
+                              ),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.transparent,
+                                fontSize: 0.1,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0,
+                                height: 0.1,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 0),
                           Text(
                             vird.title,
                             maxLines: 1,
@@ -750,25 +1044,34 @@ class _VirdPanel extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 3),
-                          Text(
-                            vird.description,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFF43506D),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              height: 1.15,
-                            ),
-                          ),
                           const SizedBox(height: 6),
                           Align(
                             alignment: Alignment.bottomRight,
-                            child: _StartDhikrButton(
-                              theme: theme,
-                              locale: locale,
-                              onTap: onTap,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _text(
+                                    locale,
+                                    tr: 'VAKTÄ°N VÄ°RDÄ°',
+                                    en: 'CURRENT DHIKR',
+                                    ar: 'CURRENT DHIKR',
+                                  ),
+                                  style: TextStyle(
+                                    color: Colors.transparent,
+                                    fontSize: 0.1,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0,
+                                    height: 0.1,
+                                  ),
+                                ),
+                                const SizedBox(width: 0),
+                                _StartDhikrButton(
+                                  theme: theme,
+                                  locale: locale,
+                                  onTap: onTap,
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -823,7 +1126,7 @@ class _StartDhikrButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              _text(locale, tr: 'Zikre Başla', en: 'Start Dhikr', ar: 'Start'),
+              _text(locale, tr: 'Virde Basla', en: 'Start Wird', ar: 'Start'),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 13,
@@ -1355,50 +1658,71 @@ _HomeTheme _homeThemeForPrayer(String? prayerName, bool isDark) {
   );
 }
 
-_VirdModel _virdForPrayer(String? prayerName, String locale) {
-  final normalized = (prayerName ?? '').toLowerCase();
+_VirdModel _virdForPrayer(String? prayerName, DateTime date, String locale) {
+  final virdler = _allVirds(locale);
+  final slotIndex = _prayerSlotIndex(prayerName);
+  final dayIndex = DateTime(
+    date.year,
+    date.month,
+    date.day,
+  ).difference(DateTime(2024, 1, 1)).inDays;
+  final index = (dayIndex + slotIndex) % virdler.length;
+  return virdler[index];
+}
 
-  if (normalized.contains('sunrise') || normalized.contains('gunes')) {
-    return _VirdModel(
-      title: _text(locale, tr: 'Subhanallah', en: 'Subhanallah', ar: 'Subhanallah'),
+List<_VirdModel> _allVirds(String locale) {
+  return [
+    _VirdModel(
+      title: _text(
+        locale,
+        tr: 'Estagfirullah',
+        en: 'Astaghfirullah',
+        ar: 'Astaghfirullah',
+      ),
       targetCount: 100,
       description: _text(
         locale,
-        tr: 'Allah\'ı her türlü eksiklikten uzak tutmak için.',
+        tr: 'Gunaha tovbe ve kalbi arindirmak icin.',
+        en: 'To seek forgiveness and purify the heart.',
+        ar: 'To seek forgiveness and purify the heart.',
+      ),
+    ),
+    _VirdModel(
+      title: _text(
+        locale,
+        tr: 'Subhanallah',
+        en: 'Subhanallah',
+        ar: 'Subhanallah',
+      ),
+      targetCount: 100,
+      description: _text(
+        locale,
+        tr: 'Allahi her turlu eksiklikten tenzih etmek icin.',
         en: 'To glorify Allah beyond all imperfection.',
         ar: 'To glorify Allah beyond all imperfection.',
       ),
-    );
-  }
-
-  if (normalized.contains('dhuhr') || normalized.contains('ogle')) {
-    return _VirdModel(
+    ),
+    _VirdModel(
       title: _text(locale, tr: 'Ya Allah', en: 'Ya Allah', ar: 'Ya Allah'),
       targetCount: 66,
       description: _text(
         locale,
-        tr: 'Kalbi Allah\'a yöneltmek ve O\'na sığınmak için.',
+        tr: "Kalbi Allah'a yoneltmek ve O'na siginmak icin.",
         en: 'To turn the heart toward Allah and seek His shelter.',
         ar: 'To turn the heart toward Allah and seek His shelter.',
       ),
-    );
-  }
-
-  if (normalized.contains('asr') || normalized.contains('ikindi')) {
-    return _VirdModel(
+    ),
+    _VirdModel(
       title: _text(locale, tr: 'Ya Latif', en: 'Ya Latif', ar: 'Ya Latif'),
       targetCount: 129,
       description: _text(
         locale,
-        tr: 'Allah\'ın lütfunu ve ince rahmetini hatırlamak için.',
-        en: 'To remember Allah\'s subtle kindness and mercy.',
-        ar: 'To remember Allah\'s subtle kindness and mercy.',
+        tr: "Allah'in lutfunu ve ince rahmetini hatirlamak icin.",
+        en: "To remember Allah's subtle kindness and mercy.",
+        ar: "To remember Allah's subtle kindness and mercy.",
       ),
-    );
-  }
-
-  if (normalized.contains('maghrib') || normalized.contains('aksam')) {
-    return _VirdModel(
+    ),
+    _VirdModel(
       title: _text(
         locale,
         tr: 'La ilahe illallah',
@@ -1408,46 +1732,47 @@ _VirdModel _virdForPrayer(String? prayerName, String locale) {
       targetCount: 100,
       description: _text(
         locale,
-        tr: 'Kalbi huzura ve imana güçlendirmek için.',
+        tr: 'Kalbi huzur ve imanla guclendirmek icin.',
         en: 'To strengthen the heart with peace and faith.',
         ar: 'To strengthen the heart with peace and faith.',
       ),
-    );
-  }
-
-  if (normalized.contains('isha') || normalized.contains('yatsi')) {
-    return _VirdModel(
+    ),
+    _VirdModel(
       title: _text(
         locale,
-        tr: 'Salavat-i Serife',
+        tr: 'Allahumme salli ala seyyidina Muhammed',
         en: 'Salawat',
         ar: 'Salawat',
       ),
       targetCount: 100,
       description: _text(
         locale,
-        tr: 'Peygamber Efendimiz\'e salat ve selam getirmek için.',
+        tr: "Peygamber Efendimiz'e salat ve selam getirmek icin.",
         en: 'To send blessings and peace upon the Prophet.',
         ar: 'To send blessings and peace upon the Prophet.',
       ),
-    );
-  }
+    ),
+  ];
+}
 
-  return _VirdModel(
-    title: _text(
-      locale,
-      tr: 'Estagfirullah',
-      en: 'Astaghfirullah',
-      ar: 'Astaghfirullah',
-    ),
-    targetCount: 100,
-    description: _text(
-      locale,
-      tr: 'Günaha tövbe ve kalbi arındırmak için.',
-      en: 'To seek forgiveness and purify the heart.',
-      ar: 'To seek forgiveness and purify the heart.',
-    ),
-  );
+int _prayerSlotIndex(String? prayerName) {
+  final normalized = (prayerName ?? '').toLowerCase();
+  if (normalized.contains('sunrise') || normalized.contains('gunes')) {
+    return 1;
+  }
+  if (normalized.contains('dhuhr') || normalized.contains('ogle')) {
+    return 2;
+  }
+  if (normalized.contains('asr') || normalized.contains('ikindi')) {
+    return 3;
+  }
+  if (normalized.contains('maghrib') || normalized.contains('aksam')) {
+    return 4;
+  }
+  if (normalized.contains('isha') || normalized.contains('yatsi')) {
+    return 5;
+  }
+  return 0;
 }
 
 String _backgroundAssetForPrayer(String? prayerName) {
@@ -1478,6 +1803,59 @@ String _formatCountdown(Duration? duration) {
   final minutes = ((totalSeconds % 3600) ~/ 60).toString().padLeft(2, '0');
   final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
   return '$hours:$minutes:$seconds';
+}
+
+TextSpan _buildCountdownText(Duration? duration) {
+  final formatted = _formatCountdown(duration).split(':');
+  final hours = formatted.isNotEmpty ? formatted[0] : '--';
+  final minutes = formatted.length > 1 ? formatted[1] : '--';
+  final seconds = formatted.length > 2 ? formatted[2] : '--';
+
+  const mainStyle = TextStyle(
+    color: Colors.white,
+    fontSize: 52,
+    fontWeight: FontWeight.w900,
+    letterSpacing: 1.2,
+    height: 0.98,
+    shadows: [
+      Shadow(
+        color: Color(0xCCFFFFFF),
+        blurRadius: 10,
+      ),
+      Shadow(
+        color: Color(0xB3000000),
+        offset: Offset(0, 2),
+        blurRadius: 8,
+      ),
+    ],
+  );
+
+  return TextSpan(
+    style: mainStyle,
+    children: [
+      TextSpan(text: '$hours:$minutes'),
+      TextSpan(
+        text: ':$seconds',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 30,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.8,
+          shadows: [
+            Shadow(
+              color: Color(0xCCFFFFFF),
+              blurRadius: 8,
+            ),
+            Shadow(
+              color: Color(0xB3000000),
+              offset: Offset(0, 2),
+              blurRadius: 6,
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
 }
 
 String _formatClock(DateTime dateTime) {
@@ -1633,3 +2011,4 @@ String _text(
       return en;
   }
 }
+

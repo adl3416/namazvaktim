@@ -20,14 +20,6 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    QiblaScreen(),
-    NearbyMosquesScreen(),
-    ZikirmatikScreen(),
-    SettingsScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Consumer2<AppSettings, PrayerProvider>(
@@ -49,7 +41,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           },
           child: Scaffold(
             extendBody: true,
-            body: _screens[_selectedIndex],
+            body: [
+              const HomeScreen(),
+              const QiblaScreen(),
+              const NearbyMosquesScreen(),
+              ZikirmatikScreen(
+                openLibraryFirst: true,
+                onExitRequested: () {
+                  setState(() {
+                    _selectedIndex = 0;
+                  });
+                },
+              ),
+              const SettingsScreen(),
+            ][_selectedIndex],
             bottomNavigationBar: Container(
               padding: EdgeInsets.only(bottom: bottomInset),
               decoration: BoxDecoration(
@@ -251,9 +256,9 @@ _NavPalette _navPaletteForPrayer(String? prayerName, bool isDark) {
   if (normalized.contains('maghrib') || normalized.contains('aksam')) {
     return _shadePalette(
       const _NavPalette(
-        primary: Color(0xFF9F1239),
-        secondary: Color(0xFFE11D48),
-        tertiary: Color(0xFFFB7185),
+        primary: Color(0xFFCB1E13),
+        secondary: Color(0xFFFF4C36),
+        tertiary: Color(0xFFFF8577),
       ),
       isDark,
     );
@@ -262,9 +267,9 @@ _NavPalette _navPaletteForPrayer(String? prayerName, bool isDark) {
   if (normalized.contains('isha') || normalized.contains('yatsi')) {
     return _shadePalette(
       const _NavPalette(
-        primary: Color(0xFF5B21B6),
-        secondary: Color(0xFF7C3AED),
-        tertiary: Color(0xFF8B5CF6),
+        primary: Color(0xFFCB1E13),
+        secondary: Color(0xFFFF4C36),
+        tertiary: Color(0xFFFF8577),
       ),
       isDark,
     );

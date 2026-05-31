@@ -7,10 +7,11 @@ import '../models/prayer_model.dart';
 
 class EmushafPrayerService {
   static const String _baseUrl = 'https://ezanvakti.emushaf.net';
-  static const String _cacheKeyPrefix = 'emushaf_prayer_times_v1_';
+  static const String _cacheKeyPrefix = 'emushaf_prayer_times_v2_';
   static const String _legacyCacheKeyPrefix = 'prayer_times_';
-  static const String _cacheSource = 'emushaf';
-  static const String _cacheMigrationKey = 'emushaf_cache_migrated_v1';
+  static const String _previousCacheKeyPrefix = 'emushaf_prayer_times_v1_';
+  static const String _cacheSource = 'emushaf_v2';
+  static const String _cacheMigrationKey = 'emushaf_cache_migrated_v2';
 
   static List<_Country>? _countryCache;
   static final Map<String, List<_City>> _cityCache = {};
@@ -21,46 +22,100 @@ class EmushafPrayerService {
     required double longitude,
     required String city,
     required String country,
+    bool bypassCache = false,
+    String? countryId,
+    String? cityId,
+    String? districtId,
     String? state,
     String? district,
     DateTime? date,
   }) async {
     final targetDate = date ?? DateTime.now();
     await _migrateLegacyCacheIfNeeded();
-    final cached = await _getCachedPrayerTimes(city, targetDate);
-    if (cached != null) {
-      print('Using cached prayer times for $city');
-      return cached;
+    if (!bypassCache) {
+      final cached = await _getCachedPrayerTimes(
+        city,
+        targetDate,
+        countryId: countryId,
+        cityId: cityId,
+        districtId: districtId,
+        country: country,
+        state: state,
+        district: district,
+      );
+      if (cached != null) {
+        print('Using cached prayer times for $city');
+        return cached;
+      }
     }
 
     try {
-      final countryMatch = await _resolveCountry(country);
+      final hasPinnedIds =
+          (countryId != null && countryId.trim().isNotEmpty) ||
+          (cityId != null && cityId.trim().isNotEmpty) ||
+          (districtId != null && districtId.trim().isNotEmpty);
+
+      final countryMatch = countryId != null && countryId.trim().isNotEmpty
+          ? _Country(id: countryId.trim(), name: country, englishName: country)
+          : await _resolveCountry(country);
       if (countryMatch == null) {
         print('No country match found for $country');
         return null;
       }
 
-      final cityMatch = await _resolveCity(
-        countryId: countryMatch.id,
-        countryName: country,
-        city: city,
-        state: state,
-      );
+      var cityMatch = cityId != null && cityId.trim().isNotEmpty
+          ? _City(id: cityId.trim(), name: city, englishName: city)
+          : await _resolveCity(
+              countryId: countryMatch.id,
+              countryName: country,
+              city: city,
+              state: state,
+            );
+      if (cityMatch == null && hasPinnedIds) {
+        cityMatch = await _resolveCity(
+          countryId: countryMatch.id,
+          countryName: country,
+          city: city,
+          state: state,
+        );
+      }
       if (cityMatch == null) {
         print('No city/state match found for city=$city state=$state country=$country');
         return null;
       }
 
-      final districtMatch = await _resolveDistrict(
-        cityId: cityMatch.id,
-        city: city,
-        state: state,
-        district: district,
-      );
+      var districtMatch = districtId != null && districtId.trim().isNotEmpty
+          ? _District(
+              id: districtId.trim(),
+              name: district?.trim().isNotEmpty == true ? district!.trim() : city,
+              englishName:
+                  district?.trim().isNotEmpty == true ? district!.trim() : city,
+            )
+          : await _resolveDistrict(
+              cityId: cityMatch.id,
+              city: city,
+              state: state,
+              district: district,
+            );
+      if (districtMatch == null && hasPinnedIds) {
+        districtMatch = await _resolveDistrict(
+          cityId: cityMatch.id,
+          city: city,
+          state: state,
+          district: district,
+        );
+      }
       if (districtMatch == null) {
         print('No district match found for district=$district city=$city state=$state');
         return null;
       }
+
+      print(
+        '📍 Emushaf resolved => '
+        'country=${countryMatch.name}(${countryMatch.id}), '
+        'city=${cityMatch.name}(${cityMatch.id}), '
+        'district=${districtMatch.name}(${districtMatch.id})',
+      );
 
       final prayerTimes = await _fetchMonthAndExtractDay(
         districtId: districtMatch.id,
@@ -68,15 +123,42 @@ class EmushafPrayerService {
         longitude: longitude,
         city: city,
         country: country,
+        countryId: countryMatch.id,
+        cityId: cityMatch.id,
+        state: state,
+        district: district,
         targetDate: targetDate,
       );
+
+      if (prayerTimes == null && hasPinnedIds) {
+        print('Pinned Emushaf IDs did not return prayer times, retrying with name resolution');
+        return getPrayerTimes(
+          latitude: latitude,
+          longitude: longitude,
+          city: city,
+          country: country,
+          bypassCache: true,
+          state: state,
+          district: district,
+          date: targetDate,
+        );
+      }
 
       return prayerTimes;
     } catch (e, stacktrace) {
       print('Error fetching prayer times from Emushaf: $e');
       print(stacktrace);
 
-      final fallback = await _getCachedPrayerTimes(city, targetDate);
+      final fallback = await _getCachedPrayerTimes(
+        city,
+        targetDate,
+        countryId: countryId,
+        cityId: cityId,
+        districtId: districtId,
+        country: country,
+        state: state,
+        district: district,
+      );
       if (fallback != null) {
         print('Using cached prayer times as fallback');
         return fallback;
@@ -167,6 +249,10 @@ class EmushafPrayerService {
         longitude: longitude,
         city: city,
         country: country,
+        countryId: countryMatch.id,
+        cityId: cityMatch.id,
+        state: state,
+        district: district,
         month: month,
         year: year,
       );
@@ -174,6 +260,30 @@ class EmushafPrayerService {
       print('Error fetching monthly prayer times from Emushaf: $e');
       return [];
     }
+  }
+
+  static Future<PrayerTimes?> getCachedPrayerTimesForDate({
+    required String city,
+    required String country,
+    String? countryId,
+    String? cityId,
+    String? districtId,
+    String? state,
+    String? district,
+    DateTime? date,
+  }) async {
+    await _migrateLegacyCacheIfNeeded();
+    final targetDate = date ?? DateTime.now();
+    return _getCachedPrayerTimes(
+      city,
+      targetDate,
+      countryId: countryId,
+      cityId: cityId,
+      districtId: districtId,
+      country: country,
+      state: state,
+      district: district,
+    );
   }
 
   static Future<List<_Country>> _getCountries() async {
@@ -226,6 +336,10 @@ class EmushafPrayerService {
     required double longitude,
     required String city,
     required String country,
+    String? countryId,
+    String? cityId,
+    String? state,
+    String? district,
     required DateTime targetDate,
   }) async {
     final monthItems = await _fetchMonthPrayerTimes(
@@ -234,6 +348,10 @@ class EmushafPrayerService {
       longitude: longitude,
       city: city,
       country: country,
+      countryId: countryId,
+      cityId: cityId,
+      state: state,
+      district: district,
       month: targetDate.month,
       year: targetDate.year,
     );
@@ -267,6 +385,10 @@ class EmushafPrayerService {
     required double longitude,
     required String city,
     required String country,
+    String? countryId,
+    String? cityId,
+    String? state,
+    String? district,
     required int month,
     required int year,
   }) async {
@@ -287,7 +409,16 @@ class EmushafPrayerService {
       }
       if (parsed.date.year == year && parsed.date.month == month) {
         result.add(parsed);
-        await _cachePrayerTimes(parsed);
+        await _cachePrayerTimes(
+          parsed,
+          city: city,
+          country: country,
+          countryId: countryId,
+          cityId: cityId,
+          districtId: districtId,
+          state: state,
+          district: district,
+        );
       }
     }
 
@@ -310,7 +441,7 @@ class EmushafPrayerService {
     final mapping = <String, String>{
       'imsak': 'Imsak',
       'fajr': 'Imsak',
-      'sunrise': 'GunesDogus',
+      'sunrise': 'Gunes',
       'gunes': 'Gunes',
       'dhuhr': 'Ogle',
       'ogle': 'Ogle',
@@ -332,6 +463,17 @@ class EmushafPrayerService {
       }
     });
 
+    print(
+      '🕰️ Parsed Emushaf row => '
+      'date=${date.toIso8601String().split('T').first}, '
+      'imsak=${times['imsak']?.toIso8601String()}, '
+      'gunes=${times['sunrise']?.toIso8601String()}, '
+      'ogle=${times['dhuhr']?.toIso8601String()}, '
+      'ikindi=${times['asr']?.toIso8601String()}, '
+      'aksam=${times['maghrib']?.toIso8601String()}, '
+      'yatsi=${times['isha']?.toIso8601String()}',
+    );
+
     if (times.isEmpty) {
       return null;
     }
@@ -347,26 +489,50 @@ class EmushafPrayerService {
   }
 
   static DateTime? _parseApiDate(Map<String, dynamic> item) {
-    final iso = item['MiladiTarihUzunIso8601']?.toString();
-    if (iso != null && iso.isNotEmpty) {
-      final parsed = DateTime.tryParse(iso);
-      if (parsed != null) {
-        return DateTime(parsed.year, parsed.month, parsed.day);
-      }
-    }
-
     final shortDate = item['MiladiTarihKisaIso8601']?.toString() ??
         item['MiladiTarihKisa']?.toString();
-    if (shortDate == null || shortDate.isEmpty) {
+    final parsedShortDate = _parseApiShortDate(shortDate);
+
+    final longIso = item['MiladiTarihUzunIso8601']?.toString();
+    final parsedLongIso = _parseApiIsoDate(longIso);
+
+    if (parsedShortDate != null && parsedLongIso != null && !_isSameDay(parsedShortDate, parsedLongIso)) {
+      print(
+        '⚠️ Emushaf date mismatch detected: '
+        'MiladiTarihKisa=${item['MiladiTarihKisa']} / '
+        'MiladiTarihKisaIso8601=${item['MiladiTarihKisaIso8601']} / '
+        'MiladiTarihUzunIso8601=$longIso. '
+        'Using short date ${parsedShortDate.toIso8601String().split('T').first}.',
+      );
+    }
+
+    return parsedShortDate ?? parsedLongIso;
+  }
+
+  static DateTime? _parseApiIsoDate(String? value) {
+    if (value == null || value.isEmpty) {
       return null;
     }
 
-    final isoShort = DateTime.tryParse(shortDate);
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) {
+      return null;
+    }
+
+    return DateTime(parsed.year, parsed.month, parsed.day);
+  }
+
+  static DateTime? _parseApiShortDate(String? value) {
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+
+    final isoShort = DateTime.tryParse(value);
     if (isoShort != null) {
       return DateTime(isoShort.year, isoShort.month, isoShort.day);
     }
 
-    final parts = shortDate.split('.');
+    final parts = value.split('.');
     if (parts.length != 3) {
       return null;
     }
@@ -450,7 +616,14 @@ class EmushafPrayerService {
       }
     }
 
-    return null;
+    final fallback = _bestCityMatch(cities, city);
+    if (fallback != null) {
+      print('City match fallback selected for city="$city": ${fallback.name}');
+      return fallback;
+    }
+
+    print('City match not found for city="$city", state="$state", country="$countryName"');
+    return cities.first;
   }
 
   static Future<_District?> _resolveDistrict({
@@ -475,6 +648,19 @@ class EmushafPrayerService {
       }
     }
 
+    final hasExplicitDistrict = district != null && district.trim().isNotEmpty;
+    if (hasExplicitDistrict) {
+      print('District match not found for "$district" in city="$city"');
+      return null;
+    }
+
+    final fallback = _bestDistrictMatch(districts, city);
+    if (fallback != null) {
+      print('District match fallback selected for city="$city": ${fallback.name}');
+      return fallback;
+    }
+
+    print('District match not found for city="$city", state="$state"');
     return districts.first;
   }
 
@@ -491,6 +677,24 @@ class EmushafPrayerService {
         return city;
       }
     }
+
+    _City? bestMatch;
+    var bestScore = 0.0;
+    for (final city in cities) {
+      final variants = [_normalize(city.name), _normalize(city.englishName)];
+      for (final variant in variants) {
+        final score = _tokenSimilarity(variant, target);
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = city;
+        }
+      }
+    }
+
+    if (bestScore >= 0.35) {
+      return bestMatch;
+    }
+
     return null;
   }
 
@@ -511,6 +715,24 @@ class EmushafPrayerService {
         return district;
       }
     }
+
+    _District? bestMatch;
+    var bestScore = 0.0;
+    for (final district in districts) {
+      final variants = [_normalize(district.name), _normalize(district.englishName)];
+      for (final variant in variants) {
+        final score = _tokenSimilarity(variant, target);
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = district;
+        }
+      }
+    }
+
+    if (bestScore >= 0.35) {
+      return bestMatch;
+    }
+
     return null;
   }
 
@@ -527,10 +749,10 @@ class EmushafPrayerService {
       }
       values.add(city);
     } else {
+      values.add(city);
       if (state != null && state.trim().isNotEmpty) {
         values.add(state);
       }
-      values.add(city);
       values.add(countryName);
     }
     return values.where((value) => value.trim().isNotEmpty).toList();
@@ -542,8 +764,8 @@ class EmushafPrayerService {
     String? district,
   ) {
     final values = <String>[
-      if (district != null && district.trim().isNotEmpty) district,
       city,
+      if (district != null && district.trim().isNotEmpty) district,
       if (state != null && state.trim().isNotEmpty) state,
     ];
     return values.where((value) => value.trim().isNotEmpty).toList();
@@ -629,6 +851,59 @@ class EmushafPrayerService {
     return normalized;
   }
 
+  static double _tokenSimilarity(String left, String right) {
+    final leftTokens = left
+        .split(' ')
+        .where((token) => token.isNotEmpty)
+        .toSet();
+    final rightTokens = right
+        .split(' ')
+        .where((token) => token.isNotEmpty)
+        .toSet();
+
+    if (leftTokens.isEmpty || rightTokens.isEmpty) {
+      return 0;
+    }
+
+    final intersection = leftTokens.intersection(rightTokens).length;
+    final union = leftTokens.union(rightTokens).length;
+    if (union == 0) {
+      return 0;
+    }
+
+    return intersection / union;
+  }
+
+  static String _cachePart(String? value) {
+    final normalized = _normalize(value ?? '');
+    if (normalized.isEmpty) {
+      return 'na';
+    }
+    return normalized.replaceAll(' ', '-');
+  }
+
+  static String _buildCacheKey({
+    required String city,
+    required DateTime date,
+    String? countryId,
+    String? cityId,
+    String? districtId,
+    String? country,
+    String? state,
+    String? district,
+  }) {
+    final dateKey =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final cityKey = _cachePart(city);
+    final countryIdKey = _cachePart(countryId);
+    final cityIdKey = _cachePart(cityId);
+    final districtIdKey = _cachePart(districtId);
+    final countryKey = _cachePart(country);
+    final stateKey = _cachePart(state);
+    final districtKey = _cachePart(district);
+    return '$_cacheKeyPrefix${cityKey}_${dateKey}_${countryIdKey}_${cityIdKey}_${districtIdKey}_${countryKey}_${stateKey}_$districtKey';
+  }
+
   static Future<String> _getJson(String path) async {
     final response = await http
         .get(
@@ -647,20 +922,41 @@ class EmushafPrayerService {
     return response.body;
   }
 
-  static Future<void> _cachePrayerTimes(PrayerTimes prayerTimes) async {
+  static Future<void> _cachePrayerTimes(
+    PrayerTimes prayerTimes, {
+    required String city,
+    required String country,
+    String? countryId,
+    String? cityId,
+    String? districtId,
+    String? state,
+    String? district,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final dateKey =
-          '${prayerTimes.date.year}-${prayerTimes.date.month.toString().padLeft(2, '0')}-${prayerTimes.date.day.toString().padLeft(2, '0')}';
-      final cacheKey = '$_cacheKeyPrefix${prayerTimes.city}_$dateKey';
+      final cacheKey = _buildCacheKey(
+        city: city,
+        date: prayerTimes.date,
+        countryId: countryId,
+        cityId: cityId,
+        districtId: districtId,
+        country: country,
+        state: state,
+        district: district,
+      );
 
       final cacheData = {
         'source': _cacheSource,
         'date': prayerTimes.date.toIso8601String(),
         'latitude': prayerTimes.latitude,
         'longitude': prayerTimes.longitude,
-        'city': prayerTimes.city,
-        'country': prayerTimes.country,
+        'city': city,
+        'country': country,
+        'countryId': countryId,
+        'cityId': cityId,
+        'districtId': districtId,
+        'state': state,
+        'district': district,
         'times': prayerTimes.times.map(
           (key, value) => MapEntry(key, value.toIso8601String()),
         ),
@@ -675,12 +971,27 @@ class EmushafPrayerService {
   static Future<PrayerTimes?> _getCachedPrayerTimes(
     String city,
     DateTime date,
+    {
+    String? countryId,
+    String? cityId,
+    String? districtId,
+    String? country,
+    String? state,
+    String? district,
+  }
   ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final dateKey =
-          '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-      final cacheKey = '$_cacheKeyPrefix${city}_$dateKey';
+      final cacheKey = _buildCacheKey(
+        city: city,
+        date: date,
+        countryId: countryId,
+        cityId: cityId,
+        districtId: districtId,
+        country: country,
+        state: state,
+        district: district,
+      );
 
       final cached = prefs.getString(cacheKey);
       if (cached == null) {
@@ -713,6 +1024,63 @@ class EmushafPrayerService {
     }
   }
 
+  static Future<PrayerTimes?> getLatestCachedPrayerTimes(String city) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cityPrefix = '$_cacheKeyPrefix${_cachePart(city)}_';
+      final matchingKeys = prefs
+          .getKeys()
+          .where((key) => key.startsWith(cityPrefix))
+          .toList()
+        ..sort();
+
+      for (final key in matchingKeys.reversed) {
+        final cached = prefs.getString(key);
+        if (cached == null) {
+          continue;
+        }
+
+        final prayerTimes = _prayerTimesFromCache(cached);
+        if (prayerTimes != null) {
+          return prayerTimes;
+        }
+      }
+    } catch (e) {
+      print('Error retrieving latest cached prayer times: $e');
+    }
+
+    return null;
+  }
+
+  static PrayerTimes? _prayerTimesFromCache(String cached) {
+    try {
+      final json = jsonDecode(cached) as Map<String, dynamic>;
+      if (json['source'] != _cacheSource) {
+        return null;
+      }
+
+      final Map<String, DateTime> times = {};
+      final timesJson = json['times'] as Map<String, dynamic>? ?? {};
+      timesJson.forEach((key, value) {
+        if (value is String) {
+          times[key] = DateTime.parse(value);
+        }
+      });
+
+      return PrayerTimes(
+        date: DateTime.parse(json['date'] ?? DateTime.now().toIso8601String()),
+        latitude: (json['latitude'] as num?)?.toDouble() ?? 0,
+        longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
+        city: json['city'] ?? 'Unknown',
+        country: json['country'] ?? 'Unknown',
+        times: times,
+      );
+    } catch (e) {
+      print('Error parsing cached prayer times: $e');
+      return null;
+    }
+  }
+
   static Future<void> _migrateLegacyCacheIfNeeded() async {
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool(_cacheMigrationKey) ?? false) {
@@ -721,7 +1089,9 @@ class EmushafPrayerService {
 
     final legacyKeys = prefs
         .getKeys()
-        .where((key) => key.startsWith(_legacyCacheKeyPrefix))
+        .where((key) =>
+            key.startsWith(_legacyCacheKeyPrefix) ||
+            key.startsWith(_previousCacheKeyPrefix))
         .toList();
 
     for (final key in legacyKeys) {

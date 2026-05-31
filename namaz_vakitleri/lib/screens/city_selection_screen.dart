@@ -186,7 +186,10 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
       return;
     }
 
-    await _applySelection(city: item.searchName);
+    await _applySelection(
+      city: item.searchName,
+      cityId: item.id,
+    );
   }
 
   Future<void> _selectNested(_NestedMatch match) async {
@@ -194,6 +197,8 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
       await _applySelection(
         city: match.parent.searchName,
         district: match.child.searchName,
+        cityId: match.parent.id,
+        districtId: match.child.id,
       );
       return;
     }
@@ -201,6 +206,8 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
     await _applySelection(
       city: match.child.searchName,
       state: match.parent.searchName,
+      cityId: match.parent.id,
+      districtId: match.child.id,
     );
   }
 
@@ -208,6 +215,8 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
     required String city,
     String? district,
     String? state,
+    String? cityId,
+    String? districtId,
   }) async {
     setState(() {
       _isSelecting = true;
@@ -220,6 +229,9 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
         widget.country.searchName,
         district: district,
         state: state,
+        countryId: widget.country.id,
+        cityId: cityId,
+        districtId: districtId,
       );
 
       if (!mounted) {
@@ -283,7 +295,40 @@ class _CitySelectionScreenState extends State<CitySelectionScreen> {
   }
 
   String _normalize(String value) {
-    return value.trim().toLowerCase();
+    var normalized = value.trim().toLowerCase();
+    const replacements = <String, String>{
+      'ç': 'c',
+      'Ç': 'c',
+      'ğ': 'g',
+      'Ğ': 'g',
+      'ı': 'i',
+      'I': 'i',
+      'İ': 'i',
+      'i̇': 'i',
+      'ö': 'o',
+      'Ö': 'o',
+      'ş': 's',
+      'Ş': 's',
+      'ü': 'u',
+      'Ü': 'u',
+      'Ã§': 'c',
+      'ÄŸ': 'g',
+      'Ä±': 'i',
+      'Ã¶': 'o',
+      'ÅŸ': 's',
+      'Ã¼': 'u',
+      '-': ' ',
+      '\'': ' ',
+      '.': ' ',
+      ',': ' ',
+      '(': ' ',
+      ')': ' ',
+      '/': ' ',
+    };
+    replacements.forEach((from, to) {
+      normalized = normalized.replaceAll(from, to);
+    });
+    return normalized.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
   String _text(

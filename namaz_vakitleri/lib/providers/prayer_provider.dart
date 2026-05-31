@@ -24,6 +24,7 @@ class PrayerProvider extends ChangeNotifier {
 
   bool _isLoading = false;
   bool _isFetching = false;
+  bool _allowAutomaticPrayerRefresh = false;
   DateTime? _lastFetchTime;
   final Duration _minFetchInterval = const Duration(minutes: 5);
   String _errorMessage = '';
@@ -34,11 +35,17 @@ class PrayerProvider extends ChangeNotifier {
   String _savedState = '';
   String _savedCountry = '';
   String _savedDistrict = '';
-  bool _useAutomaticLocation = true;
+  String _savedCountryId = '';
+  String _savedCityId = '';
+  String _savedDistrictId = '';
+  bool _hasCompletedLocationSetup = false;
+  bool _locationBootstrapCompleted = false;
+  bool _useAutomaticLocation = false;
 
   // Countdown
   DateTime? _lastCountdownUpdate;
   Duration? _countdownDuration;
+  Timer? _countdownTimer;
   
   // Adhan playing
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -70,7 +77,7 @@ class PrayerProvider extends ChangeNotifier {
     final country = _savedCountry.trim();
 
     if (!_isMeaningfulLocationValue(city)) {
-      return _isMeaningfulLocationValue(country) ? country : 'Istanbul';
+      return _isMeaningfulLocationValue(country) ? country : '';
     }
 
     return city;
@@ -83,6 +90,20 @@ class PrayerProvider extends ChangeNotifier {
     return !_useAutomaticLocation &&
         _savedCity.trim().isNotEmpty &&
         _savedCountry.trim().isNotEmpty;
+  }
+
+  bool get requiresManualLocationSelection {
+    if (!_locationBootstrapCompleted) {
+      return false;
+    }
+
+    if (_hasCompletedLocationSetup) {
+      return false;
+    }
+
+    final hasSavedLookupContext =
+        _isMeaningfulLocationValue(_savedCity) && _isMeaningfulLocationValue(_savedCountry);
+    return !hasSavedLookupContext;
   }
 
   bool _isMeaningfulLocationValue(String? value) {
@@ -100,7 +121,7 @@ class PrayerProvider extends ChangeNotifier {
     if (_isMeaningfulLocationValue(_savedCity)) {
       return _savedCity.trim();
     }
-    return 'Istanbul';
+    return '';
   }
 
   String get _lookupCountry {
@@ -113,7 +134,7 @@ class PrayerProvider extends ChangeNotifier {
     if (_isMeaningfulLocationValue(_savedCountry)) {
       return _savedCountry.trim();
     }
-    return 'Turkey';
+    return '';
   }
 
   String? get _lookupState {
@@ -142,57 +163,46 @@ class PrayerProvider extends ChangeNotifier {
     try {
       _prefs = await SharedPreferences.getInstance();
       
-      // Load settings immediately to ensure persistence
-      await _appSettings.loadSettings();
       print('⚙️ Settings loaded: notifications=${_appSettings.prayerNotifications}, sounds=${_appSettings.prayerSounds}');
 
       _savedCity = _prefs.getString('city') ?? '';
       _savedState = _prefs.getString('state') ?? '';
       _savedCountry = _prefs.getString('country') ?? '';
       _savedDistrict = _prefs.getString('district') ?? '';
-      _useAutomaticLocation = _prefs.getBool('use_automatic_location') ?? true;
+      _savedCountryId = _prefs.getString('emushaf_country_id') ?? '';
+      _savedCityId = _prefs.getString('emushaf_city_id') ?? '';
+      _savedDistrictId = _prefs.getString('emushaf_district_id') ?? '';
+      _hasCompletedLocationSetup =
+          _prefs.getBool('has_completed_location_setup') ?? false;
+      _useAutomaticLocation = _prefs.getBool('use_automatic_location') ?? false;
+
+      if (!_hasCompletedLocationSetup &&
+          _isMeaningfulLocationValue(_savedCity) &&
+          _isMeaningfulLocationValue(_savedCountry)) {
+        _hasCompletedLocationSetup = true;
+        await _prefs.setBool('has_completed_location_setup', true);
+      }
 
       print('📱 PrayerProvider initializing...');
 
-      if (_useAutomaticLocation) {
-        await _loadCurrentLocation();
-      } else {
-        _loadLocationFromCache();
-      }
-
-      // If current location failed, load from cache as backup
-      if (_currentLocation == null) {
-        _loadLocationFromCache();
-      }
-
-      // If still no location, use default (Istanbul) as last resort
-      if (_currentLocation == null) {
-        print('📍 Using default location: Istanbul');
-        _currentLocation = GeoLocation(
-          latitude: 41.0082,
-          longitude: 28.9784,
-          city: 'Istanbul',
-          state: 'Istanbul',
-          country: 'Turkey',
-          district: '',
-        );
-        _savedCity = 'Istanbul';
-        _savedState = 'Istanbul';
-        _savedCountry = 'Turkey';
-        _savedDistrict = '';
-        _useAutomaticLocation = false;
-        await _prefs.setString('city', 'Istanbul');
-        await _prefs.setString('state', 'Istanbul');
-        await _prefs.setString('country', 'Turkey');
-        await _prefs.setString('district', '');
-        await _prefs.setDouble('latitude', 41.0082);
-        await _prefs.setDouble('longitude', 28.9784);
-        await _prefs.setBool('use_automatic_location', false);
-      }
+      _loadLocationFromCache();
+      _locationBootstrapCompleted = true;
 
       print(
         '📍 Final Location: ${_currentLocation?.city} (${_currentLocation?.latitude}, ${_currentLocation?.longitude})',
       );
+
+      if (requiresManualLocationSelection) {
+        print('📍 Manual location selection required before loading prayer times');
+        _startCountdownTimer();
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      await _loadCachedPrayerTimesForStartup();
+
+      await fetchPrayerTimes();
 
       // Set up audio context for adhan playback before playing any sounds
       await _audioPlayer.setAudioContext(
@@ -207,15 +217,14 @@ class PrayerProvider extends ChangeNotifier {
         ),
       );
 
-      // Fetch prayer times first
-      await fetchPrayerTimes();
-
       // Start countdown timer only after initial fetch is complete
       // This prevents auto-playing adhan on app startup
       _startCountdownTimer();
     } catch (e, stacktrace) {
       print('❌ Error initializing PrayerProvider: $e');
       print(stacktrace);
+    } finally {
+      _locationBootstrapCompleted = true;
     }
   }
 
@@ -228,6 +237,9 @@ class PrayerProvider extends ChangeNotifier {
       final country = _prefs.getString('country') ?? '';
       final state = _prefs.getString('state') ?? '';
       final district = _prefs.getString('district') ?? '';
+      final countryId = _prefs.getString('emushaf_country_id') ?? '';
+      final cityId = _prefs.getString('emushaf_city_id') ?? '';
+      final districtId = _prefs.getString('emushaf_district_id') ?? '';
 
       if (lat != null && lon != null && city.isNotEmpty) {
         _currentLocation = GeoLocation(
@@ -242,6 +254,10 @@ class PrayerProvider extends ChangeNotifier {
         _savedState = state;
         _savedCountry = country;
         _savedDistrict = district;
+        _savedCountryId = countryId;
+        _savedCityId = cityId;
+        _savedDistrictId = districtId;
+        _hasCompletedLocationSetup = true;
         print('✅ Loaded location from cache: $city, $country');
       } else {
         print(
@@ -272,11 +288,17 @@ class PrayerProvider extends ChangeNotifier {
           await _prefs.setString('state', location.state);
           await _prefs.setString('country', location.country);
           await _prefs.setString('district', location.district);
+          await _prefs.remove('emushaf_country_id');
+          await _prefs.remove('emushaf_city_id');
+          await _prefs.remove('emushaf_district_id');
 
           _savedCity = location.city;
           _savedState = location.state;
           _savedCountry = location.country;
           _savedDistrict = location.district;
+          _savedCountryId = '';
+          _savedCityId = '';
+          _savedDistrictId = '';
         } else {
           print(
             '⚠️ Current location text is incomplete, keeping saved lookup context: '
@@ -295,7 +317,7 @@ class PrayerProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> fetchPrayerTimes() async {
+  Future<void> fetchPrayerTimes({bool bypassCache = false}) async {
     if (_isFetching) return;
     final now = DateTime.now();
     if (_lastFetchTime != null &&
@@ -328,44 +350,62 @@ class PrayerProvider extends ChangeNotifier {
       print(
         '🔄 Fetching prayer times for: $lookupCity (${_currentLocation!.latitude}, ${_currentLocation!.longitude})',
       );
+      print(
+        '🧭 Fetch context => '
+        'country=$lookupCountry, state=$lookupState, district=$lookupDistrict, '
+        'savedCountryId=$_savedCountryId, savedCityId=$_savedCityId, savedDistrictId=$_savedDistrictId',
+      );
 
-      final prayerTimes = await EmushafPrayerService.getPrayerTimes(
+      PrayerTimes? prayerTimes = await EmushafPrayerService.getPrayerTimes(
         latitude: _currentLocation!.latitude,
         longitude: _currentLocation!.longitude,
         city: lookupCity,
         country: lookupCountry,
+        bypassCache: bypassCache,
+        countryId: _savedCountryId.trim().isEmpty ? null : _savedCountryId,
+        cityId: _savedCityId.trim().isEmpty ? null : _savedCityId,
+        districtId: _savedDistrictId.trim().isEmpty ? null : _savedDistrictId,
         state: lookupState,
         district: lookupDistrict,
       );
+
+      if (prayerTimes == null &&
+          (lookupDistrict != null ||
+              lookupState != null ||
+              _savedDistrictId.trim().isNotEmpty ||
+              _savedCityId.trim().isNotEmpty ||
+              _savedCountryId.trim().isNotEmpty)) {
+        print('↩️ Retrying prayer times fetch with relaxed location matching...');
+        prayerTimes = await EmushafPrayerService.getPrayerTimes(
+          latitude: _currentLocation!.latitude,
+          longitude: _currentLocation!.longitude,
+          city: lookupCity,
+          country: lookupCountry,
+          bypassCache: true,
+          state: null,
+          district: null,
+        );
+      }
+
+      if (prayerTimes == null && _savedState.trim().isNotEmpty) {
+        print('↩️ Retrying prayer times fetch with saved state as city fallback...');
+        prayerTimes = await EmushafPrayerService.getPrayerTimes(
+          latitude: _currentLocation!.latitude,
+          longitude: _currentLocation!.longitude,
+          city: _savedState.trim(),
+          country: lookupCountry,
+          bypassCache: true,
+          state: null,
+          district: null,
+        );
+      }
 
       print(
         '📦 Prayer Times Result: ${prayerTimes != null ? "Received" : "Null"}',
       );
 
       if (prayerTimes != null && prayerTimes.prayerTimesList.isNotEmpty) {
-        _currentPrayerTimes = prayerTimes;
-        _nextPrayer = prayerTimes.nextPrayer;
-        _activePrayer = prayerTimes.activePrayer;
-
-        // Debug: print active prayer for quick visibility
-        try {
-          debugPrint(
-            '🔔 Active prayer: ${_activePrayer?.name} at ${_activePrayer?.time}',
-          );
-        } catch (_) {}
-
-        // If the computed next prayer is in the past (some APIs return today's
-        // first prayer when there are no more for today), treat it as next day's prayer
-        // to avoid immediate repeated fetches.
-        final now2 = DateTime.now();
-        if (_nextPrayer != null && _nextPrayer!.time.isBefore(now2)) {
-          print('ℹ️ nextPrayer was in the past; adjusting to next day');
-          _nextPrayer = PrayerTime(
-            name: _nextPrayer!.name,
-            time: _nextPrayer!.time.add(const Duration(days: 1)),
-            nextTime: _nextPrayer!.nextTime?.add(const Duration(days: 1)),
-          );
-        }
+        _applyPrayerTimes(prayerTimes, allowAutomaticRefresh: true);
 
         _lastFetchTime = DateTime.now();
 
@@ -412,7 +452,7 @@ class PrayerProvider extends ChangeNotifier {
   Future<void> refreshPrayerTimes() async {
     _lastFetchTime = null;
     _scheduledNotifications.clear();
-    await fetchPrayerTimes();
+    await fetchPrayerTimes(bypassCache: true);
   }
 
   Future<void> setManualLocation(
@@ -420,6 +460,9 @@ class PrayerProvider extends ChangeNotifier {
     String country, {
     String? district,
     String? state,
+    String? countryId,
+    String? cityId,
+    String? districtId,
   }) async {
     try {
       _isLoading = true;
@@ -453,6 +496,9 @@ class PrayerProvider extends ChangeNotifier {
       _savedState = hasState ? trimmedState! : '';
       _savedCountry = country.trim();
       _savedDistrict = trimmedDistrict ?? '';
+      _savedCountryId = countryId?.trim() ?? '';
+      _savedCityId = cityId?.trim() ?? '';
+      _savedDistrictId = districtId?.trim() ?? '';
       _currentLocation = GeoLocation(
         latitude: resolvedLocation.latitude,
         longitude: resolvedLocation.longitude,
@@ -469,11 +515,16 @@ class PrayerProvider extends ChangeNotifier {
       await _prefs.setString('state', _savedState);
       await _prefs.setString('country', _savedCountry);
       await _prefs.setString('district', _savedDistrict);
+      await _prefs.setString('emushaf_country_id', _savedCountryId);
+      await _prefs.setString('emushaf_city_id', _savedCityId);
+      await _prefs.setString('emushaf_district_id', _savedDistrictId);
+      await _prefs.setBool('has_completed_location_setup', true);
       await _prefs.setBool('use_automatic_location', false);
       await _prefs.setDouble('latitude', _currentLocation!.latitude);
       await _prefs.setDouble('longitude', _currentLocation!.longitude);
+      _hasCompletedLocationSetup = true;
 
-      await fetchPrayerTimes();
+      await fetchPrayerTimes(bypassCache: true);
     } catch (e) {
       _errorMessage = 'Error setting location: $e';
       notifyListeners();
@@ -484,12 +535,16 @@ class PrayerProvider extends ChangeNotifier {
   }
 
   void _startCountdownTimer() {
+    if (_countdownTimer != null) {
+      return;
+    }
+
     // Use a periodic timer to update the countdown once per second.
     // If the next prayer has already passed, attempt to refresh prayer times
     // but avoid hammering the API by waiting a short cooldown after each fetch.
     const cooldownAfterFetch = Duration(seconds: 30);
     // Keep a reference to the timer so we can cancel it on dispose if needed.
-    Timer.periodic(const Duration(seconds: 1), (timer) async {
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       final now = DateTime.now();
 
       // Update active prayer in real-time
@@ -533,7 +588,7 @@ class PrayerProvider extends ChangeNotifier {
         }
 
         // Only fetch new times if prayer has passed by more than 1 minute
-        if (timeDiff < Duration(minutes: -1)) {
+        if (_allowAutomaticPrayerRefresh && timeDiff < Duration(minutes: -1)) {
           print('🔄 Prayer time passed, fetching next prayer times...');
           await fetchPrayerTimes();
         }
@@ -543,6 +598,7 @@ class PrayerProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     super.dispose();
     // Cancel audio player subscriptions
     _playerStateSubscription?.cancel();
@@ -713,6 +769,9 @@ class PrayerProvider extends ChangeNotifier {
           longitude: _currentLocation!.longitude,
           city: lookupCity,
           country: lookupCountry,
+          countryId: _savedCountryId.trim().isEmpty ? null : _savedCountryId,
+          cityId: _savedCityId.trim().isEmpty ? null : _savedCityId,
+          districtId: _savedDistrictId.trim().isEmpty ? null : _savedDistrictId,
           state: lookupState,
           district: lookupDistrict,
           date: DateTime.now().add(const Duration(days: 1)),
@@ -851,6 +910,11 @@ class PrayerProvider extends ChangeNotifier {
     try {
       print('🔄 Force refreshing location...');
 
+      if (!_useAutomaticLocation) {
+        await refreshPrayerTimes();
+        return;
+      }
+
       // Force get current location
       final location = await LocationService.getCurrentLocation();
       if (location != null) {
@@ -869,10 +933,18 @@ class PrayerProvider extends ChangeNotifier {
           await _prefs.setString('state', location.state);
           await _prefs.setString('country', location.country);
           await _prefs.setString('district', location.district);
+          await _prefs.remove('emushaf_country_id');
+          await _prefs.remove('emushaf_city_id');
+          await _prefs.remove('emushaf_district_id');
+          await _prefs.setBool('has_completed_location_setup', true);
 
           _savedCity = location.city;
           _savedState = location.state;
           _savedCountry = location.country;
+          _savedCountryId = '';
+          _savedCityId = '';
+          _savedDistrictId = '';
+          _hasCompletedLocationSetup = true;
         } else {
           print(
             '⚠️ Refreshed coordinates are valid but placemark text is incomplete; '
@@ -884,7 +956,7 @@ class PrayerProvider extends ChangeNotifier {
         _lastFetchTime = null;
 
         // Fetch new prayer times for the new location
-        await fetchPrayerTimes();
+        await fetchPrayerTimes(bypassCache: true);
 
         notifyListeners();
       } else {
@@ -943,6 +1015,56 @@ class PrayerProvider extends ChangeNotifier {
     return value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
   }
 
+  Future<void> _loadCachedPrayerTimesForStartup() async {
+    final cachedPrayerTimes = await EmushafPrayerService.getCachedPrayerTimesForDate(
+      city: _lookupCity,
+      country: _lookupCountry,
+      countryId: _savedCountryId.trim().isEmpty ? null : _savedCountryId,
+      cityId: _savedCityId.trim().isEmpty ? null : _savedCityId,
+      districtId: _savedDistrictId.trim().isEmpty ? null : _savedDistrictId,
+      state: _lookupState,
+      district: _lookupDistrict,
+      date: DateTime.now(),
+    );
+    if (cachedPrayerTimes == null || cachedPrayerTimes.prayerTimesList.isEmpty) {
+      print('No cached prayer times found for startup');
+      return;
+    }
+
+    _applyPrayerTimes(cachedPrayerTimes, allowAutomaticRefresh: false);
+    _errorMessage = '';
+    print('Loaded cached prayer times for startup');
+  }
+
+  void _applyPrayerTimes(
+    PrayerTimes prayerTimes, {
+    required bool allowAutomaticRefresh,
+  }) {
+    _currentPrayerTimes = prayerTimes;
+    _nextPrayer = prayerTimes.nextPrayer;
+    _activePrayer = prayerTimes.activePrayer;
+    _allowAutomaticPrayerRefresh = allowAutomaticRefresh;
+    final now = DateTime.now();
+    if (_nextPrayer != null && _nextPrayer!.time.isBefore(now)) {
+      _nextPrayer = PrayerTime(
+        name: _nextPrayer!.name,
+        time: _nextPrayer!.time.add(const Duration(days: 1)),
+        nextTime: _nextPrayer!.nextTime?.add(const Duration(days: 1)),
+      );
+    }
+
+    if (_nextPrayer != null) {
+      _countdownDuration = _nextPrayer!.time.difference(now);
+      if (_countdownDuration!.isNegative) {
+        _countdownDuration = Duration.zero;
+      }
+      _lastCountdownUpdate = now;
+    } else {
+      _countdownDuration = null;
+      _lastCountdownUpdate = null;
+    }
+  }
+
   String _normalizeCountryValue(String value) {
     final normalized = _normalizeLookupValue(value);
     const aliases = <String, String>{
@@ -969,3 +1091,7 @@ class PrayerProvider extends ChangeNotifier {
     return aliases[normalized] ?? normalized;
   }
 }
+
+
+
+

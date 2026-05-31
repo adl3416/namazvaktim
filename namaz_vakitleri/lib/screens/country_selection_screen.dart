@@ -8,7 +8,12 @@ import '../services/emushaf_prayer_service.dart';
 import 'city_selection_screen.dart';
 
 class CountrySelectionScreen extends StatefulWidget {
-  const CountrySelectionScreen({super.key});
+  const CountrySelectionScreen({
+    super.key,
+    this.canPop = true,
+  });
+
+  final bool canPop;
 
   @override
   State<CountrySelectionScreen> createState() => _CountrySelectionScreenState();
@@ -35,7 +40,7 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen> {
 
     try {
       final countries = await EmushafPrayerService.fetchCountries();
-      countries.sort((a, b) => _displayName(a).compareTo(_displayName(b)));
+      countries.sort(_compareCountries);
 
       if (!mounted) {
         return;
@@ -81,6 +86,42 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen> {
     return _titleCase(source);
   }
 
+  int _compareCountries(EmushafCountry a, EmushafCountry b) {
+    final priorityA = _countryPriority(a);
+    final priorityB = _countryPriority(b);
+    if (priorityA != priorityB) {
+      return priorityA.compareTo(priorityB);
+    }
+    return _displayName(a).compareTo(_displayName(b));
+  }
+
+  int _countryPriority(EmushafCountry country) {
+    final normalized = _normalize('${country.name} ${country.englishName}');
+    if (normalized.contains('turkiye') || normalized.contains('türkiye') || normalized.contains('turkey')) {
+      return 0;
+    }
+    if (normalized.contains('almanya') || normalized.contains('germany') || normalized.contains('deutschland')) {
+      return 1;
+    }
+    if (normalized.contains('hollanda') || normalized.contains('netherlands')) {
+      return 2;
+    }
+    if (normalized.contains('fransa') || normalized.contains('france')) {
+      return 3;
+    }
+    if (normalized.contains('belcika') || normalized.contains('belçika') || normalized.contains('belgium')) {
+      return 4;
+    }
+    if (normalized.contains('abd') ||
+        normalized.contains('amerika birlesik devletleri') ||
+        normalized.contains('amerika birleÅŸik devletleri') ||
+        normalized.contains('united states') ||
+        normalized.contains('usa')) {
+      return 5;
+    }
+    return 100;
+  }
+
   String _titleCase(String value) {
     return value
         .split(RegExp(r'\s+'))
@@ -95,7 +136,40 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen> {
   }
 
   String _normalize(String value) {
-    return value.trim().toLowerCase();
+    var normalized = value.trim().toLowerCase();
+    const replacements = <String, String>{
+      'ç': 'c',
+      'Ç': 'c',
+      'ğ': 'g',
+      'Ğ': 'g',
+      'ı': 'i',
+      'I': 'i',
+      'İ': 'i',
+      'i̇': 'i',
+      'ö': 'o',
+      'Ö': 'o',
+      'ş': 's',
+      'Ş': 's',
+      'ü': 'u',
+      'Ü': 'u',
+      'Ã§': 'c',
+      'ÄŸ': 'g',
+      'Ä±': 'i',
+      'Ã¶': 'o',
+      'ÅŸ': 's',
+      'Ã¼': 'u',
+      '-': ' ',
+      '\'': ' ',
+      '.': ' ',
+      ',': ' ',
+      '(': ' ',
+      ')': ' ',
+      '/': ' ',
+    };
+    replacements.forEach((from, to) {
+      normalized = normalized.replaceAll(from, to);
+    });
+    return normalized.replaceAll(RegExp(r'\s+'), ' ').trim();
   }
 
   String _text(
@@ -125,18 +199,23 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = context.read<AppSettings>().language;
 
-    return Scaffold(
+    return PopScope(
+      canPop: widget.canPop,
+      child: Scaffold(
       backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
       appBar: AppBar(
         backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: widget.canPop,
+        leading: widget.canPop
+            ? IconButton(
+                icon: Icon(
+                  Icons.arrow_back,
+                  color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                ),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
         title: Text(
           AppLocalizations.translate('select_country', locale),
           style: AppTypography.h3.copyWith(
@@ -146,6 +225,22 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen> {
       ),
       body: Column(
         children: [
+          if (!widget.canPop)
+            Padding(
+              padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
+              child: Text(
+                _text(
+                  locale,
+                  tr: 'Devam etmek icin once ulke ve sehir secin.',
+                  en: 'Select your country and city before continuing.',
+                  ar: 'Select your country and city before continuing.',
+                ),
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                ),
+              ),
+            ),
           Padding(
             padding: EdgeInsets.all(AppSpacing.lg),
             child: TextField(
@@ -200,6 +295,7 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen> {
           ),
         ],
       ),
+    ),
     );
   }
 

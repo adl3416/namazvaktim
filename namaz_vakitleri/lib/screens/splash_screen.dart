@@ -67,9 +67,9 @@ class _SplashScreenState extends State<SplashScreen>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Color(0xFFF8F1DF),
-                    Color(0xFFF3E4C1),
-                    Color(0xFFE8D1A0),
+                    Color(0xFFE8DEC6),
+                    Color(0xFFDDCCA6),
+                    Color(0xFFD2BC8A),
                   ],
                 ),
               ),
@@ -83,35 +83,35 @@ class _SplashScreenState extends State<SplashScreen>
                         Transform.translate(
                           offset: Offset(0, wave * 6),
                           child: Container(
-                            width: 126,
-                            height: 126,
+                            width: 164,
+                            height: 164,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: const LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
-                                  Color(0xFF2C6A63),
-                                  Color(0xFF205A54),
+                                  Color(0xFF295F58),
+                                  Color(0xFF1B4D47),
                                 ],
                               ),
                               boxShadow: [
                                 BoxShadow(
                                   color: const Color(0xFF205A54)
                                       .withOpacity(glow),
-                                  blurRadius: 34,
-                                  spreadRadius: 4,
+                                  blurRadius: 42,
+                                  spreadRadius: 6,
                                 ),
                               ],
                             ),
                             child: const Icon(
                               Icons.mosque_rounded,
                               color: Color(0xFFF7E4B0),
-                              size: 58,
+                              size: 78,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 30),
                         Text(
                           _text(
                             locale,
@@ -121,13 +121,13 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            color: Color(0xFF205A54),
-                            fontSize: 30,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.4,
+                            color: Color(0xFF184842),
+                            fontSize: 44,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.6,
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         Text(
                           _text(
                             locale,

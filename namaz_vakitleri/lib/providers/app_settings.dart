@@ -7,12 +7,14 @@ class AppSettings extends ChangeNotifier {
   late SharedPreferences _prefs;
   bool _initialized = false;
   static const _languageExplicitlySetKey = 'language_explicitly_set';
+  static const _onboardingCompletedKey = 'onboarding_completed';
 
   // Settings
   String _language = AppLocalizations.getLocale(null);
   ThemeMode _themeMode = ThemeMode.system;
   bool _enableAdhanSound = false;
   bool _enablePrayerNotifications = false;
+  bool _hasCompletedOnboarding = false;
 
   // Prayer-specific notification settings
   Map<String, bool> _prayerNotifications = {
@@ -47,6 +49,7 @@ class AppSettings extends ChangeNotifier {
   ThemeMode get themeMode => _themeMode;
   bool get enableAdhanSound => _enableAdhanSound;
   bool get enablePrayerNotifications => _enablePrayerNotifications;
+  bool get hasCompletedOnboarding => _hasCompletedOnboarding;
   bool get hasAnyPrayerSoundEnabled => _prayerSounds.values.any((enabled) => enabled);
   bool get hasAnyPrayerNotificationEnabled =>
       _prayerNotifications.values.any((enabled) => enabled);
@@ -87,6 +90,7 @@ class AppSettings extends ChangeNotifier {
     
     _enableAdhanSound = _prefs.getBool('enableAdhanSound') ?? false;
     _enablePrayerNotifications = _prefs.getBool('enablePrayerNotifications') ?? false;
+    _hasCompletedOnboarding = _prefs.getBool(_onboardingCompletedKey) ?? false;
 
     // Load prayer-specific settings
     final prayerNotificationsRaw = _prefs.getString('prayer_notifications');
@@ -205,6 +209,14 @@ class AppSettings extends ChangeNotifier {
     _enablePrayerNotifications = enable;
     if (_initialized) {
       await _prefs.setBool('enablePrayerNotifications', enable);
+    }
+    notifyListeners();
+  }
+
+  Future<void> setOnboardingCompleted(bool completed) async {
+    _hasCompletedOnboarding = completed;
+    if (_initialized) {
+      await _prefs.setBool(_onboardingCompletedKey, completed);
     }
     notifyListeners();
   }

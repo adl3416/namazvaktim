@@ -73,8 +73,13 @@ class PrayerProvider extends ChangeNotifier {
   String get savedCountry => _savedCountry;
   bool get useAutomaticLocation => _useAutomaticLocation;
   String get savedLocationLabel {
+    final district = _savedDistrict.trim();
     final city = _savedCity.trim();
     final country = _savedCountry.trim();
+
+    if (!_useAutomaticLocation && _isMeaningfulLocationValue(district)) {
+      return district;
+    }
 
     if (!_isMeaningfulLocationValue(city)) {
       return _isMeaningfulLocationValue(country) ? country : '';
@@ -188,6 +193,10 @@ class PrayerProvider extends ChangeNotifier {
       _loadLocationFromCache();
       _locationBootstrapCompleted = true;
 
+      if (_useAutomaticLocation) {
+        await _loadCurrentLocation();
+      }
+
       print(
         '📍 Final Location: ${_currentLocation?.city} (${_currentLocation?.latitude}, ${_currentLocation?.longitude})',
       );
@@ -299,6 +308,8 @@ class PrayerProvider extends ChangeNotifier {
           _savedCountryId = '';
           _savedCityId = '';
           _savedDistrictId = '';
+          _hasCompletedLocationSetup = true;
+          await _prefs.setBool('has_completed_location_setup', true);
         } else {
           print(
             '⚠️ Current location text is incomplete, keeping saved lookup context: '
@@ -906,11 +917,11 @@ class PrayerProvider extends ChangeNotifier {
   PlayerState get currentAudioState => _audioPlayer.state;
 
   /// Force refresh current location and prayer times
-  Future<void> refreshLocation() async {
+  Future<void> refreshLocation({bool forceAutomatic = false}) async {
     try {
       print('🔄 Force refreshing location...');
 
-      if (!_useAutomaticLocation) {
+      if (!_useAutomaticLocation && !forceAutomatic) {
         await refreshPrayerTimes();
         return;
       }

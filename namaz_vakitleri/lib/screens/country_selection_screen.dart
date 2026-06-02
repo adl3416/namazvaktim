@@ -228,16 +228,57 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen> {
           if (!widget.canPop)
             Padding(
               padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
-              child: Text(
-                _text(
-                  locale,
-                  tr: 'Devam etmek icin once ulke ve sehir secin.',
-                  en: 'Select your country and city before continuing.',
-                  ar: 'Select your country and city before continuing.',
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.darkBgSecondary.withOpacity(0.9)
+                      : Colors.white,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.08)
+                        : AppColors.divider,
+                  ),
                 ),
-                textAlign: TextAlign.center,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColors.darkAccentPrimary.withOpacity(0.18)
+                            : AppColors.accentPrimary.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        Icons.mosque_rounded,
+                        color: isDark
+                            ? AppColors.darkAccentPrimary
+                            : AppColors.accentPrimary,
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        _text(
+                          locale,
+                          tr: 'Devam etmek icin once ulke ve sehir secin.',
+                          en: 'Select your country and city before continuing.',
+                          ar: 'Select your country and city before continuing.',
+                        ),
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.textSecondary,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -315,14 +356,32 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen> {
       return Center(
         child: Padding(
           padding: EdgeInsets.all(AppSpacing.lg),
-          child: Text(
-            _text(
-              locale,
-              tr: 'Ulke listesi yuklenemedi.\n$_errorMessage',
-              en: 'Country list could not be loaded.\n$_errorMessage',
-              ar: 'تعذر تحميل قائمة الدول.\n$_errorMessage',
-            ),
-            textAlign: TextAlign.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _text(
+                  locale,
+                  tr: 'Ulke listesi yuklenemedi.\n$_errorMessage',
+                  en: 'Country list could not be loaded.\n$_errorMessage',
+                  ar: 'تعذر تحميل قائمة الدول.\n$_errorMessage',
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: AppSpacing.md),
+              FilledButton.icon(
+                onPressed: _loadCountries,
+                icon: const Icon(Icons.refresh_rounded),
+                label: Text(
+                  _text(
+                    locale,
+                    tr: 'Tekrar dene',
+                    en: 'Try again',
+                    ar: 'حاول مرة أخرى',
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       );

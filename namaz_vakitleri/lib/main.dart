@@ -7,6 +7,7 @@ import 'package:namaz_vakitleri/config/color_system.dart';
 import 'package:namaz_vakitleri/providers/app_settings.dart';
 import 'package:namaz_vakitleri/providers/prayer_provider.dart';
 import 'package:namaz_vakitleri/screens/main_navigation_screen.dart';
+import 'package:namaz_vakitleri/screens/onboarding_screen.dart';
 import 'package:namaz_vakitleri/screens/splash_screen.dart';
 import 'package:namaz_vakitleri/services/notification_service.dart';
 import 'package:provider/provider.dart';
@@ -153,7 +154,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             darkTheme: _buildDarkTheme(),
             themeMode: appSettings.themeMode,
             home: _isInitialized
-                ? const MainNavigationScreen()
+                ? (appSettings.hasCompletedOnboarding
+                    ? const MainNavigationScreen()
+                    : const OnboardingScreen())
                 : const SplashScreen(),
           );
         },

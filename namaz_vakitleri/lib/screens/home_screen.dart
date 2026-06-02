@@ -20,6 +20,11 @@ class HomeScreen extends StatelessWidget {
       builder: (context, settings, prayerProvider, _) {
         final locale = settings.language;
         final isDark = Theme.of(context).brightness == Brightness.dark;
+        final mediaQuery = MediaQuery.of(context);
+        final bottomInset = mediaQuery.padding.bottom;
+        final navigationClearance = 122.0 + (bottomInset == 0
+            ? 12.0
+            : bottomInset.clamp(8.0, 18.0).toDouble());
         final prayerTimes =
             prayerProvider.currentPrayerTimes?.prayerTimesList ?? const <PrayerTime>[];
         final activePrayer = prayerProvider.activePrayer;
@@ -107,7 +112,12 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                     SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(14, 18, 14, 24),
+                      padding: EdgeInsets.fromLTRB(
+                        14,
+                        18,
+                        14,
+                        navigationClearance,
+                      ),
                       sliver: SliverToBoxAdapter(
                         child: _PrayerTimesCard(
                           theme: theme,
@@ -440,6 +450,7 @@ class _HeroSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final topInset = MediaQuery.of(context).padding.top;
     final targetPrayer = nextPrayer ?? activePrayer;
+    final backgroundPrayerName = activePrayer?.name ?? nextPrayer?.name;
     final prayerLabel = targetPrayer == null
         ? _text(
             locale,
@@ -477,15 +488,18 @@ class _HeroSection extends StatelessWidget {
                       ],
                       stops: const [0.0, 0.38, 0.6, 0.78, 0.9, 1.0],
                     ).createShader(bounds),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.asset(
-                          _backgroundAssetForPrayer(
-                            activePrayer?.name ?? nextPrayer?.name,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                        ColorFiltered(
+                          colorFilter: _backgroundColorFilterForPrayer(
+                            backgroundPrayerName,
                           ),
-                          fit: BoxFit.cover,
-                          alignment: const Alignment(0, 0.42),
+                          child: Image.asset(
+                            _backgroundAssetForPrayer(backgroundPrayerName),
+                            fit: BoxFit.cover,
+                            alignment: const Alignment(0, 0.42),
+                          ),
                         ),
                         DecoratedBox(
                           decoration: BoxDecoration(
@@ -493,7 +507,7 @@ class _HeroSection extends StatelessWidget {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                Colors.black.withOpacity(0.16),
+                                _heroImageTopShadeForPrayer(backgroundPrayerName),
                                 theme.overlayTop,
                                 theme.overlayBottom,
                               ],
@@ -1602,8 +1616,8 @@ _HomeTheme _homeThemeForPrayer(String? prayerName, bool isDark) {
       pageBackgroundSoft: Color(0xFFF1F8FF),
       accent: Color(0xFF3A89FF),
       accentDark: Color(0xFF1E5EDB),
-      overlayTop: Color(0x1F0D4F9A),
-      overlayBottom: Color(0x8F0A5AB5),
+      overlayTop: Color(0x160D4F9A),
+      overlayBottom: Color(0x700A5AB5),
       cardTint: Color(0xFF81B6FF),
       shadow: Color(0xFF164A9C),
     );
@@ -1615,8 +1629,8 @@ _HomeTheme _homeThemeForPrayer(String? prayerName, bool isDark) {
       pageBackgroundSoft: Color(0xFFFFF0E0),
       accent: Color(0xFFFF8A1E),
       accentDark: Color(0xFFDB5D00),
-      overlayTop: Color(0x2B7A2D00),
-      overlayBottom: Color(0xA36F2700),
+      overlayTop: Color(0x1B5A3E10),
+      overlayBottom: Color(0x7A6A3412),
       cardTint: Color(0xFFFFB263),
       shadow: Color(0xFFA34E00),
     );
@@ -1657,6 +1671,42 @@ _HomeTheme _homeThemeForPrayer(String? prayerName, bool isDark) {
     overlayBottom: const Color(0xBA071735),
     cardTint: const Color(0xFF84A6FF),
     shadow: const Color(0xFF1A2B60),
+  );
+}
+
+Color _heroImageTopShadeForPrayer(String? prayerName) {
+  final normalized = (prayerName ?? '').toLowerCase();
+  if (normalized.contains('dhuhr') || normalized.contains('ogle')) {
+    return Colors.black.withOpacity(0.08);
+  }
+  if (normalized.contains('asr') || normalized.contains('ikindi')) {
+    return Colors.black.withOpacity(0.11);
+  }
+  return Colors.black.withOpacity(0.16);
+}
+
+ColorFilter _backgroundColorFilterForPrayer(String? prayerName) {
+  final normalized = (prayerName ?? '').toLowerCase();
+
+  if (normalized.contains('dhuhr') || normalized.contains('ogle')) {
+    return const ColorFilter.mode(
+      Colors.transparent,
+      BlendMode.srcOver,
+    );
+  }
+
+  if (normalized.contains('asr') || normalized.contains('ikindi')) {
+    return const ColorFilter.matrix(<double>[
+      1.03, 0, 0, 0, -4,
+      0, 1.06, 0, 0, -4,
+      0, 0, 1.12, 0, 4,
+      0, 0, 0, 1, 0,
+    ]);
+  }
+
+  return const ColorFilter.mode(
+    Colors.transparent,
+    BlendMode.srcOver,
   );
 }
 

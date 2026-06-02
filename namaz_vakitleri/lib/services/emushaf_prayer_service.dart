@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -905,22 +906,43 @@ class EmushafPrayerService {
   }
 
   static Future<String> _getJson(String path) async {
-    final response = await http
-        .get(
-          Uri.parse('$_baseUrl$path'),
-          headers: const {
-            'accept': 'application/json',
-            'user-agent': 'namaz-vakitleri-app/1.0',
-          },
-        )
-        .timeout(const Duration(seconds: 20));
+    Object? lastError;
 
-    if (response.statusCode != 200) {
-      throw Exception('Emushaf API error ${response.statusCode} for $path');
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        final response = await http
+            .get(
+              Uri.parse('$_baseUrl$path'),
+              headers: const {
+                'accept': 'application/json',
+                'user-agent': 'namaz-vakitleri-app/1.0',
+              },
+            )
+            .timeout(const Duration(seconds: 20));
+
+        if (response.statusCode != 200) {
+          throw HttpException(
+            'Emushaf API error ${response.statusCode} for $path',
+          );
+        }
+
+        return response.body;
+      } on SocketException catch (e) {
+        lastError = Exception(
+          'ezanvakti.emushaf.net host bulunamadi. Internet/DNS baglantisini kontrol edin. Detay: $e',
+        );
+      } catch (e) {
+        lastError = e;
+      }
+
+      if (attempt < 2) {
+        await Future<void>.delayed(Duration(milliseconds: 500 * (attempt + 1)));
+      }
     }
 
-    return response.body;
+    throw lastError ?? Exception('Emushaf API istegi basarisiz oldu: $path');
   }
+
 
   static Future<void> _cachePrayerTimes(
     PrayerTimes prayerTimes, {

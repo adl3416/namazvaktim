@@ -8,8 +8,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../config/color_system.dart';
 import '../models/mosque_model.dart';
+import '../models/prayer_model.dart';
 import '../providers/app_settings.dart';
 import '../providers/prayer_provider.dart';
+import '../services/location_service.dart';
 import '../services/mosque_service.dart';
 
 class NearbyMosquesScreen extends StatefulWidget {
@@ -21,7 +23,10 @@ class NearbyMosquesScreen extends StatefulWidget {
 
 class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
   Future<List<Mosque>>? _nearbyMosquesFuture;
-  double _searchRadius = 5.0;
+  double _searchRadius = 10.0;
+  String? _lastLocationSignature;
+  bool _isRefreshingLocation = false;
+  GeoLocation? _mosqueSearchLocation;
 
   String _text(
     String locale, {
@@ -45,11 +50,46 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => _tryLoadMosques());
   }
 
-  void _tryLoadMosques() {
+  String? _locationSignature(GeoLocation? location) {
+    if (location == null) {
+      return null;
+    }
+
+    return '${location.latitude.toStringAsFixed(5)}_${location.longitude.toStringAsFixed(5)}_${_searchRadius.toStringAsFixed(1)}';
+  }
+
+  Future<void> _tryLoadMosques({bool forceRefreshLocation = false}) async {
     if (!mounted) return;
-    final location = context.read<PrayerProvider>().currentLocation;
-    if (location != null && _nearbyMosquesFuture == null) {
+
+    if (_mosqueSearchLocation == null || forceRefreshLocation) {
       setState(() {
+        _isRefreshingLocation = true;
+      });
+
+      try {
+        _mosqueSearchLocation = await LocationService.getCurrentLocation(
+          preferFresh: false,
+          maxLastKnownAge: const Duration(minutes: 10),
+          freshTimeout: const Duration(seconds: 6),
+        );
+      } catch (_) {
+        if (!mounted) return;
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isRefreshingLocation = false;
+          });
+        }
+      }
+    }
+
+    final location = _mosqueSearchLocation;
+    final signature = _locationSignature(location);
+    if (location != null &&
+        signature != null &&
+        (_nearbyMosquesFuture == null || _lastLocationSignature != signature)) {
+      setState(() {
+        _lastLocationSignature = signature;
         _nearbyMosquesFuture = MosqueService.getNearbyMosques(
           location: location,
           radiusKm: _searchRadius,
@@ -59,16 +99,10 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
   }
 
   void _updateRadius(double value) {
-    final location = context.read<PrayerProvider>().currentLocation;
     setState(() {
       _searchRadius = value;
-      if (location != null) {
-        _nearbyMosquesFuture = MosqueService.getNearbyMosques(
-          location: location,
-          radiusKm: value,
-        );
-      }
     });
+    _tryLoadMosques();
   }
 
   Future<void> _launchExternal(String url) async {
@@ -80,35 +114,243 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
   }
 
   Future<void> _openNavigation(Mosque mosque) async {
-    final label = Uri.encodeComponent(mosque.name);
+    final locale = context.read<AppSettings>().language;
+    final options = await _availableNavigationOptions(mosque);
+
+    if (!mounted) return;
+
+    if (options.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _text(
+              locale,
+              tr: 'Bu cihazda acilabilecek bir navigasyon uygulamasi bulunamadi',
+              en: 'No navigation app could be opened on this device',
+              ar: 'No navigation app could be opened on this device',
+            ),
+          ),
+          backgroundColor: const Color(0xFFB42318),
+        ),
+      );
+      return;
+    }
+
+    final selected = await showModalBottomSheet<_NavigationOption>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        final isDark = Theme.of(sheetContext).brightness == Brightness.dark;
+        final background = isDark ? const Color(0xFF111827) : Colors.white;
+        final foreground = isDark ? Colors.white : const Color(0xFF0F172A);
+
+        return SafeArea(
+          top: false,
+          child: Container(
+            decoration: BoxDecoration(
+              color: background,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.32 : 0.12),
+                  blurRadius: 24,
+                  offset: const Offset(0, -6),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: foreground.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _text(
+                      locale,
+                      tr: 'Navigasyon uygulamasi sec',
+                      en: 'Choose navigation app',
+                      ar: 'Choose navigation app',
+                    ),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: foreground,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    mosque.name,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: foreground.withOpacity(0.72),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  ...options.map(
+                    (option) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                        radius: 21,
+                        backgroundColor: option.color.withOpacity(0.14),
+                        child: Icon(option.icon, color: option.color),
+                      ),
+                      title: Text(
+                        option.label,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: foreground,
+                        ),
+                      ),
+                      subtitle: Text(
+                        option.subtitle,
+                        style: TextStyle(
+                          color: foreground.withOpacity(0.62),
+                        ),
+                      ),
+                      trailing: Icon(
+                        Icons.chevron_right_rounded,
+                        color: foreground.withOpacity(0.4),
+                      ),
+                      onTap: () => Navigator.of(sheetContext).pop(option),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    if (selected == null) return;
+
+    final launched = await launchUrl(
+      selected.uri,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (launched) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          _text(
+            locale,
+            tr: 'Secilen navigasyon uygulamasi acilamadi',
+            en: 'The selected navigation app could not be opened',
+            ar: 'The selected navigation app could not be opened',
+          ),
+        ),
+        backgroundColor: const Color(0xFFB42318),
+      ),
+    );
+  }
+
+  Future<List<_NavigationOption>> _availableNavigationOptions(Mosque mosque) async {
     final lat = mosque.latitude;
     final lon = mosque.longitude;
+    final encodedLabel = Uri.encodeComponent(mosque.name);
+    final locale = context.read<AppSettings>().language;
 
-    final candidates = <Uri>[
+    final candidates = <_NavigationOption>[
       if (Platform.isAndroid)
-        Uri.parse('google.navigation:q=$lat,$lon')
-      else
-        Uri.parse('http://maps.apple.com/?daddr=$lat,$lon&dirflg=d'),
-      Uri.parse('geo:$lat,$lon?q=$lat,$lon($label)'),
-      Uri.parse(
-        'https://www.google.com/maps/dir/?api=1&destination=$lat,$lon&travelmode=driving',
+        _NavigationOption(
+          label: 'Google Maps',
+          subtitle: _text(
+            locale,
+            tr: 'Google Maps ile yol tarifi al',
+            en: 'Get directions with Google Maps',
+            ar: 'Get directions with Google Maps',
+          ),
+          icon: Icons.map_rounded,
+          color: const Color(0xFF1A73E8),
+          uri: Uri.parse('google.navigation:q=$lat,$lon'),
+        ),
+      if (Platform.isIOS)
+        _NavigationOption(
+          label: 'Apple Maps',
+          subtitle: _text(
+            locale,
+            tr: 'Apple Maps ile yol tarifi al',
+            en: 'Get directions with Apple Maps',
+            ar: 'Get directions with Apple Maps',
+          ),
+          icon: Icons.map_outlined,
+          color: const Color(0xFF111827),
+          uri: Uri.parse('http://maps.apple.com/?daddr=$lat,$lon&dirflg=d'),
+        ),
+      _NavigationOption(
+        label: 'Waze',
+        subtitle: _text(
+          locale,
+          tr: 'Waze ile trafik destekli rota ac',
+          en: 'Open a traffic-aware route with Waze',
+          ar: 'Open a traffic-aware route with Waze',
+        ),
+        icon: Icons.alt_route_rounded,
+        color: const Color(0xFF33CCFF),
+        uri: Uri.parse('waze://?ll=$lat,$lon&navigate=yes'),
+      ),
+      if (Platform.isAndroid)
+        _NavigationOption(
+          label: _text(
+            locale,
+            tr: 'Haritalar',
+            en: 'Maps',
+            ar: 'Maps',
+          ),
+          subtitle: _text(
+            locale,
+            tr: 'Cihazin varsayilan harita uygulamasini kullan',
+            en: 'Use the device default map app',
+            ar: 'Use the device default map app',
+          ),
+          icon: Icons.place_rounded,
+          color: const Color(0xFF0F766E),
+          uri: Uri.parse('geo:$lat,$lon?q=$lat,$lon($encodedLabel)'),
+        ),
+      _NavigationOption(
+        label: _text(
+          locale,
+          tr: 'Tarayicida Google Maps',
+          en: 'Google Maps in browser',
+          ar: 'Google Maps in browser',
+        ),
+        subtitle: _text(
+          locale,
+          tr: 'Uygulama yoksa web uzerinden ac',
+          en: 'Open on the web if no app is available',
+          ar: 'Open on the web if no app is available',
+        ),
+        icon: Icons.public_rounded,
+        color: const Color(0xFF2563EB),
+        uri: Uri.parse(
+          'https://www.google.com/maps/dir/?api=1&destination=$lat,$lon&travelmode=driving',
+        ),
       ),
     ];
 
-    for (final uri in candidates) {
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-        return;
+    final available = <_NavigationOption>[];
+    for (final option in candidates) {
+      if (await canLaunchUrl(option.uri)) {
+        available.add(option);
       }
     }
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Navigasyon uygulamasi acilamadi'),
-        backgroundColor: Color(0xFFB42318),
-      ),
-    );
+    return available;
   }
 
   @override
@@ -117,9 +359,12 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
       builder: (context, settings, prayerProvider, _) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final locale = settings.language;
-        final location = prayerProvider.currentLocation;
+        final location = _mosqueSearchLocation;
+        final locationSignature = _locationSignature(location);
 
-        if (location != null && _nearbyMosquesFuture == null) {
+        if (locationSignature != null &&
+            (_nearbyMosquesFuture == null ||
+                _lastLocationSignature != locationSignature)) {
           WidgetsBinding.instance.addPostFrameCallback((_) => _tryLoadMosques());
         }
 
@@ -225,6 +470,36 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                                       ],
                                     ),
                                   ),
+                                  IconButton(
+                                    onPressed: _isRefreshingLocation
+                                        ? null
+                                        : () => _tryLoadMosques(
+                                              forceRefreshLocation: true,
+                                            ),
+                                    tooltip: _text(
+                                      locale,
+                                      tr: 'Konumu bul ve tara',
+                                      en: 'Find location and scan',
+                                      ar: 'Find location and scan',
+                                    ),
+                                    icon: _isRefreshingLocation
+                                        ? SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.2,
+                                              color: isDark
+                                                  ? AppColors.darkTextPrimary
+                                                  : const Color(0xFF1F1A16),
+                                            ),
+                                          )
+                                        : Icon(
+                                            Icons.my_location_rounded,
+                                            color: isDark
+                                                ? AppColors.darkTextPrimary
+                                                : const Color(0xFF1F1A16),
+                                          ),
+                                  ),
                                 ],
                               ),
                               const SizedBox(height: 8),
@@ -257,6 +532,17 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                               en: 'The app needs location permission to show nearby mosques.',
                               ar: 'يحتاج التطبيق إلى إذن الموقع لعرض المساجد القريبة.',
                             ),
+                            actionLabel: _text(
+                              locale,
+                              tr: 'Konumu bul',
+                              en: 'Find location',
+                              ar: 'Find location',
+                            ),
+                            onAction: _isRefreshingLocation
+                                ? null
+                                : () => _tryLoadMosques(
+                                      forceRefreshLocation: true,
+                                    ),
                           ),
                         )
                       else if (snapshot.connectionState == ConnectionState.waiting)
@@ -438,6 +724,22 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
       },
     );
   }
+}
+
+class _NavigationOption {
+  const _NavigationOption({
+    required this.label,
+    required this.subtitle,
+    required this.icon,
+    required this.color,
+    required this.uri,
+  });
+
+  final String label;
+  final String subtitle;
+  final IconData icon;
+  final Color color;
+  final Uri uri;
 }
 
 class _CompactRadiusCard extends StatelessWidget {
@@ -660,6 +962,8 @@ class _EmptyMosqueState extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.message,
+    this.actionLabel,
+    this.onAction,
   });
 
   final bool isDark;
@@ -667,6 +971,8 @@ class _EmptyMosqueState extends StatelessWidget {
   final IconData icon;
   final String title;
   final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -699,6 +1005,22 @@ class _EmptyMosqueState extends StatelessWidget {
                 height: 1.45,
               ),
             ),
+            if (actionLabel != null) ...[
+              const SizedBox(height: 18),
+              FilledButton.icon(
+                onPressed: onAction,
+                icon: const Icon(Icons.my_location_rounded),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF1F4C43),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
+                ),
+                label: Text(actionLabel!),
+              ),
+            ],
           ],
         ),
       ),

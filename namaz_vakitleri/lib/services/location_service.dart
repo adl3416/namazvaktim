@@ -61,47 +61,55 @@ class LocationService {
         permission == LocationPermission.always;
   }
 
-  static Future<GeoLocation?> getCurrentLocation() async {
+  static Future<GeoLocation?> getCurrentLocation({
+    bool preferFresh = false,
+    Duration maxLastKnownAge = const Duration(minutes: 5),
+    Duration freshTimeout = const Duration(seconds: 45),
+  }) async {
     try {
       final hasPermission = await requestLocationPermission();
       if (!hasPermission) {
         return null;
       }
 
-      Position? last = await Geolocator.getLastKnownPosition();
-      final now = DateTime.now();
-      if (last != null && last.timestamp != null) {
-        final age = now.difference(last.timestamp!);
-        if (age.inMinutes <= 5) {
-          final placemarks = await geo.placemarkFromCoordinates(
-            last.latitude,
-            last.longitude,
-          );
-          if (placemarks.isNotEmpty) {
-            return _buildGeoLocation(
+      if (!preferFresh) {
+        Position? last = await Geolocator.getLastKnownPosition();
+        final now = DateTime.now();
+        if (last != null && last.timestamp != null) {
+          final age = now.difference(last.timestamp!);
+          if (age <= maxLastKnownAge) {
+            final placemarks = await geo.placemarkFromCoordinates(
               last.latitude,
               last.longitude,
-              placemarks.first,
+            );
+            if (placemarks.isNotEmpty) {
+              return _buildGeoLocation(
+                last.latitude,
+                last.longitude,
+                placemarks.first,
+              );
+            }
+
+            return GeoLocation(
+              latitude: last.latitude,
+              longitude: last.longitude,
+              city: 'Unknown',
+              state: 'Unknown',
+              country: 'Unknown',
+              district: '',
             );
           }
-
-          return GeoLocation(
-            latitude: last.latitude,
-            longitude: last.longitude,
-            city: 'Unknown',
-            state: 'Unknown',
-            country: 'Unknown',
-            district: '',
-          );
         }
       }
 
       Position? position;
       try {
-        print('Requesting fresh GPS location (timeout: 45 seconds)...');
+        print('Requesting fresh GPS location (timeout: ${freshTimeout.inSeconds} seconds)...');
         position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-          timeLimit: const Duration(seconds: 45),
+          desiredAccuracy: preferFresh
+              ? LocationAccuracy.bestForNavigation
+              : LocationAccuracy.high,
+          timeLimit: freshTimeout,
         );
         print(
           'Got fresh GPS location: ${position.latitude}, ${position.longitude}',

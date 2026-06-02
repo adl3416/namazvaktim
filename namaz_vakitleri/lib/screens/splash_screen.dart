@@ -163,17 +163,40 @@ class _SplashScreenState extends State<SplashScreen>
                               ),
                             ),
                             const SizedBox(height: 34),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.16),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.22),
+                                ),
+                              ),
+                              child: const Text(
+                                'Ezanlar',
+                                style: TextStyle(
+                                  color: Color(0xFFFFF3D8),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
                             Text(
                               _text(
                                 locale,
-                                tr: 'Namaz Vaktim',
-                                en: 'Namaz Vaktim',
-                                ar: 'Namaz Vaktim',
+                                tr: 'Ezanlar',
+                                en: 'Ezanlar',
+                                ar: 'Ezanlar',
                               ),
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 48,
+                                fontSize: 44,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 0.8,
                                 shadows: [

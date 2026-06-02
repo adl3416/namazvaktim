@@ -30,7 +30,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           prayerProvider.activePrayer?.name,
           isDark,
         );
-        final bottomInset = MediaQuery.of(context).padding.bottom;
+        final mediaQuery = MediaQuery.of(context);
+        final bottomInset = mediaQuery.padding.bottom;
+        final compactBottomInset = bottomInset == 0
+            ? 12.0
+            : bottomInset.clamp(8.0, 18.0).toDouble();
 
         return PopScope(
           canPop: true,
@@ -56,7 +60,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               const SettingsScreen(),
             ][_selectedIndex],
             bottomNavigationBar: Container(
-              padding: EdgeInsets.only(bottom: bottomInset),
+              padding: EdgeInsets.fromLTRB(0, 0, 0, compactBottomInset),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -89,7 +93,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 child: NavigationBarTheme(
                   data: NavigationBarThemeData(
                     backgroundColor: Colors.transparent,
-                    height: 68,
+                    height: 72,
                     elevation: 0,
                     indicatorColor: isDark
                         ? Colors.white.withOpacity(0.14)

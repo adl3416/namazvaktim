@@ -51,24 +51,35 @@ class MosqueService {
       ),
     ],
   };
+  static const List<String> _mosqueKeywords = [
+    'mosque', 'masjid', 'masjed', 'masdjid', 'cami', 'camii', 'jami',
+    'mescit', 'mesjid', 'musalla', 'جامع', 'مسجد', 'جماعت', 'muslim', 'islam',
+  ];
 
   static Future<List<Mosque>> getNearbyMosques({
     required GeoLocation location,
     required double radiusKm,
   }) async {
-    // 1. Try Overpass API (multiple mirrors)
-    try {
-      final results = await _fetchFromOverpass(
-        latitude: location.latitude,
-        longitude: location.longitude,
-        radiusKm: radiusKm,
-      );
-      if (results.isNotEmpty) return results;
-    } catch (e) {
-      print('Overpass failed: $e');
+    final radii = <double>{
+      if (radiusKm > 3) 3.0,
+      if (radiusKm > 5) 5.0,
+      radiusKm,
+    }.toList()
+      ..sort();
+
+    for (final probeRadius in radii) {
+      try {
+        final results = await _fetchFromOverpass(
+          latitude: location.latitude,
+          longitude: location.longitude,
+          radiusKm: probeRadius,
+        );
+        if (results.isNotEmpty) return results;
+      } catch (e) {
+        print('Overpass failed for ${probeRadius}km: $e');
+      }
     }
 
-    // 2. Try Nominatim as live fallback
     try {
       final results = await _fetchFromNominatim(
         latitude: location.latitude,
@@ -91,12 +102,13 @@ class MosqueService {
   }) async {
     final radiusMeters = (radiusKm * 1000).round();
     final query = '''
-[out:json][timeout:25];
+[out:json][timeout:12];
 (
   nwr["amenity"="place_of_worship"]["religion"="muslim"](around:$radiusMeters,$latitude,$longitude);
   nwr["building"="mosque"](around:$radiusMeters,$latitude,$longitude);
   nwr["amenity"="mosque"](around:$radiusMeters,$latitude,$longitude);
   nwr["place_of_worship"="mosque"](around:$radiusMeters,$latitude,$longitude);
+  nwr["name"~"cami|camii|mosque|masjid|mescit|mesjid",i](around:$radiusMeters,$latitude,$longitude);
 );
 out center tags;
 ''';
@@ -117,7 +129,7 @@ out center tags;
               },
               body: {'data': query},
             )
-            .timeout(const Duration(seconds: 20));
+            .timeout(const Duration(seconds: 10));
         if (response.statusCode == 200) break;
         lastError = Exception('Overpass error: ${response.statusCode}');
       } catch (e) {
@@ -143,6 +155,7 @@ out center tags;
       final coords = _extractCoordinates(element);
 
       if (coords == null) continue;
+      if (!_looksLikeMosque(tags)) continue;
 
       final mosque = Mosque(
         name: _readName(tags, coords.$1, coords.$2),
@@ -347,6 +360,34 @@ out center tags;
     final website =
         tags['website']?.toString() ?? tags['contact:website']?.toString();
     return website != null && website.isNotEmpty ? website : null;
+  }
+
+  static bool _looksLikeMosque(Map<String, dynamic> tags) {
+    final religion = tags['religion']?.toString().toLowerCase() ?? '';
+    final denomination = tags['denomination']?.toString().toLowerCase() ?? '';
+    final amenity = tags['amenity']?.toString().toLowerCase() ?? '';
+    final building = tags['building']?.toString().toLowerCase() ?? '';
+    final placeOfWorship =
+        tags['place_of_worship']?.toString().toLowerCase() ?? '';
+    final names = [
+      tags['name'],
+      tags['name:tr'],
+      tags['official_name'],
+      tags['alt_name'],
+    ]
+        .whereType<String>()
+        .join(' ')
+        .toLowerCase();
+
+    if (religion == 'muslim' || religion == 'islam') return true;
+    if (denomination == 'muslim') return true;
+    if (amenity == 'mosque' ||
+        building == 'mosque' ||
+        placeOfWorship == 'mosque') {
+      return true;
+    }
+
+    return _mosqueKeywords.any((keyword) => names.contains(keyword));
   }
 
   static List<Mosque> _fallbackForCity(GeoLocation location, double radiusKm) {

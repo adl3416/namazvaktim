@@ -37,6 +37,8 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
   static const _currentZikirKey = 'zikirmatik_current_zikir';
   static const _savedZikirListKey = 'zikirmatik_saved_zikir_list';
   static const _zikirCountsKey = 'zikirmatik_zikir_counts';
+  static const _storageVersionKey = 'zikirmatik_storage_version';
+  static const _currentStorageVersion = 2;
   static const _defaultZikirler = [
     _SavedZikir(name: 'Sübhanallah', target: 33),
     _SavedZikir(name: 'Elhamdülillah', target: 33),
@@ -148,11 +150,13 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
           (widget.initialTargetCount != null && widget.initialTargetCount! > 0)
               ? widget.initialTargetCount!
               : null;
+      final storedVersion = prefs.getInt(_storageVersionKey) ?? 0;
       var saved = _decodeSavedZikirler(prefs.getStringList(_savedZikirListKey));
       var currentZikir = _normalizeLegacyZikirName(
         prefs.getString(_currentZikirKey),
       );
       final zikirCounts = _decodeZikirCounts(prefs.getString(_zikirCountsKey));
+      var shouldPersistRecoveredState = storedVersion < _currentStorageVersion;
 
       if (requestedZikir != null && requestedZikir.isNotEmpty) {
         final existingIndex = saved.indexWhere(
@@ -173,8 +177,9 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
           saved = [
             _SavedZikir(name: requestedZikir, target: requestedTarget ?? 33),
             ...saved,
-          ].take(8).toList();
+          ];
           currentZikir = requestedZikir;
+          shouldPersistRecoveredState = true;
         }
       }
 
@@ -208,6 +213,8 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
 
       if (requestedZikir != null && requestedZikir.isNotEmpty) {
         await _saveState();
+      } else if (shouldPersistRecoveredState) {
+        await _saveState();
       }
     } catch (_) {
       if (!mounted) return;
@@ -234,6 +241,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
     await prefs.setString(_hapticModeKey, _hapticMode.name);
     await prefs.setString(_currentZikirKey, _currentZikir);
     await prefs.setString(_zikirCountsKey, jsonEncode(counts));
+    await prefs.setInt(_storageVersionKey, _currentStorageVersion);
     await prefs.setStringList(
       _savedZikirListKey,
       _savedZikirler.map((item) => jsonEncode(item.toJson())).toList(),
@@ -321,7 +329,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
         _savedZikirler = [
           _SavedZikir(name: raw, target: target),
           ..._savedZikirler,
-        ].take(8).toList();
+        ];
       } else {
         _savedZikirler = _savedZikirler
             .map(
@@ -549,6 +557,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
     }
 
     final parsed = <_SavedZikir>[];
+    final seen = <String>{};
     for (final item in rawList.whereType<String>()) {
       if (item.trim().isEmpty) {
         continue;
@@ -561,18 +570,25 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
               (key, value) => MapEntry(key.toString(), value),
             ),
           );
-          parsed.add(
-            _SavedZikir(
-              name: _normalizeLegacyZikirName(saved.name),
-              target: saved.target,
-            ),
+          final normalized = _SavedZikir(
+            name: _normalizeLegacyZikirName(saved.name),
+            target: saved.target,
           );
+          final lookupKey = normalized.name.toLowerCase();
+          if (seen.add(lookupKey)) {
+            parsed.add(normalized);
+          }
           continue;
         }
       } catch (_) {
-        parsed.add(
-          _SavedZikir(name: _normalizeLegacyZikirName(item), target: 33),
+        final normalized = _SavedZikir(
+          name: _normalizeLegacyZikirName(item),
+          target: 33,
         );
+        final lookupKey = normalized.name.toLowerCase();
+        if (seen.add(lookupKey)) {
+          parsed.add(normalized);
+        }
       }
     }
 

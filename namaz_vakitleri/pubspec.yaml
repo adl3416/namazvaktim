@@ -64,6 +64,8 @@ dependencies:
   # URL Launcher
   url_launcher: ^6.1.0
   share_plus: ^10.0.2
+  package_info_plus: ^8.0.2
+  in_app_update: ^4.2.3
   
   # Compass
   flutter_compass: ^0.8.0

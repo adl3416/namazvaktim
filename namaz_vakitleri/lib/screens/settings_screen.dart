@@ -143,12 +143,12 @@ class SettingsScreen extends StatelessWidget {
                         ],
               ),
             ),
-              child: SafeArea(
-                top: false,
-                bottom: false,
-                child: ListView(
-                  padding: EdgeInsets.fromLTRB(0, 0, 0, bottomSafeSpace),
-                  children: [
+            child: SafeArea(
+              top: false,
+              bottom: false,
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(0, 0, 0, bottomSafeSpace),
+                children: [
                   _SettingsHero(
                     title: AppLocalizations.translate('settings', locale),
                     isDark: isDark,
@@ -159,198 +159,209 @@ class SettingsScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
                       children: [
-                  _SettingsTile(
-                    icon: Icons.location_on_rounded,
-                    iconColor: const Color(0xFF2563EB),
-                    title: _text(
-                      locale,
-                      tr: 'Mevcut konum',
-                      en: 'Current location',
-                      ar: 'الموقع الحالي',
-                    ),
-                    subtitle:
-                        '$currentCity, $currentCountry • $locationModeText',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CountrySelectionScreen(),
+                        _SettingsTile(
+                          icon: Icons.location_on_rounded,
+                          iconColor: const Color(0xFF2563EB),
+                          title: _text(
+                            locale,
+                            tr: 'Mevcut konum',
+                            en: 'Current location',
+                            ar: 'الموقع الحالي',
+                          ),
+                          subtitle:
+                              '$currentCity, $currentCountry • $locationModeText',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => const CountrySelectionScreen(),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
-                  _SettingsTile(
-                    icon: Icons.notifications_active_rounded,
-                    iconColor: const Color(0xFFEA580C),
-                    title: AppLocalizations.translate('notifications', locale),
-                    subtitle: _text(
-                      locale,
-                      tr: 'Ezan, hatırlatma ve vakit ayarlarını yönet',
-                      en: 'Manage adhan, reminders, and prayer time settings',
-                      ar: 'أدر الأذان والتذكيرات وإعدادات أوقات الصلاة',
-                    ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder:
-                              (context) => const NotificationSettingsScreen(),
+                        _SettingsTile(
+                          icon: Icons.notifications_active_rounded,
+                          iconColor: const Color(0xFFEA580C),
+                          title: AppLocalizations.translate(
+                            'notifications',
+                            locale,
+                          ),
+                          subtitle: _text(
+                            locale,
+                            tr: 'Ezan, hatırlatma ve vakit ayarlarını yönet',
+                            en:
+                                'Manage adhan, reminders, and prayer time settings',
+                            ar: 'أدر الأذان والتذكيرات وإعدادات أوقات الصلاة',
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) =>
+                                        const NotificationSettingsScreen(),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
-                  _SettingsTile(
-                    icon: Icons.palette_rounded,
-                    iconColor: const Color(0xFF7C3AED),
-                    title: AppLocalizations.translate('theme', locale),
-                    subtitle: _text(
-                      locale,
-                      tr: 'Uygulamanın görünüşünü değiştir',
-                      en: 'Change the look of the app',
-                      ar: 'غيّر مظهر التطبيق',
-                    ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ThemeSelectionScreen(),
+                        _SettingsTile(
+                          icon: Icons.palette_rounded,
+                          iconColor: const Color(0xFF7C3AED),
+                          title: AppLocalizations.translate('theme', locale),
+                          subtitle: _text(
+                            locale,
+                            tr: 'Uygulamanın görünüşünü değiştir',
+                            en: 'Change the look of the app',
+                            ar: 'غيّر مظهر التطبيق',
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => const ThemeSelectionScreen(),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
-                  _SettingsTile(
-                    icon: Icons.language_rounded,
-                    iconColor: const Color(0xFF15803D),
-                    title: AppLocalizations.translate('language', locale),
-                    subtitle:
-                        '${_text(locale, tr: 'Şu an', en: 'Current', ar: 'الحالية')}: ${settings.language.toUpperCase()}',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LanguageSelectionScreen(),
+                        _SettingsTile(
+                          icon: Icons.language_rounded,
+                          iconColor: const Color(0xFF15803D),
+                          title: AppLocalizations.translate('language', locale),
+                          subtitle:
+                              '${_text(locale, tr: 'Şu an', en: 'Current', ar: 'الحالية')}: ${settings.language.toUpperCase()}',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => const LanguageSelectionScreen(),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
-                  _SettingsTile(
-                    icon: Icons.info_rounded,
-                    iconColor: const Color(0xFF0F766E),
-                    title: _text(
-                      locale,
-                      tr: 'Uygulama hakkında ve destek',
-                      en: 'About and support',
-                      ar: 'حول التطبيق والدعم',
-                    ),
-                    subtitle: _text(
-                      locale,
-                      tr: 'Gizlilik, yasal bilgi ve destek alanı',
-                      en: 'Privacy, legal information, and support area',
-                      ar: 'الخصوصية والمعلومات القانونية والدعم',
-                    ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => SupportLegalScreen(language: locale),
+                        _SettingsTile(
+                          icon: Icons.info_rounded,
+                          iconColor: const Color(0xFF0F766E),
+                          title: _text(
+                            locale,
+                            tr: 'Uygulama hakkında ve destek',
+                            en: 'About and support',
+                            ar: 'حول التطبيق والدعم',
+                          ),
+                          subtitle: _text(
+                            locale,
+                            tr: 'Gizlilik, yasal bilgi ve destek alanı',
+                            en: 'Privacy, legal information, and support area',
+                            ar: 'الخصوصية والمعلومات القانونية والدعم',
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) =>
+                                        SupportLegalScreen(language: locale),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
-                  _SettingsTile(
-                    icon: Icons.star_rounded,
-                    iconColor: const Color(0xFFF59E0B),
-                    title: _text(
-                      locale,
-                      tr: 'Uygulamayı değerlendir',
-                      en: 'Rate the app',
-                      ar: 'قيّم التطبيق',
-                      de: 'App bewerten',
-                    ),
-                    subtitle: _text(
-                      locale,
-                      tr: 'Play Store üzerinden puan ver ve yorum bırak',
-                      en: 'Rate the app and leave a review on Play Store',
-                      ar: 'قيّم التطبيق واترك مراجعة على متجر Play',
-                      de: 'Bewerte die App und hinterlasse eine Rezension im Play Store',
-                    ),
-                    onTap: _openPlayStore,
-                  ),
-                  _SettingsTile(
-                    icon: Icons.share_rounded,
-                    iconColor: const Color(0xFF2563EB),
-                    title: _text(
-                      locale,
-                      tr: 'Uygulamayı paylaş',
-                      en: 'Share the app',
-                      ar: 'شارك التطبيق',
-                      de: 'App teilen',
-                    ),
-                    subtitle: _text(
-                      locale,
-                      tr: 'Uygulama bağlantısını başkalarıyla gönder',
-                      en: 'Send the app link to others',
-                      ar: 'أرسل رابط التطبيق إلى الآخرين',
-                      de: 'Sende den App-Link an andere weiter',
-                    ),
-                    onTap: () => _shareApp(locale),
-                  ),
-                  const SizedBox(height: 10),
-                  Container(
-                    width: double.infinity,
-                    height: 1,
-                    color:
-                        isDark
-                            ? Colors.white.withOpacity(0.10)
-                            : Colors.black.withOpacity(0.08),
-                  ),
-                  const SizedBox(height: 14),
-                  Center(
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          width: 42,
-                          height: 42,
-                          child: Image.asset(
-                            'assets/images/app_icon.png',
-                            fit: BoxFit.contain,
+                        _SettingsTile(
+                          icon: Icons.star_rounded,
+                          iconColor: const Color(0xFFF59E0B),
+                          title: _text(
+                            locale,
+                            tr: 'Uygulamayı değerlendir',
+                            en: 'Rate the app',
+                            ar: 'قيّم التطبيق',
+                            de: 'App bewerten',
+                          ),
+                          subtitle: _text(
+                            locale,
+                            tr: 'Play Store üzerinden puan ver ve yorum bırak',
+                            en: 'Rate the app and leave a review on Play Store',
+                            ar: 'قيّم التطبيق واترك مراجعة على متجر Play',
+                            de:
+                                'Bewerte die App und hinterlasse eine Rezension im Play Store',
+                          ),
+                          onTap: _openPlayStore,
+                        ),
+                        _SettingsTile(
+                          icon: Icons.share_rounded,
+                          iconColor: const Color(0xFF2563EB),
+                          title: _text(
+                            locale,
+                            tr: 'Uygulamayı paylaş',
+                            en: 'Share the app',
+                            ar: 'شارك التطبيق',
+                            de: 'App teilen',
+                          ),
+                          subtitle: _text(
+                            locale,
+                            tr: 'Uygulama bağlantısını başkalarıyla gönder',
+                            en: 'Send the app link to others',
+                            ar: 'أرسل رابط التطبيق إلى الآخرين',
+                            de: 'Sende den App-Link an andere weiter',
+                          ),
+                          onTap: () => _shareApp(locale),
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          width: double.infinity,
+                          height: 1,
+                          color:
+                              isDark
+                                  ? Colors.white.withOpacity(0.10)
+                                  : Colors.black.withOpacity(0.08),
+                        ),
+                        const SizedBox(height: 14),
+                        Center(
+                          child: Column(
+                            children: [
+                              SizedBox(
+                                width: 42,
+                                height: 42,
+                                child: Image.asset(
+                                  'assets/images/app_icon.png',
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Ezanlar',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
+                                  color:
+                                      isDark
+                                          ? AppColors.darkTextPrimary
+                                          : const Color(0xFF1E1A16),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _text(
+                                  locale,
+                                  tr: 'Sürüm 1.0.0',
+                                  en: 'Version 1.0.0',
+                                  ar: 'الإصدار 1.0.0',
+                                ),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color:
+                                      isDark
+                                          ? AppColors.darkTextSecondary
+                                          : const Color(0xFF655B51),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          'Ezanlar',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color:
-                                isDark
-                                    ? AppColors.darkTextPrimary
-                                    : const Color(0xFF1E1A16),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _text(
-                            locale,
-                            tr: 'Sürüm 1.0.0',
-                            en: 'Version 1.0.0',
-                            ar: 'الإصدار 1.0.0',
-                          ),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color:
-                                isDark
-                                    ? AppColors.darkTextSecondary
-                                    : const Color(0xFF655B51),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                       ],
                     ),
                   ),

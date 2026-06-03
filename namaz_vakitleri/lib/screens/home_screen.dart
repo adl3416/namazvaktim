@@ -480,13 +480,13 @@ class _HeroSection extends StatelessWidget {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.white,
-                        Colors.white.withOpacity(0.92),
-                        Colors.white.withOpacity(0.74),
-                        Colors.white.withOpacity(0.46),
-                        Colors.white.withOpacity(0.22),
+                        Colors.white.withOpacity(0.98),
+                        Colors.white.withOpacity(0.90),
+                        Colors.white.withOpacity(0.72),
+                        Colors.white.withOpacity(0.36),
                         Colors.transparent,
                       ],
-                      stops: const [0.0, 0.38, 0.6, 0.78, 0.9, 1.0],
+                      stops: const [0.0, 0.52, 0.72, 0.86, 0.94, 1.0],
                     ).createShader(bounds),
                       child: Stack(
                         fit: StackFit.expand,
@@ -1616,8 +1616,8 @@ _HomeTheme _homeThemeForPrayer(String? prayerName, bool isDark) {
       pageBackgroundSoft: Color(0xFFF1F8FF),
       accent: Color(0xFF3A89FF),
       accentDark: Color(0xFF1E5EDB),
-      overlayTop: Color(0x0D0D4F9A),
-      overlayBottom: Color(0x340A5AB5),
+      overlayTop: Color(0x060D4F9A),
+      overlayBottom: Color(0x180A5AB5),
       cardTint: Color(0xFF81B6FF),
       shadow: Color(0xFF164A9C),
     );
@@ -1677,29 +1677,31 @@ _HomeTheme _homeThemeForPrayer(String? prayerName, bool isDark) {
 Color _heroImageTopShadeForPrayer(String? prayerName) {
   final normalized = (prayerName ?? '').toLowerCase();
   if (normalized.contains('dhuhr') || normalized.contains('ogle')) {
-    return Colors.black.withOpacity(0.04);
+    return Colors.black.withOpacity(0.02);
   }
   if (normalized.contains('asr') || normalized.contains('ikindi')) {
-    return Colors.black.withOpacity(0.06);
+    return Colors.black.withOpacity(0.05);
   }
-  return Colors.black.withOpacity(0.10);
+  return Colors.black.withOpacity(0.08);
 }
 
 ColorFilter _backgroundColorFilterForPrayer(String? prayerName) {
   final normalized = (prayerName ?? '').toLowerCase();
 
   if (normalized.contains('dhuhr') || normalized.contains('ogle')) {
-    return const ColorFilter.mode(
-      Colors.transparent,
-      BlendMode.srcOver,
-    );
+    return const ColorFilter.matrix(<double>[
+      1.08, 0, 0, 0, 0,
+      0, 1.10, 0, 0, 0,
+      0, 0, 1.18, 0, 8,
+      0, 0, 0, 1, 0,
+    ]);
   }
 
   if (normalized.contains('asr') || normalized.contains('ikindi')) {
     return const ColorFilter.matrix(<double>[
-      1.03, 0, 0, 0, -4,
-      0, 1.06, 0, 0, -4,
-      0, 0, 1.12, 0, 4,
+      1.04, 0, 0, 0, -2,
+      0, 1.08, 0, 0, -2,
+      0, 0, 1.14, 0, 6,
       0, 0, 0, 1, 0,
     ]);
   }

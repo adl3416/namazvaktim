@@ -35,6 +35,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         final compactBottomInset = bottomInset == 0
             ? 12.0
             : bottomInset.clamp(8.0, 18.0).toDouble();
+        final navLabelFontSize = locale == 'de' ? 10.5 : 12.0;
 
         return PopScope(
           canPop: true,
@@ -50,7 +51,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               const QiblaScreen(),
               const NearbyMosquesScreen(),
               ZikirmatikScreen(
-                openLibraryFirst: true,
                 onExitRequested: () {
                   setState(() {
                     _selectedIndex = 0;
@@ -113,7 +113,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         WidgetStateProperty.resolveWith<TextStyle>((states) {
                       final selected = states.contains(WidgetState.selected);
                       return TextStyle(
-                        fontSize: 12,
+                        fontSize: navLabelFontSize,
                         fontWeight:
                             selected ? FontWeight.w800 : FontWeight.w600,
                         color: selected

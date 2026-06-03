@@ -38,9 +38,9 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
   static const _savedZikirListKey = 'zikirmatik_saved_zikir_list';
   static const _zikirCountsKey = 'zikirmatik_zikir_counts';
   static const _defaultZikirler = [
-    _SavedZikir(name: 'Sübhânallah', target: 33),
+    _SavedZikir(name: 'Sübhanallah', target: 33),
     _SavedZikir(name: 'Elhamdülillah', target: 33),
-    _SavedZikir(name: 'Allâhu ekber', target: 33),
+    _SavedZikir(name: 'Allahu ekber', target: 33),
     _SavedZikir(name: 'Allahümme salli alâ seyyidinâ Muhammed', target: 100),
     _SavedZikir(name: 'Lâ ilâhe illallah', target: 99),
     _SavedZikir(name: 'Yâ Rahmân', target: 298),
@@ -64,6 +64,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
   int _target = 33;
   bool _isLoading = true;
   bool _isSavedZikirExpanded = false;
+  bool _isHapticMenuOpen = false;
   _ZikirHapticMode _hapticMode = _ZikirHapticMode.everyTap;
   late _ZikirViewMode _viewMode;
   final TextEditingController _zikirController = TextEditingController();
@@ -71,7 +72,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
     text: '33',
   );
   late final AnimationController _tapPulseController;
-  String _currentZikir = 'Subhanallah';
+  String _currentZikir = '';
   List<_SavedZikir> _savedZikirler = _defaultZikirler;
   Map<String, int> _zikirCounts = const {};
 
@@ -117,18 +118,18 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
   String _hapticModeLabel(_ZikirHapticMode mode, String language) {
     switch (mode) {
       case _ZikirHapticMode.off:
-        return _text(language, tr: 'Kapali', en: 'Off', ar: 'Ø¥ÙŠÙ‚Ø§Ù');
+        return _text(language, tr: 'Kapali', en: 'Off', ar: 'Ã˜Â¥Ã™Å Ã™â€šÃ˜Â§Ã™Â');
       case _ZikirHapticMode.everyTap:
         return _text(
           language,
           tr: 'Her dokunus',
           en: 'Every tap',
-          ar: 'ÙƒÙ„ Ù„Ù…Ø³Ø©',
+          ar: 'Ã™Æ’Ã™â€ž Ã™â€žÃ™â€¦Ã˜Â³Ã˜Â©',
         );
       case _ZikirHapticMode.every33:
-        return _text(language, tr: 'Her 33', en: 'Every 33', ar: 'ÙƒÙ„ 33');
+        return _text(language, tr: 'Her 33', en: 'Every 33', ar: 'Ã™Æ’Ã™â€ž 33');
       case _ZikirHapticMode.onTarget:
-        return _text(language, tr: 'Hedefte', en: 'On target', ar: 'Ø¹Ù†Ø¯ Ø§Ù„Ù‡Ø¯Ù');
+        return _text(language, tr: 'Hedefte', en: 'On target', ar: 'Ã˜Â¹Ã™â€ Ã˜Â¯ Ã˜Â§Ã™â€žÃ™â€¡Ã˜Â¯Ã™Â');
     }
   }
 
@@ -177,20 +178,27 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
         }
       }
 
-      final active = saved.firstWhere(
-        (item) => item.name == currentZikir,
-        orElse: () => saved.first,
-      );
-      final target = requestedTarget ?? prefs.getInt(_targetKey) ?? active.target;
+      final active =
+          currentZikir.isEmpty
+              ? null
+              : saved.cast<_SavedZikir?>().firstWhere(
+                  (item) => item?.name == currentZikir,
+                  orElse: () => null,
+                );
+      final target =
+          requestedTarget ?? prefs.getInt(_targetKey) ?? active?.target ?? 33;
 
       setState(() {
         _zikirCounts = zikirCounts;
-        _count = zikirCounts[active.name] ?? prefs.getInt(_countKey) ?? 0;
+        _count =
+            active != null
+                ? zikirCounts[active.name] ?? prefs.getInt(_countKey) ?? 0
+                : prefs.getInt(_countKey) ?? 0;
         _target = target;
         _hapticMode = _ZikirHapticMode.values.byName(
           prefs.getString(_hapticModeKey) ?? _ZikirHapticMode.everyTap.name,
         );
-        _currentZikir = active.name;
+        _currentZikir = active?.name ?? '';
         _savedZikirler = saved;
         _zikirController.clear();
         _zikirTargetController.text =
@@ -205,8 +213,8 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
       if (!mounted) return;
       setState(() {
         _savedZikirler = _defaultZikirler;
-        _currentZikir = _defaultZikirler.first.name;
-        _target = _defaultZikirler.first.target;
+        _currentZikir = '';
+        _target = 33;
         _count = 0;
         _zikirCounts = const {};
         _zikirTargetController.text = _target.toString();
@@ -218,7 +226,9 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
   Future<void> _saveState() async {
     final prefs = await SharedPreferences.getInstance();
     final counts = Map<String, int>.from(_zikirCounts);
-    counts[_currentZikir] = _count;
+    if (_currentZikir.isNotEmpty) {
+      counts[_currentZikir] = _count;
+    }
     await prefs.setInt(_countKey, _count);
     await prefs.setInt(_targetKey, _target);
     await prefs.setString(_hapticModeKey, _hapticMode.name);
@@ -234,23 +244,39 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
     final nextCount = _count + 1;
     _tapPulseController.forward(from: 0);
     setState(() {
+      _isHapticMenuOpen = false;
       _count = nextCount;
-      _zikirCounts = {
-        ..._zikirCounts,
-        _currentZikir: nextCount,
-      };
+      if (_currentZikir.isNotEmpty) {
+        _zikirCounts = {
+          ..._zikirCounts,
+          _currentZikir: nextCount,
+        };
+      }
     });
     await _triggerHapticIfNeeded(nextCount);
+    await _saveState();
+  }
+
+  Future<void> _clearCounter() async {
+    setState(() {
+      _currentZikir = '';
+      _count = 0;
+      _target = 33;
+      _zikirTargetController.text = '33';
+      _zikirController.clear();
+    });
     await _saveState();
   }
 
   Future<void> _reset() async {
     setState(() {
       _count = 0;
-      _zikirCounts = {
-        ..._zikirCounts,
-        _currentZikir: 0,
-      };
+      if (_currentZikir.isNotEmpty) {
+        _zikirCounts = {
+          ..._zikirCounts,
+          _currentZikir: 0,
+        };
+      }
     });
     await _saveState();
   }
@@ -266,9 +292,16 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
     await _saveState();
   }
 
+  Future<void> _applyTypedTarget() async {
+    final parsedTarget = int.tryParse(_zikirTargetController.text.trim()) ?? _target;
+    final nextTarget = parsedTarget <= 0 ? _target : parsedTarget;
+    await _setTarget(nextTarget);
+  }
+
   Future<void> _setHapticMode(_ZikirHapticMode mode) async {
     setState(() {
       _hapticMode = mode;
+      _isHapticMenuOpen = false;
     });
     await _saveState();
   }
@@ -450,30 +483,44 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
   String _normalizeLegacyZikirName(String? value) {
     final raw = value?.trim();
     if (raw == null || raw.isEmpty) {
-      return _defaultZikirler.first.name;
+      return '';
     }
 
     final normalized = raw
         .toLowerCase()
-        .replaceAll('â', 'a')
+        .replaceAll('Ã¢', 'a') // Legacy broken characters
+        .replaceAll('Ã®', 'i')
+        .replaceAll('Ã»', 'u')
+        .replaceAll('Ã¼', 'u')
+        .replaceAll('Ã¡', 'a')
+        .replaceAll('Ã£', 'a')
+        .replaceAll('Â¢', 'a')
+        .replaceAll('Ã ', 'a')
+        .replaceAll('Ã¤', 'a')
+        .replaceAll('ã¼', 'u')
+        .replaceAll('ã¢', 'a')
+        .replaceAll('ã®', 'i')
+        .replaceAll('ã»', 'u')
+        .replaceAll('â¢', 'a')
+        .replaceAll('â', 'a') // Proper Turkish/Arabic characters
         .replaceAll('î', 'i')
         .replaceAll('û', 'u')
         .replaceAll('ü', 'u')
-        .replaceAll('á', 'a')
-        .replaceAll('ã', 'a')
-        .replaceAll('¢', 'a')
-        .replaceAll('à', 'a')
-        .replaceAll('ä', 'a')
+        .replaceAll('ş', 's')
+        .replaceAll('ç', 'c')
+        .replaceAll('ö', 'o')
+        .replaceAll('ğ', 'g')
+        .replaceAll('ı', 'i')
         .replaceAll(' ', '')
         .replaceAll(',', '')
         .replaceAll("'", '');
 
     const aliases = {
-      'subhanallah': 'Sübhânallah',
-      'subhanallahh': 'Sübhânallah',
+      'subhanallah': 'Sübhanallah',
+      'subhanallahh': 'Sübhanallah',
       'elhamdulillah': 'Elhamdülillah',
-      'allahuekber': 'Allâhu ekber',
-      'allahuakbar': 'Allâhu ekber',
+      'allahuekber': 'Allahu ekber',
+      'allahuakbar': 'Allahu ekber',
       'allahummesallialaseyyidinamuhammed':
           'Allahümme salli alâ seyyidinâ Muhammed',
       'allah': 'Allâh',
@@ -601,6 +648,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
             curve: Curves.easeOut,
             padding: EdgeInsets.only(bottom: bottomInset),
             child: Container(
+              width: double.infinity,
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.of(context).size.height * 0.82,
               ),
@@ -608,12 +656,14 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
               decoration: BoxDecoration(
                 color: cardColor,
                 borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(28),
+                  top: Radius.circular(0),
                 ),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withOpacity(0.08)
-                      : Colors.white.withOpacity(0.86),
+                border: Border(
+                  top: BorderSide(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.08)
+                        : Colors.white.withOpacity(0.86),
+                  ),
                 ),
               ),
               child: StatefulBuilder(
@@ -656,7 +706,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                                     language,
                                     tr: 'Zikirmatik ayarlari',
                                     en: 'Dhikr counter settings',
-                                    ar: 'Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ø§Ù„Ø³Ø¨Ø­Ø©',
+                                    ar: 'Ã˜Â¥Ã˜Â¹Ã˜Â¯Ã˜Â§Ã˜Â¯Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â¨Ã˜Â­Ã˜Â©',
                                   ),
                                   style: TextStyle(
                                     fontSize: 20,
@@ -673,7 +723,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                                     en:
                                         'Manage your target, haptics, and saved dhikr list.',
                                     ar:
-                                        'Ø£Ø¯Ø± Ø§Ù„Ù‡Ø¯Ù ÙˆØ§Ù„Ø§Ù‡ØªØ²Ø§Ø² ÙˆÙ‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø£Ø°ÙƒØ§Ø± Ø§Ù„Ù…Ø­ÙÙˆØ¸Ø©.',
+                                        'Ã˜Â£Ã˜Â¯Ã˜Â± Ã˜Â§Ã™â€žÃ™â€¡Ã˜Â¯Ã™Â Ã™Ë†Ã˜Â§Ã™â€žÃ˜Â§Ã™â€¡Ã˜ÂªÃ˜Â²Ã˜Â§Ã˜Â² Ã™Ë†Ã™â€šÃ˜Â§Ã˜Â¦Ã™â€¦Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â£Ã˜Â°Ã™Æ’Ã˜Â§Ã˜Â± Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â­Ã™ÂÃ™Ë†Ã˜Â¸Ã˜Â©.',
                                   ),
                                   style: TextStyle(
                                     fontSize: 13,
@@ -700,7 +750,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                                     language,
                                     tr: 'Aktif',
                                     en: 'Active',
-                                    ar: 'Ø§Ù„Ù†Ø´Ø·',
+                                    ar: 'Ã˜Â§Ã™â€žÃ™â€ Ã˜Â´Ã˜Â·',
                                   ),
                                   style: TextStyle(
                                     fontSize: 11,
@@ -724,100 +774,262 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                       ),
                       const SizedBox(height: 18),
                       _SettingsSectionCard(
+                        isExpandable: true,
+                        isExpanded: _isSavedZikirExpanded,
+                        onToggle: () {
+                          setSheetState(() {
+                            _isSavedZikirExpanded = !_isSavedZikirExpanded;
+                          });
+                        },
                         title: _text(
                           language,
-                          tr: 'Hedef',
-                          en: 'Target',
-                          ar: 'Ø§Ù„Ù‡Ø¯Ù',
+                          tr: 'Kayıtlı zikirler',
+                          en: 'Saved dhikr',
+                          ar: 'Saved dhikr',
                         ),
                         subtitle: _text(
                           language,
-                          tr: 'Sayac tamamlanma sayisini sec.',
-                          en: 'Choose the completion count for the counter.',
-                          ar: 'Ø§Ø®ØªØ± Ø¹Ø¯Ø¯ Ø§Ù„Ø¥ÙƒÙ…Ø§Ù„ Ù„Ù„Ø¹Ø¯Ø§Ø¯.',
+                          tr: 'Yeni zikir ekle, sec veya gerekmeyenleri kaldir.',
+                          en: 'Add, select, or remove your saved dhikr entries.',
+                          ar: 'Add, select, or remove your saved dhikr entries.',
                         ),
                         textPrimary: textPrimary,
                         borderColor: isDark
                             ? Colors.white.withOpacity(0.06)
                             : Colors.black.withOpacity(0.04),
                         accentSoft: accentSoft,
-                        child: Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: [33, 99, 100, 500].map((value) {
-                            final isSelected = _target == value;
-                            return ChoiceChip(
-                              label: Text('$value'),
-                              selected: isSelected,
-                              onSelected: (_) => refreshSheet(
-                                () => _setTarget(value),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TextField(
+                              controller: _zikirController,
+                              style: TextStyle(
+                                color: textPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              decoration: InputDecoration(
+                                labelText: _text(
+                                  language,
+                                  tr: 'Zikir metni',
+                                  en: 'Dhikr text',
+                                  ar: 'Dhikr text',
+                                ),
+                                hintText: _text(
+                                  language,
+                                  tr: 'Ornek: Subhanallah',
+                                  en: 'Example: Subhanallah',
+                                  ar: 'Example: Subhanallah',
+                                ),
+                                filled: true,
+                                fillColor: accentSoft.withOpacity(0.92),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                              onSubmitted: (_) => refreshSheet(
+                                () => _saveZikir(openCounter: true),
                                 setSheetState,
                               ),
-                              selectedColor: accent,
-                              backgroundColor: accentSoft,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: _zikirTargetController,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                              style: TextStyle(
+                                color: textPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
                               ),
-                              labelStyle: TextStyle(
-                                color: isSelected
-                                    ? (isDark
-                                        ? AppColors.darkBg
-                                        : Colors.white)
-                                    : textPrimary,
-                                fontWeight: FontWeight.w800,
+                              decoration: InputDecoration(
+                                labelText: _text(
+                                  language,
+                                  tr: 'Hedef sayisi',
+                                  en: 'Target count',
+                                  ar: 'Target count',
+                                ),
+                                hintText: '33',
+                                filled: true,
+                                fillColor: accentSoft.withOpacity(0.92),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                  borderSide: BorderSide.none,
+                                ),
                               ),
-                              side: BorderSide.none,
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      _SettingsSectionCard(
-                        title: _text(
-                          language,
-                          tr: 'Titresim',
-                          en: 'Haptics',
-                          ar: 'Ø§Ù„Ø§Ù‡ØªØ²Ø§Ø²',
-                        ),
-                        subtitle: _text(
-                          language,
-                          tr: 'Dokunusta hangi geri bildirim verilsin.',
-                          en: 'Choose the feedback you want on tap.',
-                          ar: 'Ø§Ø®ØªØ± Ù†ÙˆØ¹ Ø§Ù„Ø§Ø³ØªØ¬Ø§Ø¨Ø© Ø¹Ù†Ø¯ Ø§Ù„Ù„Ù…Ø³.',
-                        ),
-                        textPrimary: textPrimary,
-                        borderColor: isDark
-                            ? Colors.white.withOpacity(0.06)
-                            : Colors.black.withOpacity(0.04),
-                        accentSoft: accentSoft,
-                        child: Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: _ZikirHapticMode.values.map((mode) {
-                            final isSelected = _hapticMode == mode;
-                            return ChoiceChip(
-                              label: Text(_hapticModeLabel(mode, language)),
-                              selected: isSelected,
-                              onSelected: (_) => refreshSheet(
-                                () => _setHapticMode(mode),
+                              onSubmitted: (_) => refreshSheet(
+                                () => _saveZikir(openCounter: true),
                                 setSheetState,
                               ),
-                              selectedColor: accent,
-                              backgroundColor: accentSoft,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: () => refreshSheet(
+                                  () => _saveZikir(openCounter: true),
+                                  setSheetState,
+                                ),
+                                icon: const Icon(Icons.add_rounded, size: 18),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: accent,
+                                  foregroundColor:
+                                      isDark ? AppColors.darkBg : Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 15,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                ),
+                                label: Text(
+                                  _text(
+                                    language,
+                                    tr: 'Listeye kaydet',
+                                    en: 'Save to list',
+                                    ar: 'Save to list',
+                                  ),
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
                               ),
-                              labelStyle: TextStyle(
-                                color: isSelected
-                                    ? (isDark
-                                        ? AppColors.darkBg
-                                        : Colors.white)
-                                    : textPrimary,
-                                fontWeight: FontWeight.w800,
-                              ),
-                              side: BorderSide.none,
-                            );
-                          }).toList(),
+                            ),
+                            const SizedBox(height: 14),
+                            ..._savedZikirler.map((zikir) {
+                              final count = _zikirCounts[zikir.name] ?? 0;
+                              final isSelected = zikir.name == _currentZikir;
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(18),
+                                    onTap: () async {
+                                      await refreshSheet(
+                                        () => _openCounterForZikir(zikir.name),
+                                        setSheetState,
+                                      );
+                                      if (context.mounted) {
+                                        Navigator.of(context).maybePop();
+                                      }
+                                    },
+                                    child: Ink(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        14,
+                                        14,
+                                        10,
+                                        14,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? accent.withOpacity(0.12)
+                                            : accentSoft.withOpacity(0.58),
+                                        borderRadius: BorderRadius.circular(18),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? accent.withOpacity(0.28)
+                                              : Colors.transparent,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  zikir.name,
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    fontSize: 15,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: textPrimary,
+                                                    height: 1.2,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 6),
+                                                Wrap(
+                                                  spacing: 8,
+                                                  runSpacing: 8,
+                                                  children: [
+                                                    _LibraryMetaChip(
+                                                      label: _text(
+                                                        language,
+                                                        tr: 'Sayac',
+                                                        en: 'Count',
+                                                        ar: 'Count',
+                                                      ),
+                                                      value: '$count',
+                                                      accent: accent,
+                                                      background: Colors.white
+                                                          .withOpacity(
+                                                        isDark ? 0.06 : 0.62,
+                                                      ),
+                                                      textColor: textPrimary,
+                                                    ),
+                                                    _LibraryMetaChip(
+                                                      label: _text(
+                                                        language,
+                                                        tr: 'Hedef',
+                                                        en: 'Target',
+                                                        ar: 'Target',
+                                                      ),
+                                                      value: '${zikir.target}',
+                                                      accent: accent,
+                                                      background: Colors.white
+                                                          .withOpacity(
+                                                        isDark ? 0.06 : 0.62,
+                                                      ),
+                                                      textColor: textPrimary,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          if (!_isDefaultZikir(zikir.name))
+                                            IconButton(
+                                              onPressed: () => refreshSheet(
+                                                () => _removeZikir(zikir.name),
+                                                setSheetState,
+                                              ),
+                                              icon: Icon(
+                                                Icons.delete_outline_rounded,
+                                                color: textPrimary.withOpacity(
+                                                  0.62,
+                                                ),
+                                              ),
+                                              tooltip: _text(
+                                                language,
+                                                tr: 'Sil',
+                                                en: 'Delete',
+                                                ar: 'Delete',
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ],
                         ),
                       ),
                     ],
@@ -876,29 +1088,141 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
               ? Center(
                   child: CircularProgressIndicator(color: accent),
                 )
-              : (_viewMode == _ZikirViewMode.library
-                    ? _buildLibraryView(
-                        context: context,
-                        language: language,
-                        isDark: isDark,
-                        cardColor: cardColor,
-                        textPrimary: textPrimary,
-                        textSecondary: textSecondary,
-                        accent: accent,
-                        accentSoft: accentSoft,
-                      )
-                    : _buildCounterView(
-                        context: context,
-                        language: language,
-                        isDark: isDark,
-                        cardColor: cardColor,
-                        textPrimary: textPrimary,
-                        textSecondary: textSecondary,
-                        accent: accent,
-                        accentSoft: accentSoft,
-                        progress: progress,
-                      )),
+              : _buildCounterView(
+                  context: context,
+                  language: language,
+                  isDark: isDark,
+                  cardColor: cardColor,
+                  textPrimary: textPrimary,
+                  textSecondary: textSecondary,
+                  accent: accent,
+                  accentSoft: accentSoft,
+                  progress: progress,
+                ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildHapticQuickMenu({
+    required String language,
+    required bool isDark,
+    required Color cardColor,
+    required Color textPrimary,
+    required Color textSecondary,
+    required Color accent,
+    required Color accentSoft,
+  }) {
+    return Positioned(
+      left: 0,
+      top: -30,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () {
+                setState(() {
+                  _isHapticMenuOpen = !_isHapticMenuOpen;
+                });
+              },
+              child: Ink(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: cardColor.withOpacity(isDark ? 0.72 : 0.82),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.10)
+                        : Colors.black.withOpacity(0.06),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.18 : 0.06),
+                      blurRadius: 18,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.vibration_rounded,
+                  color: _hapticMode == _ZikirHapticMode.off
+                      ? textSecondary
+                      : accent,
+                  size: 22,
+                ),
+              ),
+            ),
+          ),
+          AnimatedOpacity(
+            duration: const Duration(milliseconds: 180),
+            opacity: _isHapticMenuOpen ? 1 : 0,
+            child: IgnorePointer(
+              ignoring: !_isHapticMenuOpen,
+              child: Container(
+                margin: const EdgeInsets.only(left: 8),
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: cardColor.withOpacity(isDark ? 0.82 : 0.90),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.10)
+                        : Colors.black.withOpacity(0.06),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(isDark ? 0.22 : 0.08),
+                      blurRadius: 22,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: _ZikirHapticMode.values.map((mode) {
+                    final isSelected = _hapticMode == mode;
+                    return Padding(
+                      padding: EdgeInsets.only(
+                          right: mode != _ZikirHapticMode.values.last ? 6 : 0),
+                      child: Material(
+                        color: isSelected
+                            ? accent.withOpacity(0.88)
+                            : accentSoft.withOpacity(isDark ? 0.34 : 0.62),
+                        borderRadius: BorderRadius.circular(13),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(13),
+                          onTap: () => _setHapticMode(mode),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
+                            child: Text(
+                              _hapticModeLabel(mode, language),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: isSelected
+                                    ? (isDark
+                                        ? AppColors.darkBg
+                                        : Colors.white)
+                                    : textPrimary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -914,8 +1238,12 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
     required Color accentSoft,
     required double progress,
   }) {
-    return ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+    return RefreshIndicator(
+      onRefresh: _clearCounter,
+      color: accent,
+      backgroundColor: cardColor,
+      child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
                   children: [
                     Row(
                       children: [
@@ -928,39 +1256,22 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                           ),
                           tooltip: _text(
                             language,
-                            tr: 'Anasayfaya don',
+                            tr: 'Anasayfaya dön',
                             en: 'Go home',
-                            ar: 'Go home',
+                            ar: 'العودة للرئيسية',
                           ),
                         ),
                         const SizedBox(width: 4),
-                        if (widget.openLibraryFirst) ...[
-                          IconButton(
-                            onPressed: _openLibrary,
-                            icon: Icon(
-                              Icons.arrow_back_ios_new_rounded,
-                              color: textPrimary,
-                              size: 20,
-                            ),
-                            tooltip: _text(
-                              language,
-                              tr: 'Listeye don',
-                              en: 'Back to list',
-                              ar: 'Back to list',
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                        ],
                         Expanded(
                           child: Text(
                             _text(
                               language,
                               tr: 'Zikirmatik',
                               en: 'Dhikr Counter',
-                              ar: 'Ø§Ù„Ø³Ø¨Ø­Ø©',
+                              ar: 'السبحة',
                             ),
                             style: TextStyle(
-                              fontSize: 28,
+                              fontSize: 24,
                               fontWeight: FontWeight.w900,
                               color: textPrimary,
                             ),
@@ -981,17 +1292,17 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                             language,
                             tr: 'Ayarlar',
                             en: 'Settings',
-                            ar: 'Ø§Ù„Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª',
+                            ar: 'الإعدادات',
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 6),
                     Container(
-                      padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
                       decoration: BoxDecoration(
                         color: cardColor,
-                        borderRadius: BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(26),
                         border: Border.all(
                           color: isDark
                               ? Colors.white.withOpacity(0.08)
@@ -1012,64 +1323,102 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Expanded(
-                                child: _InfoPill(
-                                  label: _text(
-                                    language,
-                                    tr: 'Hedef',
-                                    en: 'Target',
-                                    ar: 'Ø§Ù„Ù‡Ø¯Ù',
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: accentSoft,
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  value: '$_target',
-                                  accentSoft: accentSoft,
-                                  textColor: textPrimary,
-                                  subtitleColor: textSecondary,
-                                  compact: true,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        _text(
+                                          language,
+                                          tr: 'Hedef',
+                                          en: 'Target',
+                                          ar: 'Ã˜Â§Ã™â€žÃ™â€¡Ã˜Â¯Ã™Â',
+                                        ),
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: textSecondary,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 1),
+                                      TextField(
+                                        controller: _zikirTargetController,
+                                        keyboardType: TextInputType.number,
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter.digitsOnly,
+                                        ],
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w900,
+                                          color: textPrimary,
+                                        ),
+                                        decoration: const InputDecoration(
+                                          isDense: true,
+                                          contentPadding: EdgeInsets.zero,
+                                          border: InputBorder.none,
+                                        ),
+                                        onTapOutside: (_) {
+                                          FocusScope.of(context).unfocus();
+                                          _applyTypedTarget();
+                                        },
+                                        onSubmitted: (_) {
+                                          FocusScope.of(context).unfocus();
+                                          _applyTypedTarget();
+                                        },
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 6),
                               Column(
                                 children: [
                                   Text(
                                     '$_count',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
-                                      fontSize: 62,
+                                        fontSize: 28,
                                       fontWeight: FontWeight.w900,
                                       color: textPrimary,
                                       height: 1,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 1),
                                   Text(
                                     _count >= _target
                                         ? _text(
                                             language,
                                             tr: 'Tamam',
                                             en: 'Done',
-                                            ar: 'ØªÙ…',
+                                            ar: 'Ã˜ÂªÃ™â€¦',
                                           )
                                         : _text(
                                             language,
                                             tr: 'Sayac',
                                             en: 'Counter',
-                                            ar: 'Ø§Ù„Ø¹Ø¯Ø§Ø¯',
+                                            ar: 'Ã˜Â§Ã™â€žÃ˜Â¹Ã˜Â¯Ã˜Â§Ã˜Â¯',
                                           ),
                                     style: TextStyle(
-                                      fontSize: 12,
+                                      fontSize: 10,
                                       fontWeight: FontWeight.w700,
                                       color: textSecondary,
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 6),
                               Expanded(
                                 child: _InfoPill(
                                   label: _text(
                                     language,
                                     tr: 'Kalan',
                                     en: 'Left',
-                                    ar: 'Ø§Ù„Ù…ØªØ¨Ù‚ÙŠ',
+                                    ar: 'Ã˜Â§Ã™â€žÃ™â€¦Ã˜ÂªÃ˜Â¨Ã™â€šÃ™Å ',
                                   ),
                                   value: '${(_target - _count).clamp(0, _target)}',
                                   accentSoft: accentSoft,
@@ -1080,20 +1429,10 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(999),
-                            child: LinearProgressIndicator(
-                              value: progress,
-                              minHeight: 10,
-                              backgroundColor: accentSoft,
-                              color: accent,
-                            ),
-                          ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 54),
                     GestureDetector(
                       onTap: _increment,
                       child: SizedBox(
@@ -1108,6 +1447,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                             final coreScale = 1 - (pulse * 0.035);
 
                             return Stack(
+                              clipBehavior: Clip.none,
                               alignment: Alignment.center,
                               children: [
                                 Transform.scale(
@@ -1132,8 +1472,8 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                                   child: Opacity(
                                     opacity: (1 - pulse) * 0.20,
                                     child: Container(
-                                      width: 280,
-                                      height: 280,
+                                      width: 250,
+                                      height: 250,
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
                                         color: accent.withOpacity(0.22),
@@ -1141,13 +1481,42 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                                     ),
                                   ),
                                 ),
+                                TweenAnimationBuilder<double>(
+                                  tween: Tween<double>(begin: 0, end: progress),
+                                  duration: const Duration(milliseconds: 350),
+                                  curve: Curves.easeOutCubic,
+                                  builder: (context, val, _) {
+                                    return Transform.scale(
+                                      scale: coreScale,
+                                      child: SizedBox(
+                                        width: 270,
+                                        height: 270,
+                                        child: CircularProgressIndicator(
+                                          value: val,
+                                          strokeWidth: 12,
+                                          backgroundColor: accentSoft.withOpacity(0.35),
+                                          color: accent,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                                 Transform.scale(scale: coreScale, child: child),
+                                _buildHapticQuickMenu(
+                                  language: language,
+                                  isDark: isDark,
+                                  cardColor: cardColor,
+                                  textPrimary: textPrimary,
+                                  textSecondary: textSecondary,
+                                  accent: accent,
+                                  accentSoft: accentSoft,
+                                ),
                               ],
                             );
                           },
                           child: Container(
-                            width: 280,
-                            height: 280,
+                            width: 240,
+                            height: 240,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: LinearGradient(
@@ -1192,7 +1561,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                                       language,
                                       tr: 'Dokun',
                                       en: 'Tap',
-                                      ar: 'Ø§Ù„Ù…Ø³',
+                                      ar: 'Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³',
                                     ),
                                     style: const TextStyle(
                                       fontSize: 30,
@@ -1207,19 +1576,22 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                         ),
                       ),
                     ),
-                    const SizedBox(height: 22),
-                    Center(
-                      child: Text(
-                        _currentZikir,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: textPrimary,
+                    if (_currentZikir.isNotEmpty) ...[
+                      const SizedBox(height: 22),
+                      Center(
+                        child: Text(
+                          _currentZikir,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: textPrimary,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 18),
+                      const SizedBox(height: 18),
+                    ] else
+                      const SizedBox(height: 14),
                     OutlinedButton.icon(
                       onPressed: _reset,
                       icon: const Icon(Icons.refresh_rounded),
@@ -1228,7 +1600,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                           language,
                           tr: 'Sayaci sifirla',
                           en: 'Reset counter',
-                          ar: 'Ø¥Ø¹Ø§Ø¯Ø© Ø¶Ø¨Ø· Ø§Ù„Ø¹Ø¯Ø§Ø¯',
+                          ar: 'Ã˜Â¥Ã˜Â¹Ã˜Â§Ã˜Â¯Ã˜Â© Ã˜Â¶Ã˜Â¨Ã˜Â· Ã˜Â§Ã™â€žÃ˜Â¹Ã˜Â¯Ã˜Â§Ã˜Â¯',
                         ),
                       ),
                       style: OutlinedButton.styleFrom(
@@ -1236,7 +1608,8 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                       ),
                     ),
                   ],
-                );
+                ),
+    );
   }
 
   Widget _buildLibraryView({
@@ -1250,7 +1623,7 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
     required Color accentSoft,
   }) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
       children: [
         Row(
           children: [
@@ -1279,8 +1652,8 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                       en: 'Saved dhikr',
                       ar: 'Saved dhikr',
                     ),
-                    style: TextStyle(
-                      fontSize: 28,
+                   style: TextStyle(
+                      fontSize: 26,
                       fontWeight: FontWeight.w900,
                       color: textPrimary,
                     ),
@@ -1294,8 +1667,9 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                       ar: 'Choose a dhikr or add a new one.',
                     ),
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: FontWeight.w500,
+                      height: 1.35,
                       color: textSecondary,
                     ),
                   ),
@@ -1324,10 +1698,10 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
         ),
         const SizedBox(height: 18),
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
           decoration: BoxDecoration(
             color: cardColor,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(28),
             border: Border.all(
               color: isDark
                   ? Colors.white.withOpacity(0.08)
@@ -1341,91 +1715,158 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _text(
-                  language,
-                  tr: 'Yeni zikir ekle',
-                  en: 'Add new dhikr',
-                  ar: 'Add new dhikr',
-                ),
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: textPrimary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _zikirController,
-                style: TextStyle(color: textPrimary),
-                decoration: InputDecoration(
-                  hintText: _text(
-                    language,
-                    tr: 'Zikir metni',
-                    en: 'Dhikr text',
-                    ar: 'Dhikr text',
-                  ),
-                  filled: true,
-                  fillColor: accentSoft,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-                onSubmitted: (_) => _saveZikir(),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _zikirTargetController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                style: TextStyle(color: textPrimary),
-                decoration: InputDecoration(
-                  hintText: _text(
-                    language,
-                    tr: 'Hedef sayisi',
-                    en: 'Target count',
-                    ar: 'Target count',
-                  ),
-                  filled: true,
-                  fillColor: accentSoft,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-                onSubmitted: (_) => _saveZikir(),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => _saveZikir(),
-                  icon: const Icon(Icons.add_rounded),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: accent,
-                    foregroundColor: isDark ? AppColors.darkBg : Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: accentSoft,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(
+                        Icons.auto_awesome_rounded,
+                        color: accent,
+                        size: 22,
+                      ),
                     ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _text(
+                              language,
+                              tr: 'Yeni zikir ekle',
+                              en: 'Add new dhikr',
+                              ar: 'Add new dhikr',
+                            ),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            _text(
+                              language,
+                              tr: 'Kendi zikir listesini hizlica olustur.',
+                              en: 'Create a custom dhikr entry in seconds.',
+                              ar: 'Create a custom dhikr entry in seconds.',
+                            ),
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w500,
+                              height: 1.35,
+                              color: textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _zikirController,
+                  style: TextStyle(
+                    color: textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
                   ),
-                  label: Text(
-                    _text(
+                  decoration: InputDecoration(
+                    labelText: _text(
                       language,
-                      tr: 'Listeye kaydet',
-                      en: 'Save to list',
-                      ar: 'Save to list',
+                      tr: 'Zikir metni',
+                      en: 'Dhikr text',
+                      ar: 'Dhikr text',
+                    ),
+                    hintText: _text(
+                      language,
+                      tr: 'Ornek: Subhanallah',
+                      en: 'Example: Subhanallah',
+                      ar: 'Example: Subhanallah',
+                    ),
+                    filled: true,
+                    fillColor: accentSoft,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onSubmitted: (_) => _saveZikir(),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _zikirTargetController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  style: TextStyle(
+                    color: textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  decoration: InputDecoration(
+                    labelText: _text(
+                      language,
+                      tr: 'Hedef sayisi',
+                      en: 'Target count',
+                      ar: 'Target count',
+                    ),
+                    hintText: '33',
+                    filled: true,
+                    fillColor: accentSoft,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  onSubmitted: (_) => _saveZikir(),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => _saveZikir(),
+                    icon: const Icon(Icons.add_rounded, size: 20),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: accent,
+                      foregroundColor: isDark ? AppColors.darkBg : Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 17),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                    label: Text(
+                      _text(
+                        language,
+                        tr: 'Listeye kaydet',
+                        en: 'Save to list',
+                        ar: 'Save to list',
+                      ),
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
         const SizedBox(height: 16),
         ..._savedZikirler.map((zikir) {
           final count = _zikirCounts[zikir.name] ?? 0;
@@ -1457,41 +1898,89 @@ class _ZikirmatikScreenState extends State<ZikirmatikScreen>
                       ),
                     ],
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              zikir.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 21,
-                                fontWeight: FontWeight.w800,
-                                color: textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            RichText(
-                              text: TextSpan(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 46,
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: isSelected ? accent.withOpacity(0.16) : accentSoft,
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          child: Icon(
+                            Icons.menu_book_rounded,
+                            color: isSelected ? accent : textSecondary,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                zikir.name,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: textSecondary,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: textPrimary,
+                                  height: 1.15,
                                 ),
+                              ),
+                              const SizedBox(height: 6),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
                                 children: [
-                                  TextSpan(
-                                    text: '$count',
-                                    style: TextStyle(color: accent),
+                                  _LibraryMetaChip(
+                                    label: _text(
+                                      language,
+                                      tr: 'Sayac',
+                                      en: 'Count',
+                                      ar: 'Count',
+                                    ),
+                                    value: '$count',
+                                    accent: accent,
+                                    background: accentSoft,
+                                    textColor: textPrimary,
                                   ),
-                                  TextSpan(text: ' / ${zikir.target}'),
+                                  _LibraryMetaChip(
+                                    label: _text(
+                                      language,
+                                      tr: 'Hedef',
+                                      en: 'Target',
+                                      ar: 'Target',
+                                    ),
+                                    value: '${zikir.target}',
+                                    accent: accent,
+                                    background: accentSoft,
+                                    textColor: textPrimary,
+                                  ),
+                                  if (isSelected)
+                                    _LibraryMetaChip(
+                                      label: _text(
+                                        language,
+                                        tr: 'Durum',
+                                        en: 'Status',
+                                        ar: 'Status',
+                                      ),
+                                      value: _text(
+                                        language,
+                                        tr: 'Aktif',
+                                        en: 'Active',
+                                        ar: 'Active',
+                                      ),
+                                      accent: accent,
+                                      background: accent.withOpacity(0.16),
+                                      textColor: accent,
+                                    ),
                                 ],
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
                       ),
                       if (!_isDefaultZikir(zikir.name))
                         IconButton(
@@ -1559,6 +2048,9 @@ class _SettingsSectionCard extends StatelessWidget {
     required this.borderColor,
     required this.accentSoft,
     required this.child,
+    this.isExpandable = false,
+    this.isExpanded = true,
+    this.onToggle,
   });
 
   final String title;
@@ -1567,41 +2059,86 @@ class _SettingsSectionCard extends StatelessWidget {
   final Color borderColor;
   final Color accentSoft;
   final Widget child;
+  final bool isExpandable;
+  final bool isExpanded;
+  final VoidCallback? onToggle;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: accentSoft.withOpacity(0.42),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: borderColor),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: textPrimary,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: isExpandable ? onToggle : null,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              fontSize: 13,
+                              height: 1.35,
+                              fontWeight: FontWeight.w500,
+                              color: textPrimary.withOpacity(0.65),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isExpandable)
+                      Icon(
+                        isExpanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        color: textPrimary.withOpacity(0.5),
+                        size: 26,
+                      ),
+                  ],
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.fastOutSlowIn,
+                  alignment: Alignment.topCenter,
+                  child: Container(
+                    width: double.infinity,
+                    child: isExpanded
+                        ? Padding(
+                            padding: const EdgeInsets.only(top: 14),
+                            child: child,
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 12,
-              height: 1.35,
-              fontWeight: FontWeight.w500,
-              color: textPrimary.withOpacity(0.65),
-            ),
-          ),
-          const SizedBox(height: 14),
-          child,
-        ],
+        ),
       ),
     );
   }
@@ -1627,10 +2164,10 @@ class _InfoPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: accentSoft,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1638,21 +2175,67 @@ class _InfoPill extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 10,
               fontWeight: FontWeight.w700,
               color: subtitleColor,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 1),
           Text(
             value,
             style: TextStyle(
-              fontSize: compact ? 20 : 24,
+              fontSize: compact ? 15 : 20,
               fontWeight: FontWeight.w900,
               color: textColor,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _LibraryMetaChip extends StatelessWidget {
+  const _LibraryMetaChip({
+    required this.label,
+    required this.value,
+    required this.accent,
+    required this.background,
+    required this.textColor,
+  });
+
+  final String label;
+  final String value;
+  final Color accent;
+  final Color background;
+  final Color textColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: textColor.withOpacity(0.72),
+          ),
+          children: [
+            TextSpan(text: '$label: '),
+            TextSpan(
+              text: value,
+              style: TextStyle(
+                color: accent,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

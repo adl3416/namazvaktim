@@ -187,10 +187,13 @@ String _text(
   required String tr,
   required String en,
   required String ar,
+  String? de,
 }) {
   switch (locale) {
     case 'tr':
       return tr;
+    case 'de':
+      return de ?? en;
     case 'ar':
       return ar;
     default:

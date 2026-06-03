@@ -1616,8 +1616,8 @@ _HomeTheme _homeThemeForPrayer(String? prayerName, bool isDark) {
       pageBackgroundSoft: Color(0xFFF1F8FF),
       accent: Color(0xFF3A89FF),
       accentDark: Color(0xFF1E5EDB),
-      overlayTop: Color(0x160D4F9A),
-      overlayBottom: Color(0x700A5AB5),
+      overlayTop: Color(0x0D0D4F9A),
+      overlayBottom: Color(0x340A5AB5),
       cardTint: Color(0xFF81B6FF),
       shadow: Color(0xFF164A9C),
     );
@@ -1629,8 +1629,8 @@ _HomeTheme _homeThemeForPrayer(String? prayerName, bool isDark) {
       pageBackgroundSoft: Color(0xFFFFF0E0),
       accent: Color(0xFFFF8A1E),
       accentDark: Color(0xFFDB5D00),
-      overlayTop: Color(0x1B5A3E10),
-      overlayBottom: Color(0x7A6A3412),
+      overlayTop: Color(0x105A3E10),
+      overlayBottom: Color(0x386A3412),
       cardTint: Color(0xFFFFB263),
       shadow: Color(0xFFA34E00),
     );
@@ -1677,12 +1677,12 @@ _HomeTheme _homeThemeForPrayer(String? prayerName, bool isDark) {
 Color _heroImageTopShadeForPrayer(String? prayerName) {
   final normalized = (prayerName ?? '').toLowerCase();
   if (normalized.contains('dhuhr') || normalized.contains('ogle')) {
-    return Colors.black.withOpacity(0.08);
+    return Colors.black.withOpacity(0.04);
   }
   if (normalized.contains('asr') || normalized.contains('ikindi')) {
-    return Colors.black.withOpacity(0.11);
+    return Colors.black.withOpacity(0.06);
   }
-  return Colors.black.withOpacity(0.16);
+  return Colors.black.withOpacity(0.10);
 }
 
 ColorFilter _backgroundColorFilterForPrayer(String? prayerName) {

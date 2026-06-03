@@ -134,6 +134,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               Locale('en'),
               Locale('tr'),
               Locale('ar'),
+              Locale('de'),
             ],
             localeResolutionCallback: (locale, supportedLocales) {
               if (locale != null) {
@@ -246,6 +247,27 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: AppColors.lightBgSecondary,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          side: BorderSide(color: AppColors.divider),
+        ),
+        textStyle: AppTypography.bodyMedium.copyWith(
+          color: AppColors.textPrimary,
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: AppColors.textPrimary,
+        contentTextStyle: AppTypography.bodyMedium.copyWith(
+          color: Colors.white,
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
       ),
       dividerColor: AppColors.divider,
@@ -374,6 +396,27 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: AppColors.darkBgSecondary,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          side: BorderSide(color: AppColors.darkDivider),
+        ),
+        textStyle: AppTypography.bodyMedium.copyWith(
+          color: AppColors.darkTextPrimary,
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: AppColors.darkBgSecondary,
+        contentTextStyle: AppTypography.bodyMedium.copyWith(
+          color: AppColors.darkTextPrimary,
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
         ),
       ),
       dividerColor: AppColors.darkDivider,

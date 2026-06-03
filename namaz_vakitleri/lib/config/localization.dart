@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:intl/intl.dart';
 
 class AppLocalizations {
-  static const supportedLanguages = <String>['tr', 'en', 'ar'];
+  static const supportedLanguages = <String>['tr', 'en', 'ar', 'de'];
 
   static const Map<String, Map<String, String>> translations = {
     'tr': {
@@ -152,6 +152,55 @@ class AppLocalizations {
       'later': 'لاحقًا',
       'go_to_settings': 'الذهاب إلى الإعدادات',
     },
+    'de': {
+      'app_title': 'Ezanlar',
+      'fajr': 'Fadschr',
+      'sunrise': 'Sonnenaufgang',
+      'dhuhr': 'Dhuhr',
+      'asr': 'Asr',
+      'maghrib': 'Maghrib',
+      'isha': 'Isha',
+      'settings': 'Einstellungen',
+      'location': 'Standort',
+      'qibla': 'Qibla',
+      'search_city': 'Stadt suchen',
+      'select_country': 'Land auswählen',
+      'nearby_mosques': 'Moscheen in der Nähe',
+      'prayer_time_label': 'Bis zum Gebet',
+      'iftar_time': 'Zeit bis Iftar',
+      'theme': 'Design',
+      'language': 'Sprache',
+      'notifications': 'Benachrichtigungen',
+      'enable_adhan': 'Adhan-Ton aktivieren',
+      'prayer_notifications': 'Gebetsbenachrichtigungen',
+      'system': 'System',
+      'light': 'Hell',
+      'dark': 'Dunkel',
+      'hour': 'STD',
+      'minute': 'MIN',
+      'second': 'SEK',
+      'cancel': 'Abbrechen',
+      'search': 'Suchen',
+      'loading': 'Wird geladen...',
+      'allow': 'Erlauben',
+      'open_settings': 'Einstellungen öffnen',
+      'notification_imsak': 'Zeit für das Fadschr-Gebet',
+      'notification_sunrise': 'Zeit für den Sonnenaufgang',
+      'notification_noon': 'Zeit für das Dhuhr-Gebet',
+      'notification_afternoon': 'Zeit für das Asr-Gebet',
+      'notification_sunset': 'Zeit für das Maghrib-Gebet',
+      'notification_night': 'Zeit für das Isha-Gebet',
+      'adhan_enabled': 'Adhan-Ton aktiviert',
+      'adhan_disabled': 'Adhan-Ton deaktiviert',
+      'notification_enabled': 'Benachrichtigungen aktiviert',
+      'notification_disabled': 'Benachrichtigungen deaktiviert',
+      'notification_settings': 'Benachrichtigungseinstellungen',
+      'dnd_permission_title': 'Nicht-stören-Berechtigung',
+      'dnd_permission_message':
+          'Damit Gebetsbenachrichtigungen auch im Nicht-stören-Modus funktionieren, musst du den Zugriff erlauben. Öffne die Einstellungen und aktiviere den Zugriff auf "Nicht stören".',
+      'later': 'Später',
+      'go_to_settings': 'Zu den Einstellungen',
+    },
   };
 
   static String translate(String key, String locale) {
@@ -175,7 +224,8 @@ class AppLocalizations {
     }
 
     final systemLocale =
-        WidgetsBinding.instance.platformDispatcher.locale.languageCode.toLowerCase();
+        WidgetsBinding.instance.platformDispatcher.locale.languageCode
+            .toLowerCase();
     return supportedLanguages.contains(systemLocale) ? systemLocale : 'en';
   }
 
@@ -210,18 +260,6 @@ class AppLocalizations {
         normalizedPrayer.contains('yatsı')) {
       return translate('isha', locale);
     }
-    return prayerKey;
-  }
-
-  static String template(
-    String fallback,
-    String locale, {
-    Map<String, String> values = const {},
-  }) {
-    var value = fallback;
-    for (final entry in values.entries) {
-      value = value.replaceAll('{${entry.key}}', entry.value);
-    }
-    return value;
+    return toBeginningOfSentenceCase(prayerKey) ?? prayerKey;
   }
 }

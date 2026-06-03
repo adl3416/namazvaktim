@@ -23,8 +23,10 @@ class NearbyMosquesScreen extends StatefulWidget {
 
 class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
   Future<List<Mosque>>? _nearbyMosquesFuture;
+  final MapController _mapController = MapController();
   double _searchRadius = 10.0;
   String? _lastLocationSignature;
+  String? _lastMapFitSignature;
   bool _isRefreshingLocation = false;
   GeoLocation? _mosqueSearchLocation;
 
@@ -47,7 +49,9 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _tryLoadMosques());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _tryLoadMosques(forceRefreshLocation: true),
+    );
   }
 
   String? _locationSignature(GeoLocation? location) {
@@ -64,13 +68,17 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
     if (_mosqueSearchLocation == null || forceRefreshLocation) {
       setState(() {
         _isRefreshingLocation = true;
+        if (forceRefreshLocation) {
+          _nearbyMosquesFuture = null;
+          _lastLocationSignature = null;
+        }
       });
 
       try {
         _mosqueSearchLocation = await LocationService.getCurrentLocation(
-          preferFresh: false,
-          maxLastKnownAge: const Duration(minutes: 10),
-          freshTimeout: const Duration(seconds: 6),
+          preferFresh: true,
+          maxLastKnownAge: const Duration(minutes: 2),
+          freshTimeout: const Duration(seconds: 12),
         );
       } catch (_) {
         if (!mounted) return;
@@ -87,7 +95,9 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
     final signature = _locationSignature(location);
     if (location != null &&
         signature != null &&
-        (_nearbyMosquesFuture == null || _lastLocationSignature != signature)) {
+        (_nearbyMosquesFuture == null ||
+            _lastLocationSignature != signature ||
+            forceRefreshLocation)) {
       setState(() {
         _lastLocationSignature = signature;
         _nearbyMosquesFuture = MosqueService.getNearbyMosques(
@@ -102,7 +112,40 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
     setState(() {
       _searchRadius = value;
     });
-    _tryLoadMosques();
+  }
+
+  void _applyRadius(double value) {
+    setState(() {
+      _searchRadius = value;
+    });
+    _tryLoadMosques(forceRefreshLocation: true);
+  }
+
+  List<Mosque> _visibleMosques(List<Mosque> source) {
+    final filtered = source
+        .where((mosque) => (mosque.distance ?? double.infinity) <= _searchRadius)
+        .toList();
+    filtered.sort((a, b) =>
+        (a.distance ?? double.infinity).compareTo(b.distance ?? double.infinity));
+    return filtered;
+  }
+
+  void _fitMapToResults(GeoLocation location, List<Mosque> mosques) {
+    final points = <LatLng>[
+      LatLng(location.latitude, location.longitude),
+      ...mosques.map((mosque) => LatLng(mosque.latitude, mosque.longitude)),
+    ];
+
+    if (points.isEmpty) return;
+
+    _mapController.fitCamera(
+      CameraFit.bounds(
+        bounds: LatLngBounds.fromPoints(points),
+        padding: const EdgeInsets.all(36),
+        maxZoom: 15.5,
+        minZoom: 4,
+      ),
+    );
   }
 
   Future<void> _launchExternal(String url) async {
@@ -392,7 +435,21 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
               child: FutureBuilder<List<Mosque>>(
                 future: _nearbyMosquesFuture,
                 builder: (context, snapshot) {
-                  final mosques = snapshot.data ?? const <Mosque>[];
+                  final mosques = _visibleMosques(
+                    snapshot.data ?? const <Mosque>[],
+                  );
+
+                  if (location != null && mosques.isNotEmpty) {
+                    final mapFitSignature =
+                        '${location.latitude.toStringAsFixed(5)}_${location.longitude.toStringAsFixed(5)}_${mosques.length}_${_searchRadius.toStringAsFixed(1)}';
+                    if (_lastMapFitSignature != mapFitSignature) {
+                      _lastMapFitSignature = mapFitSignature;
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        _fitMapToResults(location, mosques);
+                      });
+                    }
+                  }
 
                   return CustomScrollView(
                     physics: const BouncingScrollPhysics(),
@@ -504,11 +561,12 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                               ),
                               const SizedBox(height: 8),
                               _CompactRadiusCard(
-                                radius: _searchRadius,
-                                onChanged: _updateRadius,
-                                isDark: isDark,
-                                locale: locale,
-                              ),
+                                 radius: _searchRadius,
+                                 onChanged: _updateRadius,
+                                 onChangeEnd: _applyRadius,
+                                 isDark: isDark,
+                                 locale: locale,
+                               ),
                             ],
                           ),
                         ),
@@ -599,7 +657,11 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                               borderRadius: BorderRadius.circular(20),
                               child: SizedBox(
                                 height: 220,
-                                child: FlutterMap(
+                               child: FlutterMap(
+                                  mapController: _mapController,
+                                  key: ValueKey(
+                                    '${locationSignature}_${mosques.length}_${_searchRadius.toStringAsFixed(1)}',
+                                  ),
                                   options: MapOptions(
                                     initialCenter: LatLng(
                                       location.latitude,
@@ -746,12 +808,14 @@ class _CompactRadiusCard extends StatelessWidget {
   const _CompactRadiusCard({
     required this.radius,
     required this.onChanged,
+    required this.onChangeEnd,
     required this.isDark,
     required this.locale,
   });
 
   final double radius;
   final ValueChanged<double> onChanged;
+  final ValueChanged<double> onChangeEnd;
   final bool isDark;
   final String locale;
 
@@ -806,6 +870,7 @@ class _CompactRadiusCard extends StatelessWidget {
                 max: 25,
                 divisions: 24,
                 onChanged: onChanged,
+                onChangeEnd: onChangeEnd,
               ),
             ),
           ),

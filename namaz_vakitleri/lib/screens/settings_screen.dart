@@ -16,6 +16,27 @@ import 'theme_selection_screen.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
+  String _backgroundAssetForPrayer(String? prayerName) {
+    final normalized = (prayerName ?? '').toLowerCase();
+
+    if (normalized.contains('sunrise') || normalized.contains('gunes')) {
+      return 'assets/images/gunes_bg.png';
+    }
+    if (normalized.contains('dhuhr') || normalized.contains('ogle')) {
+      return 'assets/images/ogle_bg.png';
+    }
+    if (normalized.contains('asr') || normalized.contains('ikindi')) {
+      return 'assets/images/ikindi_bg.png';
+    }
+    if (normalized.contains('maghrib') || normalized.contains('aksam')) {
+      return 'assets/images/aksam_bg.png';
+    }
+    if (normalized.contains('isha') || normalized.contains('yatsi')) {
+      return 'assets/images/yatsi_bg.png';
+    }
+    return 'assets/images/imsak_bg.png';
+  }
+
   String _text(
     String language, {
     required String tr,
@@ -65,6 +86,9 @@ class SettingsScreen extends StatelessWidget {
       builder: (context, settings, prayerProvider, _) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final locale = settings.language;
+        final bottomSafeSpace = MediaQuery.of(context).padding.bottom + 112;
+        final heroPrayerName =
+            prayerProvider.activePrayer?.name ?? prayerProvider.nextPrayer?.name;
         final currentCity =
             prayerProvider.savedLocationLabel.isNotEmpty
                 ? prayerProvider.savedLocationLabel
@@ -119,16 +143,22 @@ class SettingsScreen extends StatelessWidget {
                         ],
               ),
             ),
-            child: SafeArea(
-              bottom: false,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-                children: [
+              child: SafeArea(
+                top: false,
+                bottom: false,
+                child: ListView(
+                  padding: EdgeInsets.fromLTRB(0, 0, 0, bottomSafeSpace),
+                  children: [
                   _SettingsHero(
                     title: AppLocalizations.translate('settings', locale),
                     isDark: isDark,
+                    backgroundAsset: _backgroundAssetForPrayer(heroPrayerName),
                   ),
                   const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Column(
+                      children: [
                   _SettingsTile(
                     icon: Icons.location_on_rounded,
                     iconColor: const Color(0xFF2563EB),
@@ -227,111 +257,100 @@ class SettingsScreen extends StatelessWidget {
                       );
                     },
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _ActionButtonCard(
-                          icon: Icons.star_rounded,
-                          color: const Color(0xFFF59E0B),
-                          label: _text(
-                            locale,
-                            tr: 'Uygulamayı değerlendir',
-                            en: 'Rate the app',
-                            ar: 'قيّم التطبيق',
-                            de: 'App bewerten',
-                          ),
-                          onTap: _openPlayStore,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _ActionButtonCard(
-                          icon: Icons.share_rounded,
-                          color: const Color(0xFF2563EB),
-                          label: _text(
-                            locale,
-                            tr: 'Uygulamayı paylaş',
-                            en: 'Share the app',
-                            ar: 'شارك التطبيق',
-                            de: 'App teilen',
-                          ),
-                          onTap: () => _shareApp(locale),
-                        ),
-                      ),
-                    ],
+                  _SettingsTile(
+                    icon: Icons.star_rounded,
+                    iconColor: const Color(0xFFF59E0B),
+                    title: _text(
+                      locale,
+                      tr: 'Uygulamayı değerlendir',
+                      en: 'Rate the app',
+                      ar: 'قيّم التطبيق',
+                      de: 'App bewerten',
+                    ),
+                    subtitle: _text(
+                      locale,
+                      tr: 'Play Store üzerinden puan ver ve yorum bırak',
+                      en: 'Rate the app and leave a review on Play Store',
+                      ar: 'قيّم التطبيق واترك مراجعة على متجر Play',
+                      de: 'Bewerte die App und hinterlasse eine Rezension im Play Store',
+                    ),
+                    onTap: _openPlayStore,
                   ),
-                  const SizedBox(height: 12),
+                  _SettingsTile(
+                    icon: Icons.share_rounded,
+                    iconColor: const Color(0xFF2563EB),
+                    title: _text(
+                      locale,
+                      tr: 'Uygulamayı paylaş',
+                      en: 'Share the app',
+                      ar: 'شارك التطبيق',
+                      de: 'App teilen',
+                    ),
+                    subtitle: _text(
+                      locale,
+                      tr: 'Uygulama bağlantısını başkalarıyla gönder',
+                      en: 'Send the app link to others',
+                      ar: 'أرسل رابط التطبيق إلى الآخرين',
+                      de: 'Sende den App-Link an andere weiter',
+                    ),
+                    onTap: () => _shareApp(locale),
+                  ),
+                  const SizedBox(height: 10),
                   Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color:
-                          isDark
-                              ? AppColors.darkBgSecondary.withOpacity(0.92)
-                              : Colors.white.withOpacity(0.78),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color:
-                            isDark
-                                ? Colors.white.withOpacity(0.08)
-                                : Colors.white.withOpacity(0.82),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(isDark ? 0.22 : 0.05),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
+                    width: double.infinity,
+                    height: 1,
+                    color:
+                        isDark
+                            ? Colors.white.withOpacity(0.10)
+                            : Colors.black.withOpacity(0.08),
+                  ),
+                  const SizedBox(height: 14),
+                  Center(
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          width: 42,
+                          height: 42,
+                          child: Image.asset(
+                            'assets/images/app_icon.png',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Ezanlar',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color:
+                                isDark
+                                    ? AppColors.darkTextPrimary
+                                    : const Color(0xFF1E1A16),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _text(
+                            locale,
+                            tr: 'Sürüm 1.0.0',
+                            en: 'Version 1.0.0',
+                            ar: 'الإصدار 1.0.0',
+                          ),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color:
+                                isDark
+                                    ? AppColors.darkTextSecondary
+                                    : const Color(0xFF655B51),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 58,
-                          height: 58,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(18),
-                            image: const DecorationImage(
-                              image: AssetImage('assets/images/app_icon.png'),
-                              fit: BoxFit.contain,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Ezanlar',
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w800,
-                                  color:
-                                      isDark
-                                          ? AppColors.darkTextPrimary
-                                          : const Color(0xFF1E1A16),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _text(
-                                  locale,
-                                  tr: 'Sürüm 1.0.0',
-                                  en: 'Version 1.0.0',
-                                  ar: 'الإصدار 1.0.0',
-                                ),
-                                style: TextStyle(
-                                  color:
-                                      isDark
-                                          ? AppColors.darkTextSecondary
-                                          : const Color(0xFF655B51),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                  ),
+                  const SizedBox(height: 8),
                       ],
                     ),
                   ),
@@ -535,10 +554,15 @@ class _ActionButtonCard extends StatelessWidget {
 }
 
 class _SettingsHero extends StatelessWidget {
-  const _SettingsHero({required this.title, required this.isDark});
+  const _SettingsHero({
+    required this.title,
+    required this.isDark,
+    required this.backgroundAsset,
+  });
 
   final String title;
   final bool isDark;
+  final String backgroundAsset;
 
   @override
   Widget build(BuildContext context) {
@@ -549,15 +573,8 @@ class _SettingsHero extends StatelessWidget {
             isDark
                 ? AppColors.darkBgSecondary.withOpacity(0.92)
                 : Colors.white.withOpacity(0.72),
-        borderRadius: BorderRadius.circular(26),
-        border: Border.all(
-          color:
-              isDark
-                  ? Colors.white.withOpacity(0.08)
-                  : Colors.white.withOpacity(0.86),
-        ),
-        image: const DecorationImage(
-          image: AssetImage('assets/images/aksam_bg.png'),
+        image: DecorationImage(
+          image: AssetImage(backgroundAsset),
           fit: BoxFit.cover,
           alignment: Alignment.center,
         ),
@@ -570,7 +587,7 @@ class _SettingsHero extends StatelessWidget {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(26),
+        borderRadius: BorderRadius.zero,
         child: Stack(
           children: [
             Container(
@@ -579,14 +596,14 @@ class _SettingsHero extends StatelessWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    (isDark ? Colors.black : Colors.white).withOpacity(
-                      isDark ? 0.34 : 0.22,
+                    (isDark ? Colors.black : Colors.black).withOpacity(
+                      isDark ? 0.34 : 0.08,
                     ),
-                    (isDark ? Colors.black : Colors.white).withOpacity(
-                      isDark ? 0.10 : 0.02,
+                    (isDark ? Colors.black : Colors.black).withOpacity(
+                      isDark ? 0.10 : 0.01,
                     ),
-                    (isDark ? Colors.black : Colors.white).withOpacity(
-                      isDark ? 0.16 : 0.08,
+                    (isDark ? Colors.black : Colors.black).withOpacity(
+                      isDark ? 0.16 : 0.04,
                     ),
                   ],
                 ),

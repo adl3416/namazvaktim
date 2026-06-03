@@ -33,8 +33,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         final mediaQuery = MediaQuery.of(context);
         final bottomInset = mediaQuery.padding.bottom;
         final compactBottomInset = bottomInset == 0
-            ? 12.0
-            : bottomInset.clamp(8.0, 18.0).toDouble();
+            ? 6.0
+            : bottomInset.clamp(4.0, 12.0).toDouble();
         final navLabelFontSize = locale == 'de' ? 10.5 : 12.0;
 
         return PopScope(

@@ -274,9 +274,9 @@ _NavPalette _navPaletteForPrayer(String? prayerName, bool isDark) {
   if (normalized.contains('isha') || normalized.contains('yatsi')) {
     return _shadePalette(
       const _NavPalette(
-        primary: Color(0xFFCB1E13),
-        secondary: Color(0xFFFF4C36),
-        tertiary: Color(0xFFFF8577),
+        primary: Color(0xFF5B2BE0),
+        secondary: Color(0xFF7A4DFF),
+        tertiary: Color(0xFFA78BFA),
       ),
       isDark,
     );

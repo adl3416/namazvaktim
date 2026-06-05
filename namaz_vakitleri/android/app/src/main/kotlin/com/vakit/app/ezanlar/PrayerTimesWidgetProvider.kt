@@ -178,7 +178,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             )
             views.setTextViewText(
                 R.id.widget_countdown,
-                nextPrayer?.let { "Saat ${it.timeLabel}" } ?: "Saat --:--"
+                nextPrayer?.let { "Saat ${it.timeLabel} ${it.displayName} vakti" } ?: "Saat --:--"
             )
         }
 

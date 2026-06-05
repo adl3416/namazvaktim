@@ -125,11 +125,12 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
                 R.id.widget_header_date,
                 if (isSingleRowHeight || isSingleColumnWidth || isTiny) View.GONE else View.VISIBLE
             )
-            views.setInt(
-                R.id.widget_header_container,
-                "setBackgroundColor",
-                resolvePrayerHeaderColor(activePrayerName ?: nextPrayerName)
-            )
+            if (!isTiny) {
+                views.setImageViewResource(
+                    R.id.widget_header_background,
+                    resolvePrayerHeaderBackground(activePrayerName ?: nextPrayerName)
+                )
+            }
 
             bindNextPrayerCard(views, nextPrayer, isCompact, isTiny)
             bindPrayerRows(views, prayers, nextPrayerName, isCompact || isTiny)
@@ -329,22 +330,22 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             }
         }
 
-        private fun resolvePrayerHeaderColor(prayerName: String?): Int {
-            val normalized = prayerName?.lowercase(Locale.ROOT) ?: return Color.parseColor("#C89B53")
+        private fun resolvePrayerHeaderBackground(prayerName: String?): Int {
+            val normalized = prayerName?.lowercase(Locale.ROOT) ?: return R.drawable.prayer_widget_header_default
             return when {
                 normalized.contains("fajr") || normalized.contains("imsak") ->
-                    Color.parseColor("#4338CA")
+                    R.drawable.prayer_widget_header_imsak
                 normalized.contains("sunrise") || normalized.contains("gunes") ->
-                    Color.parseColor("#C2410C")
+                    R.drawable.prayer_widget_header_gunes
                 normalized.contains("dhuhr") || normalized.contains("ogle") ->
-                    Color.parseColor("#1D4ED8")
+                    R.drawable.prayer_widget_header_ogle
                 normalized.contains("asr") || normalized.contains("ikindi") ->
-                    Color.parseColor("#B45309")
+                    R.drawable.prayer_widget_header_ikindi
                 normalized.contains("maghrib") || normalized.contains("aksam") ->
-                    Color.parseColor("#9F1239")
+                    R.drawable.prayer_widget_header_aksam
                 normalized.contains("isha") || normalized.contains("yatsi") ->
-                    Color.parseColor("#5B21B6")
-                else -> Color.parseColor("#C89B53")
+                    R.drawable.prayer_widget_header_yatsi
+                else -> R.drawable.prayer_widget_header_default
             }
         }
 

@@ -15,7 +15,7 @@ class QiblaScreen extends StatefulWidget {
 
 class _QiblaScreenState extends State<QiblaScreen> {
   QiblaTelemetry _telemetry = const QiblaTelemetry();
-  bool _vibrationEnabled = true;
+  bool _vibrationEnabled = false;
 
   String _text(
     String locale, {

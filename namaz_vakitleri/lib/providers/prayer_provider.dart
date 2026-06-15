@@ -565,6 +565,14 @@ class PrayerProvider extends ChangeNotifier {
           _activePrayer = newActivePrayer;
           print('🔄 Active prayer changed to: ${_activePrayer?.name}');
 
+          try {
+            await HomeWidgetService.syncPrayerTimes(
+              prayerTimes: _currentPrayerTimes!,
+            );
+          } catch (e) {
+            print('⚠️ Failed to sync widget on active prayer change: $e');
+          }
+
           // NOTE: Adhan playback is now handled only through notifications
           // Do NOT play adhan here - let the notification service handle it
           // BUG FIX: Removed automatic adhan playing for active prayers

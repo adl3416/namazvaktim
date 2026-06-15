@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -28,6 +29,8 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
   String? _lastLocationSignature;
   String? _lastMapFitSignature;
   bool _isRefreshingLocation = false;
+  bool _hasLocationPermission = false;
+  bool _hasStartedSearch = false;
   GeoLocation? _mosqueSearchLocation;
 
   String _text(
@@ -49,9 +52,57 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _tryLoadMosques(forceRefreshLocation: true),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshPermissionState());
+  }
+
+  Future<void> _refreshPermissionState() async {
+    final permission = await Geolocator.checkPermission();
+    final granted =
+        permission == LocationPermission.whileInUse ||
+        permission == LocationPermission.always;
+    if (!mounted) return;
+
+    setState(() {
+      _hasLocationPermission = granted;
+      if (!granted) {
+        _hasStartedSearch = false;
+        _mosqueSearchLocation = null;
+        _nearbyMosquesFuture = null;
+        _lastLocationSignature = null;
+        _lastMapFitSignature = null;
+      }
+    });
+  }
+
+  Future<void> _requestLocationAccess() async {
+    if (!mounted) return;
+    setState(() {
+      _isRefreshingLocation = true;
+    });
+
+    final granted = await LocationService.requestLocationPermission();
+
+    if (!mounted) return;
+    setState(() {
+      _isRefreshingLocation = false;
+      _hasLocationPermission = granted;
+      if (!granted) {
+        _hasStartedSearch = false;
+      }
+    });
+  }
+
+  Future<void> _startMosqueSearch({bool refreshLocation = true}) async {
+    if (!_hasLocationPermission) {
+      await _requestLocationAccess();
+      if (!_hasLocationPermission) return;
+    }
+
+    setState(() {
+      _hasStartedSearch = true;
+    });
+
+    await _tryLoadMosques(forceRefreshLocation: refreshLocation);
   }
 
   String? _locationSignature(GeoLocation? location) {
@@ -64,6 +115,7 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
 
   Future<void> _tryLoadMosques({bool forceRefreshLocation = false}) async {
     if (!mounted) return;
+    if (!_hasLocationPermission) return;
 
     if (_mosqueSearchLocation == null || forceRefreshLocation) {
       setState(() {
@@ -118,7 +170,9 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
     setState(() {
       _searchRadius = value;
     });
-    _tryLoadMosques(forceRefreshLocation: true);
+    if (_hasStartedSearch) {
+      _tryLoadMosques();
+    }
   }
 
   List<Mosque> _visibleMosques(List<Mosque> source) {
@@ -405,12 +459,6 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
         final location = _mosqueSearchLocation;
         final locationSignature = _locationSignature(location);
 
-        if (locationSignature != null &&
-            (_nearbyMosquesFuture == null ||
-                _lastLocationSignature != locationSignature)) {
-          WidgetsBinding.instance.addPostFrameCallback((_) => _tryLoadMosques());
-        }
-
         return Scaffold(
           backgroundColor: isDark ? AppColors.darkBg : const Color(0xFFF4F0E8),
           body: Container(
@@ -530,8 +578,8 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                                   IconButton(
                                     onPressed: _isRefreshingLocation
                                         ? null
-                                        : () => _tryLoadMosques(
-                                              forceRefreshLocation: true,
+                                        : () => _startMosqueSearch(
+                                              refreshLocation: true,
                                             ),
                                     tooltip: _text(
                                       locale,
@@ -561,17 +609,73 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                               ),
                               const SizedBox(height: 8),
                               _CompactRadiusCard(
-                                 radius: _searchRadius,
-                                 onChanged: _updateRadius,
-                                 onChangeEnd: _applyRadius,
-                                 isDark: isDark,
-                                 locale: locale,
-                               ),
+                                radius: _searchRadius,
+                                onChanged: _updateRadius,
+                                onChangeEnd: _applyRadius,
+                                isDark: isDark,
+                                locale: locale,
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.icon(
+                                  onPressed: _isRefreshingLocation
+                                      ? null
+                                      : _hasLocationPermission
+                                          ? () => _startMosqueSearch(
+                                                refreshLocation: true,
+                                              )
+                                          : _requestLocationAccess,
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: const Color(0xFF1F4C43),
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 14,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  icon: _isRefreshingLocation
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : Icon(
+                                          _hasLocationPermission
+                                              ? Icons.search_rounded
+                                              : Icons.location_on_rounded,
+                                        ),
+                                  label: Text(
+                                    _hasLocationPermission
+                                        ? _text(
+                                            locale,
+                                            tr: 'Camileri bul',
+                                            en: 'Find mosques',
+                                            ar: 'Find mosques',
+                                          )
+                                        : _text(
+                                            locale,
+                                            tr: 'Konum izni ver',
+                                            en: 'Allow location',
+                                            ar: 'Allow location',
+                                          ),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
                       ),
-                      if (location == null)
+                      if (!_hasLocationPermission)
                         SliverFillRemaining(
                           hasScrollBody: false,
                           child: _EmptyMosqueState(
@@ -586,20 +690,71 @@ class _NearbyMosquesScreenState extends State<NearbyMosquesScreen> {
                             ),
                             message: _text(
                               locale,
-                              tr: 'Yakındaki camileri görebilmek için uygulamanın konum iznine ihtiyacı var.',
+                              tr: 'Yakındaki camileri görebilmek için önce konum izni vermen gerekiyor.',
                               en: 'The app needs location permission to show nearby mosques.',
                               ar: 'يحتاج التطبيق إلى إذن الموقع لعرض المساجد القريبة.',
                             ),
                             actionLabel: _text(
                               locale,
-                              tr: 'Konumu bul',
-                              en: 'Find location',
+                              tr: 'Konum izni ver',
+                              en: 'Allow location',
                               ar: 'Find location',
                             ),
                             onAction: _isRefreshingLocation
                                 ? null
-                                : () => _tryLoadMosques(
-                                      forceRefreshLocation: true,
+                                : _requestLocationAccess,
+                          ),
+                        )
+                      else if (!_hasStartedSearch)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: _EmptyMosqueState(
+                            isDark: isDark,
+                            locale: locale,
+                            icon: Icons.mosque_rounded,
+                            title: _text(
+                              locale,
+                              tr: 'Hazır',
+                              en: 'Ready',
+                              ar: 'Ready',
+                            ),
+                            message: _text(
+                              locale,
+                              tr: 'Konum izni verildi. Aramayı başlatmak için "Camileri bul" butonuna bas.',
+                              en: 'Location permission is granted. Tap "Find mosques" to start searching.',
+                              ar: 'Location permission is granted. Tap "Find mosques" to start searching.',
+                            ),
+                          ),
+                        )
+                      else if (location == null)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: _EmptyMosqueState(
+                            isDark: isDark,
+                            locale: locale,
+                            icon: Icons.my_location_rounded,
+                            title: _text(
+                              locale,
+                              tr: 'Konum alınamadı',
+                              en: 'Location unavailable',
+                              ar: 'Location unavailable',
+                            ),
+                            message: _text(
+                              locale,
+                              tr: 'Konum izni açık ama mevcut konum alınamadı. Tekrar deneyebilirsin.',
+                              en: 'Location permission is granted, but the current location could not be determined. Please try again.',
+                              ar: 'Location permission is granted, but the current location could not be determined. Please try again.',
+                            ),
+                            actionLabel: _text(
+                              locale,
+                              tr: 'Tekrar dene',
+                              en: 'Try again',
+                              ar: 'Try again',
+                            ),
+                            onAction: _isRefreshingLocation
+                                ? null
+                                : () => _startMosqueSearch(
+                                      refreshLocation: true,
                                     ),
                           ),
                         )

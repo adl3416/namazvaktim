@@ -2,23 +2,27 @@ package com.vakit.app.ezanlar
 
 import android.app.AlarmManager
 import android.app.PendingIntent
-import android.os.Bundle
-import android.util.TypedValue
-import android.view.View
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.os.Bundle
+import android.os.SystemClock
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.RelativeSizeSpan
+import android.util.TypedValue
+import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONArray
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.util.Date
+import java.util.Locale
 
 class PrayerTimesWidgetProvider : AppWidgetProvider() {
 
@@ -36,12 +40,12 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
 
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
-        scheduleNextMinuteUpdate(context)
+        scheduleNextWidgetUpdate(context)
     }
 
     override fun onDisabled(context: Context) {
         super.onDisabled(context)
-        cancelMinuteUpdate(context)
+        cancelWidgetUpdate(context)
     }
 
     override fun onUpdate(
@@ -52,7 +56,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
         appWidgetIds.forEach { appWidgetId ->
             updateAppWidget(context, appWidgetManager, appWidgetId)
         }
-        scheduleNextMinuteUpdate(context)
+        scheduleNextWidgetUpdate(context)
     }
 
     override fun onAppWidgetOptionsChanged(
@@ -63,7 +67,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
     ) {
         super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions)
         updateAppWidget(context, appWidgetManager, appWidgetId)
-        scheduleNextMinuteUpdate(context)
+        scheduleNextWidgetUpdate(context)
     }
 
     companion object {
@@ -74,6 +78,8 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
         private const val KEY_PRAYERS_JSON = "prayers_json"
         private const val ACTION_WIDGET_MINUTE_UPDATE =
             "com.vakit.app.ezanlar.ACTION_WIDGET_MINUTE_UPDATE"
+        private const val ONE_HOUR_MILLIS = 60 * 60 * 1000L
+        private const val FINAL_STATIC_SECONDS_MILLIS = 10 * 1000L
 
         fun updateAllWidgets(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
@@ -82,7 +88,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             widgetIds.forEach { widgetId ->
                 updateAppWidget(context, manager, widgetId)
             }
-            scheduleNextMinuteUpdate(context)
+            scheduleNextWidgetUpdate(context)
         }
 
         private fun updateAppWidget(
@@ -97,7 +103,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             val prayersJson = prefs.getString(KEY_PRAYERS_JSON, "[]") ?: "[]"
             val prayers = parsePrayers(prayersJson)
             val nextPrayerName = findNextPrayerName(prayers)
-            val activePrayerName = storedActivePrayerName ?: findActivePrayerName(prayers)
+            val activePrayerName = findActivePrayerName(prayers) ?: storedActivePrayerName
             val nextPrayer = prayers.firstOrNull { it.name == nextPrayerName } ?: prayers.firstOrNull()
             val widgetOptions = appWidgetManager.getAppWidgetOptions(appWidgetId)
             val isCompact = isCompactWidget(widgetOptions)
@@ -111,7 +117,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
                 R.layout.prayer_times_widget
             }
             val views = RemoteViews(context.packageName, layoutId)
-            views.setTextViewText(R.id.widget_header_city, city)
+            views.setTextViewText(R.id.widget_header_city, formatCityLabel(city))
             views.setTextViewText(R.id.widget_header_date, dateLabel)
             views.setViewVisibility(
                 R.id.widget_header_city,
@@ -157,22 +163,40 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             isCompact: Boolean,
             isTiny: Boolean
         ) {
+            val remainingMillis = nextPrayer?.remainingMillis ?: 0L
+            val showLiveSeconds = remainingMillis > FINAL_STATIC_SECONDS_MILLIS &&
+                remainingMillis < ONE_HOUR_MILLIS
+
             views.setTextViewText(
                 R.id.widget_next_name,
                 if (isTiny) {
                     nextPrayer?.let { formatRemainingLabel(it.displayName) } ?: "Vakit yok"
                 } else {
-                    nextPrayer?.let { "${it.displayName} Vaktine" } ?: "Vakit yok"
+                    nextPrayer?.let { "${it.displayName} vaktine" } ?: "Vakit yok"
                 }
             )
-            views.setTextViewText(
-                R.id.widget_next_time,
-                nextPrayer?.let { formatRemaining(it.remainingMillis) } ?: "--"
-            )
-            views.setViewVisibility(
-                R.id.widget_next_name,
-                View.VISIBLE
-            )
+            if (showLiveSeconds) {
+                views.setChronometer(
+                    R.id.widget_next_time,
+                    SystemClock.elapsedRealtime() + remainingMillis,
+                    null,
+                    true
+                )
+                views.setChronometerCountDown(R.id.widget_next_time, true)
+            } else {
+                views.setChronometerCountDown(R.id.widget_next_time, false)
+                views.setChronometer(
+                    R.id.widget_next_time,
+                    SystemClock.elapsedRealtime(),
+                    null,
+                    false
+                )
+                views.setTextViewText(
+                    R.id.widget_next_time,
+                    nextPrayer?.let { formatRemainingStyled(it.remainingMillis) } ?: "--"
+                )
+            }
+            views.setViewVisibility(R.id.widget_next_name, View.VISIBLE)
             views.setViewVisibility(
                 R.id.widget_countdown,
                 if (isTiny) View.GONE else View.VISIBLE
@@ -281,6 +305,15 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             return formatter.format(Date())
         }
 
+        private fun formatCityLabel(city: String): String {
+            val locale = Locale("tr", "TR")
+            val normalized = city.trim().lowercase(locale)
+            if (normalized.isEmpty()) return city
+            return normalized.replaceFirstChar { char ->
+                if (char.isLowerCase()) char.titlecase(locale) else char.toString()
+            }
+        }
+
         private fun isCompactWidget(options: Bundle): Boolean {
             val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
             val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
@@ -306,16 +339,46 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
         private fun formatRemaining(remainingMillis: Long): String {
             if (remainingMillis <= 0L) return "Şimdi"
 
+            val totalSeconds = remainingMillis / 1000
             val totalMinutes = remainingMillis / 60000
             val days = totalMinutes / (24 * 60)
             val hours = (totalMinutes % (24 * 60)) / 60
             val minutes = totalMinutes % 60
+            val seconds = totalSeconds % 60
 
             return when {
                 days > 0 -> "${days}g ${hours}s ${minutes}dk"
                 hours > 0 -> "${hours}s ${minutes}dk"
-                else -> "${minutes}dk"
+                totalMinutes > 0 -> "${minutes}dk ${seconds}sn"
+                else -> "${seconds}sn"
             }
+        }
+
+        private fun formatRemainingStyled(remainingMillis: Long): CharSequence {
+            val text = if (remainingMillis <= FINAL_STATIC_SECONDS_MILLIS) {
+                formatFinalSeconds(remainingMillis)
+            } else {
+                formatRemaining(remainingMillis)
+            }
+            val styled = SpannableString(text)
+            val unitRegex = Regex("(?<=\\d)(g|s|dk|sn)")
+
+            unitRegex.findAll(text).forEach { match ->
+                styled.setSpan(
+                    RelativeSizeSpan(0.62f),
+                    match.range.first,
+                    match.range.last + 1,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+
+            return styled
+        }
+
+        private fun formatFinalSeconds(remainingMillis: Long): String {
+            if (remainingMillis <= 0L) return "0sn"
+            val seconds = ((remainingMillis - 1) / 1000L) + 1L
+            return "${seconds}sn"
         }
 
         private fun formatRemainingLabel(displayName: String): String {
@@ -331,7 +394,8 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
         }
 
         private fun resolvePrayerHeaderBackground(prayerName: String?): Int {
-            val normalized = prayerName?.lowercase(Locale.ROOT) ?: return R.drawable.prayer_widget_header_default
+            val normalized = prayerName?.lowercase(Locale.ROOT)
+                ?: return R.drawable.prayer_widget_header_default
             return when {
                 normalized.contains("fajr") || normalized.contains("imsak") ->
                     R.drawable.prayer_widget_header_imsak
@@ -349,20 +413,37 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             }
         }
 
-        private fun scheduleNextMinuteUpdate(context: Context) {
+        private fun scheduleNextWidgetUpdate(context: Context) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
             val now = System.currentTimeMillis()
-            val nextMinute = ((now / 60000) + 1) * 60000
+            val nextPrayer = getNextPrayer(context)
+            val updateAt = if (
+                nextPrayer != null &&
+                nextPrayer.remainingMillis in 1 until ONE_HOUR_MILLIS
+            ) {
+                ((now / 1000) + 1) * 1000
+            } else {
+                ((now / 60000) + 1) * 60000
+            }
+
             alarmManager.setExactAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
-                nextMinute,
+                updateAt,
                 widgetUpdatePendingIntent(context)
             )
         }
 
-        private fun cancelMinuteUpdate(context: Context) {
+        private fun cancelWidgetUpdate(context: Context) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
             alarmManager.cancel(widgetUpdatePendingIntent(context))
+        }
+
+        private fun getNextPrayer(context: Context): WidgetPrayer? {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val prayersJson = prefs.getString(KEY_PRAYERS_JSON, "[]") ?: "[]"
+            val prayers = parsePrayers(prayersJson)
+            val nextPrayerName = findNextPrayerName(prayers)
+            return prayers.firstOrNull { it.name == nextPrayerName } ?: prayers.firstOrNull()
         }
 
         private fun widgetUpdatePendingIntent(context: Context): PendingIntent {

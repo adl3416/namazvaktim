@@ -78,7 +78,7 @@ class QiblaCompassWidget extends StatefulWidget {
 }
 
 class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _fallbackController;
   StreamSubscription<CompassEvent>? _compassSub;
 
@@ -89,10 +89,15 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
   bool _hasCompass = false;
   bool _isAligned = false;
   bool _vibrationCooldown = false;
+  bool _isAppActive = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _isAppActive =
+        WidgetsBinding.instance.lifecycleState == null ||
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
     _fallbackController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 10),
@@ -158,7 +163,9 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
   }
 
   Future<void> _vibrateIfNeeded(bool aligned) async {
-    if (!widget.vibrationEnabled || !aligned || _vibrationCooldown) return;
+    if (!widget.vibrationEnabled || !_isAppActive || !aligned || _vibrationCooldown) {
+      return;
+    }
     _vibrationCooldown = true;
     try {
       final hasVibrator = await Vibration.hasVibrator() ?? false;
@@ -190,6 +197,11 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _isAppActive = state == AppLifecycleState.resumed;
+  }
+
+  @override
   void didUpdateWidget(covariant QiblaCompassWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.userLocation != widget.userLocation) {
@@ -199,6 +211,7 @@ class _QiblaCompassWidgetState extends State<QiblaCompassWidget>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _compassSub?.cancel();
     _fallbackController.dispose();
     super.dispose();

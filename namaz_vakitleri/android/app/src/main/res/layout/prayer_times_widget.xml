@@ -24,9 +24,9 @@
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingLeft="12dp"
-            android:paddingTop="8dp"
+            android:paddingTop="12dp"
             android:paddingRight="12dp"
-            android:paddingBottom="8dp">
+            android:paddingBottom="12dp">
 
             <TextView
                 android:id="@+id/widget_header_city"
@@ -82,7 +82,7 @@
                 android:textSize="21sp"
                 android:textStyle="bold" />
 
-            <TextView
+            <Chronometer
                 android:id="@+id/widget_next_time"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

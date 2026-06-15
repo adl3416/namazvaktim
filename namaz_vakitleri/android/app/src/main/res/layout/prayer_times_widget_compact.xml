@@ -32,7 +32,7 @@
             android:textSize="12sp"
             android:textStyle="bold" />
 
-        <TextView
+        <Chronometer
             android:id="@+id/widget_next_time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

@@ -82,7 +82,7 @@
                 android:textSize="21sp"
                 android:textStyle="bold" />
 
-            <Chronometer
+            <TextView
                 android:id="@+id/widget_next_time"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

@@ -9,7 +9,8 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
-import android.os.SystemClock
+import android.os.Handler
+import android.os.Looper
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.RelativeSizeSpan
@@ -80,6 +81,8 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             "com.vakit.app.ezanlar.ACTION_WIDGET_MINUTE_UPDATE"
         private const val ONE_HOUR_MILLIS = 60 * 60 * 1000L
         private const val FINAL_STATIC_SECONDS_MILLIS = 10 * 1000L
+        private val liveCountdownHandler = Handler(Looper.getMainLooper())
+        private var liveCountdownRunnable: Runnable? = null
 
         fun updateAllWidgets(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
@@ -89,6 +92,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
                 updateAppWidget(context, manager, widgetId)
             }
             scheduleNextWidgetUpdate(context)
+            scheduleLiveCountdown(context)
         }
 
         private fun updateAppWidget(
@@ -163,10 +167,6 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             isCompact: Boolean,
             isTiny: Boolean
         ) {
-            val remainingMillis = nextPrayer?.remainingMillis ?: 0L
-            val showLiveSeconds = remainingMillis > FINAL_STATIC_SECONDS_MILLIS &&
-                remainingMillis < ONE_HOUR_MILLIS
-
             views.setTextViewText(
                 R.id.widget_next_name,
                 if (isTiny) {
@@ -175,27 +175,10 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
                     nextPrayer?.let { "${it.displayName} vaktine" } ?: "Vakit yok"
                 }
             )
-            if (showLiveSeconds) {
-                views.setChronometer(
-                    R.id.widget_next_time,
-                    SystemClock.elapsedRealtime() + remainingMillis,
-                    null,
-                    true
-                )
-                views.setChronometerCountDown(R.id.widget_next_time, true)
-            } else {
-                views.setChronometerCountDown(R.id.widget_next_time, false)
-                views.setChronometer(
-                    R.id.widget_next_time,
-                    SystemClock.elapsedRealtime(),
-                    null,
-                    false
-                )
-                views.setTextViewText(
-                    R.id.widget_next_time,
-                    nextPrayer?.let { formatRemainingStyled(it.remainingMillis) } ?: "--"
-                )
-            }
+            views.setTextViewText(
+                R.id.widget_next_time,
+                nextPrayer?.let { formatRemainingStyled(it.remainingMillis) } ?: "--"
+            )
             views.setViewVisibility(R.id.widget_next_name, View.VISIBLE)
             views.setViewVisibility(
                 R.id.widget_countdown,
@@ -337,7 +320,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
         }
 
         private fun formatRemaining(remainingMillis: Long): String {
-            if (remainingMillis <= 0L) return "Şimdi"
+            if (remainingMillis <= 0L) return "00"
 
             val totalSeconds = remainingMillis / 1000
             val totalMinutes = remainingMillis / 60000
@@ -376,7 +359,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
         }
 
         private fun formatFinalSeconds(remainingMillis: Long): String {
-            if (remainingMillis <= 0L) return "0sn"
+            if (remainingMillis <= 0L) return "00"
             val seconds = ((remainingMillis - 1) / 1000L) + 1L
             return "${seconds}sn"
         }
@@ -436,6 +419,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
         private fun cancelWidgetUpdate(context: Context) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
             alarmManager.cancel(widgetUpdatePendingIntent(context))
+            stopLiveCountdown()
         }
 
         private fun getNextPrayer(context: Context): WidgetPrayer? {
@@ -444,6 +428,45 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             val prayers = parsePrayers(prayersJson)
             val nextPrayerName = findNextPrayerName(prayers)
             return prayers.firstOrNull { it.name == nextPrayerName } ?: prayers.firstOrNull()
+        }
+
+        private fun scheduleLiveCountdown(context: Context) {
+            stopLiveCountdown()
+
+            val nextPrayer = getNextPrayer(context) ?: return
+            val remainingMillis = nextPrayer.remainingMillis
+            if (remainingMillis <= 0L || remainingMillis >= ONE_HOUR_MILLIS) {
+                return
+            }
+
+            val appContext = context.applicationContext
+            val tickDelay = (1000L - (System.currentTimeMillis() % 1000L)).coerceIn(50L, 1000L)
+            val runnable = object : Runnable {
+                override fun run() {
+                    val manager = AppWidgetManager.getInstance(appContext)
+                    val component = ComponentName(appContext, PrayerTimesWidgetProvider::class.java)
+                    val widgetIds = manager.getAppWidgetIds(component)
+                    widgetIds.forEach { widgetId ->
+                        updateAppWidget(appContext, manager, widgetId)
+                    }
+
+                    val currentNextPrayer = getNextPrayer(appContext)
+                    val currentRemainingMillis = currentNextPrayer?.remainingMillis ?: 0L
+                    if (currentRemainingMillis in 1 until ONE_HOUR_MILLIS) {
+                        liveCountdownHandler.postDelayed(this, 1000L)
+                    } else {
+                        stopLiveCountdown()
+                    }
+                }
+            }
+
+            liveCountdownRunnable = runnable
+            liveCountdownHandler.postDelayed(runnable, tickDelay)
+        }
+
+        private fun stopLiveCountdown() {
+            liveCountdownRunnable?.let { liveCountdownHandler.removeCallbacks(it) }
+            liveCountdownRunnable = null
         }
 
         private fun widgetUpdatePendingIntent(context: Context): PendingIntent {

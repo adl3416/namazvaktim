@@ -269,51 +269,68 @@ class _ManualLocationSetupOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: theme.pageBackground.withOpacity(0.96),
+      color: theme.pageBackground.withOpacity(0.92),
       child: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [
-                    BoxShadow(
-                      color: theme.accent.withOpacity(0.18),
-                      blurRadius: 36,
-                      offset: const Offset(0, 18),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight - 32),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0xFFFFFCF6),
+                            Color(0xFFFFF2DA),
+                            Color(0xFFFFFBF2),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(34),
+                        border: Border.all(color: Colors.white.withOpacity(0.92)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFE1B04D).withOpacity(0.18),
+                            blurRadius: 34,
+                            offset: const Offset(0, 18),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(22, 24, 22, 20),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
+                          horizontal: 16,
+                          vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          color: theme.accent.withOpacity(0.12),
+                          color: const Color(0xFFF7EBCF),
                           borderRadius: BorderRadius.circular(999),
                           border: Border.all(
-                            color: theme.accent.withOpacity(0.22),
+                            color: const Color(0xFFE8C97E),
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.mosque_rounded,
-                              size: 18,
-                              color: theme.accent,
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.asset(
+                                'assets/images/icon3.jpg',
+                                width: 26,
+                                height: 26,
+                                fit: BoxFit.cover,
+                              ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 10),
                             Text(
                               _text(
                                 locale,
@@ -321,64 +338,137 @@ class _ManualLocationSetupOverlay extends StatelessWidget {
                                 en: 'Ezanlar',
                                 ar: 'Ezanlar',
                               ),
-                              style: TextStyle(
-                                color: theme.accentDark,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 14,
-                                letterSpacing: 0.2,
+                              style: const TextStyle(
+                                color: Color(0xFF153E37),
+                                fontWeight: FontWeight.w900,
+                                fontSize: 18,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 14),
-                      Icon(
-                        Icons.location_on_rounded,
-                        size: 42,
-                        color: theme.accent,
+                      const SizedBox(height: 16),
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: 190,
+                            height: 190,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFFE3AB30),
+                                width: 3,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            right: 14,
+                            top: 22,
+                            child: Icon(
+                              Icons.nightlight_round,
+                              color: const Color(0xFFE2A62D),
+                              size: 36,
+                            ),
+                          ),
+                          Container(
+                            width: 136,
+                            padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.95),
+                              borderRadius: BorderRadius.circular(28),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFFE5C177).withOpacity(0.34),
+                                  blurRadius: 24,
+                                  offset: const Offset(0, 12),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.location_on_rounded,
+                                  size: 42,
+                                  color: const Color(0xFFE2A62D),
+                                ),
+                                const SizedBox(height: 10),
+                                const Text(
+                                  'Şehir',
+                                  style: TextStyle(
+                                    color: Color(0xFF143D36),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Seçimi',
+                                  style: TextStyle(
+                                    color: Color(0xFF143D36),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
                       Text(
                         _text(
                           locale,
-                          tr: 'Namaz vakitlerini gormek icin once sehrinizi secin',
+                          tr: 'Namaz vakitlerini görmek için önce şehrinizi seçin',
                           en: 'Select your city before viewing prayer times',
                           ar: 'Select your city before viewing prayer times',
                         ),
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          color: theme.accentDark,
-                          height: 1.2,
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF143D36),
+                          height: 1.16,
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
+                      Container(
+                        width: 62,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE2A62D),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       Text(
                         _text(
                           locale,
-                          tr: 'Ilk kurulumda konum otomatik alinmaz. Devam etmek icin ulke ve sehir secmeniz gerekir.',
+                          tr: 'İlk kurulumda konum otomatik alınmaz. Devam etmek için ülke ve şehir seçmeniz gerekir.',
                           en: 'Location is not filled automatically on first install. Choose your country and city to continue.',
                           ar: 'Location is not filled automatically on first install. Choose your country and city to continue.',
                         ),
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: const Color(0xFF5B6476),
-                          height: 1.45,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFF6D7684),
+                          height: 1.5,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton(
                           style: FilledButton.styleFrom(
-                            backgroundColor: theme.accent,
+                            backgroundColor: const Color(0xFFE7A72B),
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.symmetric(vertical: 18),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
+                              borderRadius: BorderRadius.circular(24),
                             ),
+                            elevation: 0,
                           ),
                           onPressed: () {
                             Navigator.of(context).push(
@@ -387,22 +477,36 @@ class _ManualLocationSetupOverlay extends StatelessWidget {
                               ),
                             );
                           },
-                          child: Text(
-                            _text(
-                              locale,
-                              tr: 'Ulke ve Sehir Sec',
-                              en: 'Choose Country and City',
-                              ar: 'Choose Country and City',
-                            ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                _text(
+                                  locale,
+                                  tr: 'Ülke ve Şehir Seç',
+                                  en: 'Choose Country and City',
+                                  ar: 'Choose Country and City',
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Icon(Icons.arrow_forward_rounded, size: 28),
+                            ],
                           ),
                         ),
                       ),
-                    ],
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );

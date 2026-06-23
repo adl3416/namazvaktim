@@ -96,12 +96,15 @@ class MainActivity : FlutterActivity() {
             val jsonObject = JSONObject().apply {
                 put("name", prayer["name"]?.toString() ?: "")
                 put("time", prayer["time"]?.toString() ?: "")
+                put("displayLabel", prayer["displayLabel"]?.toString() ?: "")
+                put("shortLabel", prayer["shortLabel"]?.toString() ?: "")
             }
             prayersJson.put(jsonObject)
         }
 
         prefs.edit()
             .putString("city", arguments["city"]?.toString() ?: "Ezanlar")
+            .putString("language", arguments["language"]?.toString() ?: "tr")
             .putString("date_label", arguments["dateLabel"]?.toString() ?: "")
             .putString("active_prayer_name", arguments["activePrayerName"]?.toString() ?: "")
             .putString("prayers_json", prayersJson.toString())

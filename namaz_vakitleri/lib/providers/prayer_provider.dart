@@ -420,7 +420,10 @@ class PrayerProvider extends ChangeNotifier {
 
         _lastFetchTime = DateTime.now();
 
-        await HomeWidgetService.syncPrayerTimes(prayerTimes: prayerTimes);
+        await HomeWidgetService.syncPrayerTimes(
+          prayerTimes: prayerTimes,
+          language: _appSettings.language,
+        );
 
         // Reset adhan tracking for new prayer cycle
         _lastAdhanPlayedForPrayer = null;
@@ -568,6 +571,7 @@ class PrayerProvider extends ChangeNotifier {
           try {
             await HomeWidgetService.syncPrayerTimes(
               prayerTimes: _currentPrayerTimes!,
+              language: _appSettings.language,
             );
           } catch (e) {
             print('⚠️ Failed to sync widget on active prayer change: $e');
@@ -798,6 +802,11 @@ class PrayerProvider extends ChangeNotifier {
 
         if (tomorrowPrayerTimes != null &&
             tomorrowPrayerTimes.prayerTimesList.isNotEmpty) {
+          await HomeWidgetService.syncPrayerTimes(
+            prayerTimes: todayPrayerTimes,
+            language: _appSettings.language,
+            additionalPrayers: tomorrowPrayerTimes.prayerTimesList,
+          );
           await NotificationService.scheduleAllPrayerNotificationsWithSettings(
             prayers: tomorrowPrayerTimes.prayerTimesList,
             language: _appSettings.language,
@@ -1051,6 +1060,10 @@ class PrayerProvider extends ChangeNotifier {
     }
 
     _applyPrayerTimes(cachedPrayerTimes, allowAutomaticRefresh: false);
+    await HomeWidgetService.syncPrayerTimes(
+      prayerTimes: cachedPrayerTimes,
+      language: _appSettings.language,
+    );
     _errorMessage = '';
     print('Loaded cached prayer times for startup');
   }

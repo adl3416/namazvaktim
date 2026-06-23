@@ -79,7 +79,7 @@
                 android:layout_height="wrap_content"
                 android:text="İmsak"
                 android:textColor="#205A54"
-                android:textSize="21sp"
+                android:textSize="25sp"
                 android:textStyle="bold" />
 
             <TextView

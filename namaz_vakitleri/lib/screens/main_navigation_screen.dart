@@ -36,6 +36,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ? 6.0
             : bottomInset.clamp(4.0, 12.0).toDouble();
         final navLabelFontSize = locale == 'de' ? 10.5 : 12.0;
+        final hideBottomNav = prayerProvider.requiresManualLocationSelection;
 
         return PopScope(
           canPop: true,
@@ -59,7 +60,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ),
               const SettingsScreen(),
             ][_selectedIndex],
-            bottomNavigationBar: Container(
+            bottomNavigationBar: hideBottomNav
+                ? null
+                : Container(
               padding: EdgeInsets.fromLTRB(0, 0, 0, compactBottomInset),
               decoration: BoxDecoration(
                 gradient: LinearGradient(

@@ -15,21 +15,22 @@
         android:background="@drawable/prayer_widget_next_card"
         android:gravity="center"
         android:orientation="vertical"
-        android:paddingLeft="10dp"
+        android:paddingLeft="8dp"
         android:paddingTop="8dp"
-        android:paddingRight="10dp"
+        android:paddingRight="8dp"
         android:paddingBottom="8dp">
 
         <TextView
             android:id="@+id/widget_next_name"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:gravity="center"
             android:maxLines="1"
+            android:singleLine="true"
             android:text="İkindiye kalan"
             android:textColor="#205A54"
-            android:textSize="12sp"
+            android:textSize="17sp"
             android:textStyle="bold" />
 
         <TextView

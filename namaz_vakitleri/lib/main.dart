@@ -8,7 +8,6 @@ import 'package:namaz_vakitleri/providers/app_settings.dart';
 import 'package:namaz_vakitleri/providers/prayer_provider.dart';
 import 'package:namaz_vakitleri/screens/main_navigation_screen.dart';
 import 'package:namaz_vakitleri/screens/onboarding_screen.dart';
-import 'package:namaz_vakitleri/screens/splash_screen.dart';
 import 'package:namaz_vakitleri/services/notification_service.dart';
 import 'package:provider/provider.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -67,18 +66,20 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   Future<void> _initializeApp() async {
+    final startedAt = DateTime.now();
+    const minimumSplashDuration = Duration(milliseconds: 1400);
     try {
       print('Initializing app settings...');
       await _appSettings.initialize();
       print('App settings initialized');
-      if (mounted) {
-        setState(() {
-          _isInitialized = true;
-        });
-      }
-      unawaited(_finishBackgroundInitialization());
+      await _finishBackgroundInitialization();
     } catch (e) {
       print('Error initializing app: $e');
+    } finally {
+      final elapsed = DateTime.now().difference(startedAt);
+      if (elapsed < minimumSplashDuration) {
+        await Future.delayed(minimumSplashDuration - elapsed);
+      }
       if (mounted) {
         setState(() {
           _isInitialized = true;
@@ -158,7 +159,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 ? (appSettings.hasCompletedOnboarding
                     ? const MainNavigationScreen()
                     : const OnboardingScreen())
-                : const SplashScreen(),
+                : const _StartupPlaceholderScreen(),
           );
         },
       ),
@@ -460,5 +461,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         ),
       ),
     );
+  }
+}
+
+class _StartupPlaceholderScreen extends StatelessWidget {
+  const _StartupPlaceholderScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(body: SizedBox.expand());
   }
 }

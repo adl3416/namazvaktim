@@ -24,7 +24,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       titleEn: 'Track prayer times with ease',
       titleAr: 'تابع أوقات الصلاة بسهولة',
       descriptionTr:
-          'Bulundugun sehre gore namaz vakitlerini anlik olarak goruntule, gunun ritmini kacirma.',
+          'Bulunduğun şehre göre namaz vakitlerini anlık olarak görüntüle, günün ritmini kaçırma.',
       descriptionEn:
           'See prayer times instantly for your city and stay in sync with the day.',
       descriptionAr:
@@ -33,11 +33,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     _OnboardingStep(
       number: '02',
-      titleTr: 'Bildirimlerini kendine gore ayarla',
+      titleTr: 'Bildirimlerini kendine göre ayarla',
       titleEn: 'Tune notifications your way',
       titleAr: 'اضبط التنبيهات كما تريد',
       descriptionTr:
-          'Her vakit icin bildirim, ezan sesi ve hatirlatma zamanlarini ayri ayri yonet.',
+          'Her vakit için bildirim, ezan sesi ve hatırlatma zamanlarını ayrı ayrı yönet.',
       descriptionEn:
           'Manage notifications, adhan sounds, and reminder times for each prayer.',
       descriptionAr:
@@ -46,11 +46,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
     _OnboardingStep(
       number: '03',
-      titleTr: 'Sehrini sec, kibleyi ve camileri kesfet',
+      titleTr: 'Şehrini seç, kıbleyi ve camileri keşfet',
       titleEn: 'Choose your city and explore more',
       titleAr: 'اختر مدينتك واستكشف المزيد',
       descriptionTr:
-          'Ilk kurulumdan sonra sehrini sec, kible yonunu bul ve yakindaki camileri gor.',
+          'İlk kurulumdan sonra şehrini seç, kıble yönünü bul ve yakındaki camileri gör.',
       descriptionEn:
           'Pick your city, find the qibla direction, and discover nearby mosques.',
       descriptionAr:
@@ -121,7 +121,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   onSkip: isLastPage ? null : _completeOnboarding,
                   skipLabel: _text(
                     locale,
-                    tr: 'Gec',
+                    tr: 'Geç',
                     en: 'Skip',
                     ar: 'تخطي',
                   ),
@@ -151,13 +151,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   pageCount: _steps.length,
                   buttonLabel: _text(
                     locale,
-                    tr: isLastPage ? 'Baslayalim' : 'Devam et',
+                    tr: isLastPage ? 'Başlayalım' : 'Devam et',
                     en: isLastPage ? 'Let\'s begin' : 'Continue',
                     ar: isLastPage ? 'لنبدأ' : 'متابعة',
                   ),
                   welcomeLabel: _text(
                     locale,
-                    tr: 'Huzur veren bir deneyime hos geldiniz',
+                    tr: 'Huzur veren bir deneyime hoş geldiniz',
                     en: 'Welcome to a calming experience',
                     ar: 'مرحبًا بك في تجربة تبعث على السكينة',
                   ),
@@ -200,33 +200,41 @@ class _OnboardingHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: Image.asset(
-                  'assets/images/icon3.jpg',
-                  width: 58,
-                  height: 58,
-                  fit: BoxFit.cover,
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: Image.asset(
+                    'assets/images/icon3.jpg',
+                    width: 58,
+                    height: 58,
+                    fit: BoxFit.cover,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 14),
-              const Text(
-                'Ezanlar',
-                style: TextStyle(
-                  color: Color(0xFF143D36),
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  height: 1,
+                const SizedBox(width: 14),
+                const Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Ezanlar',
+                      style: TextStyle(
+                        color: Color(0xFF143D36),
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        height: 1,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-        const Spacer(),
+        const SizedBox(width: 8),
         if (onSkip != null)
           TextButton(
             onPressed: onSkip,
@@ -277,106 +285,157 @@ class _OnboardingSlide extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Positioned(
-          left: 0,
-          right: 0,
-          top: 0,
-          height: 360,
-          child: _TopScene(heroType: step.heroType),
-        ),
-        Positioned(
-          left: 10,
-          right: 10,
-          top: 292,
-          bottom: 0,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.88),
-              borderRadius: BorderRadius.circular(34),
-              border: Border.all(color: Colors.white.withOpacity(0.92)),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFE4C370).withOpacity(0.16),
-                  blurRadius: 30,
-                  offset: const Offset(0, 16),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(26, 86, 26, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final widthScale =
+            (constraints.maxWidth / 390).clamp(0.86, 1.18).toDouble();
+        final heightScale =
+            (constraints.maxHeight / 844).clamp(0.76, 1.10).toDouble();
+        final compact = constraints.maxHeight < 690 || constraints.maxWidth < 360;
+        final veryCompact = constraints.maxHeight < 620;
+        final sceneBase = constraints.maxHeight * (compact ? 0.54 : 0.58);
+        final topSceneHeight = sceneBase.clamp(320.0, 470.0).toDouble();
+        final heroSize = (330.0 * widthScale).clamp(300.0, 420.0).toDouble();
+        final cardTop =
+            (topSceneHeight - (heroSize * 0.26)).clamp(250.0, 360.0).toDouble();
+        final heroTop =
+            (topSceneHeight * 0.18).clamp(64.0, 108.0).toDouble();
+        final contentHeight = math.max(
+          constraints.maxHeight,
+          veryCompact
+              ? topSceneHeight + 470
+              : (compact ? topSceneHeight + 430 : 0.0),
+        );
+        final cardPaddingTop = (heroSize * (compact ? 0.36 : 0.40))
+            .clamp(86.0, 132.0)
+            .toDouble();
+        final titleFontSize =
+            (30.0 * widthScale).clamp(24.0, 34.0).toDouble();
+        final descriptionFontSize =
+            (17.0 * widthScale).clamp(15.0, 18.0).toDouble();
+        final heroScale =
+            ((widthScale + heightScale) / 2).clamp(0.92, 1.18).toDouble();
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: SizedBox(
+              height: contentHeight,
+              child: Stack(
+                clipBehavior: Clip.none,
                 children: [
-                  Container(
-                    width: 54,
-                    height: 54,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xFFF8ECD2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFE0C17A).withOpacity(0.20),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    height: topSceneHeight,
+                    child: _TopScene(heroType: step.heroType),
+                  ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: cardTop,
+                    bottom: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.88),
+                        borderRadius: BorderRadius.circular(34),
+                        border: Border.all(color: Colors.white.withOpacity(0.92)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFE4C370).withOpacity(0.16),
+                            blurRadius: 30,
+                            offset: const Offset(0, 16),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          26,
+                          cardPaddingTop,
+                          26,
+                          compact ? 20 : 24,
                         ),
-                      ],
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      step.number,
-                      style: const TextStyle(
-                        color: Color(0xFFCC8C18),
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: (compact ? 48.0 : 54.0) * widthScale,
+                              height: (compact ? 48.0 : 54.0) * widthScale,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xFFF8ECD2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFFE0C17A).withOpacity(0.20),
+                                    blurRadius: 18,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                step.number,
+                                style: TextStyle(
+                                  color: const Color(0xFFCC8C18),
+                                  fontSize: (compact ? 16.0 : 18.0) * widthScale,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: (compact ? 20.0 : 28.0) * heightScale),
+                            Text(
+                              _localizedTitle(),
+                              style: TextStyle(
+                                color: const Color(0xFF133F38),
+                                fontSize: titleFontSize,
+                                fontWeight: FontWeight.w900,
+                                height: 1.18,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Container(
+                              width: 58 * widthScale,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE0A125),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                            ),
+                            SizedBox(height: (compact ? 18.0 : 24.0) * heightScale),
+                            Text(
+                              _localizedDescription(),
+                              style: TextStyle(
+                                color: const Color(0xFF6E7786),
+                                fontSize: descriptionFontSize,
+                                height: 1.58,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 28),
-                  Text(
-                    _localizedTitle(),
-                    style: const TextStyle(
-                      color: Color(0xFF133F38),
-                      fontSize: 30,
-                      fontWeight: FontWeight.w900,
-                      height: 1.18,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    width: 58,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE0A125),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    _localizedDescription(),
-                    style: const TextStyle(
-                      color: Color(0xFF6E7786),
-                      fontSize: 17,
-                      height: 1.58,
-                      fontWeight: FontWeight.w500,
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: heroTop,
+                    child: Center(
+                      child: _HeroShowcase(
+                        heroType: step.heroType,
+                        scale: heroScale,
+                        size: heroSize,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-        ),
-        Positioned(
-          left: 0,
-          right: 0,
-          top: 118,
-          child: Center(
-            child: _HeroShowcase(heroType: step.heroType),
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -422,91 +481,105 @@ class _TopScene extends StatelessWidget {
 }
 
 class _HeroShowcase extends StatelessWidget {
-  const _HeroShowcase({required this.heroType});
+  const _HeroShowcase({
+    required this.heroType,
+    this.scale = 1,
+    this.size = 350,
+  });
 
   final _HeroType heroType;
+  final double scale;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 350,
-      height: 350,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: 290,
-            height: 290,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: const Color(0xFFE6AE33),
-                width: 4,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFD99C1F).withOpacity(0.12),
-                  blurRadius: 28,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-          ),
-          ...List.generate(12, (index) {
-            final angle = (math.pi * 2 / 12) * index;
-            final dx = math.cos(angle) * 136;
-            final dy = math.sin(angle) * 136;
-            return Positioned(
-              left: 175 + dx - 2,
-              top: 175 + dy - 12,
-              child: Transform.rotate(
-                angle: angle,
-                child: Container(
+    final outerCircle = size * 0.83;
+    final cardWidth = size * 0.49;
+    final center = size / 2;
+    final orbitRadius = outerCircle * 0.47;
+
+    return Transform.scale(
+      scale: scale,
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: outerCircle,
+              height: outerCircle,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFFE6AE33),
                   width: 4,
-                  height: index.isEven ? 18 : 12,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFECC97F),
-                    borderRadius: BorderRadius.circular(999),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFD99C1F).withOpacity(0.12),
+                    blurRadius: 28,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+            ),
+            ...List.generate(12, (index) {
+              final angle = (math.pi * 2 / 12) * index;
+              final dx = math.cos(angle) * orbitRadius;
+              final dy = math.sin(angle) * orbitRadius;
+              return Positioned(
+                left: center + dx - 2,
+                top: center + dy - 12,
+                child: Transform.rotate(
+                  angle: angle,
+                  child: Container(
+                    width: 4,
+                    height: index.isEven ? 18 : 12,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECC97F),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
                   ),
                 ),
+              );
+            }),
+            Positioned(
+              top: size * 0.11,
+              right: size * 0.15,
+              child: Icon(
+                Icons.nightlight_round,
+                color: const Color(0xFFE5A722),
+                size: size * 0.18,
               ),
-            );
-          }),
-          Positioned(
-            top: 38,
-            right: 54,
-            child: Icon(
-              Icons.nightlight_round,
-              color: const Color(0xFFE5A722),
-              size: 62,
             ),
-          ),
-          Positioned(
-            bottom: 30,
-            right: 48,
-            child: Icon(
-              Icons.mosque_rounded,
-              color: const Color(0xFFD9991A),
-              size: 90,
+            Positioned(
+              bottom: size * 0.09,
+              right: size * 0.14,
+              child: Icon(
+                Icons.mosque_rounded,
+                color: const Color(0xFFD9991A),
+                size: size * 0.26,
+              ),
             ),
-          ),
-          Container(
-            width: 170,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.92),
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFE2BC72).withOpacity(0.36),
-                  blurRadius: 28,
-                  offset: const Offset(0, 14),
-                ),
-              ],
+            Container(
+              width: cardWidth,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.92),
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFE2BC72).withOpacity(0.36),
+                    blurRadius: 28,
+                    offset: const Offset(0, 14),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              child: _HeroInnerCard(heroType: heroType),
             ),
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-            child: _HeroInnerCard(heroType: heroType),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -525,31 +598,38 @@ class _HeroInnerCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: const [
             _HeroCardHeader(title: 'Bugun'),
-            SizedBox(height: 10),
+            SizedBox(height: 6),
             _HeroPrayerRow(icon: Icons.nightlight_round, label: 'Imsak', time: '03:41'),
-            _HeroPrayerRow(
-              icon: Icons.wb_sunny_rounded,
-              label: 'Gunes',
-              time: '05:09',
-              active: true,
-            ),
+            _HeroPrayerRow(icon: Icons.wb_sunny_rounded, label: 'Gunes', time: '05:09'),
             _HeroPrayerRow(icon: Icons.light_mode_outlined, label: 'Ogle', time: '13:39'),
             _HeroPrayerRow(icon: Icons.wb_twilight_outlined, label: 'Ikindi', time: '17:09'),
-            _HeroPrayerRow(icon: Icons.brightness_4_outlined, label: 'Aksam', time: '20:01'),
-            _HeroPrayerRow(icon: Icons.dark_mode_outlined, label: 'Yatsi', time: '21:31'),
           ],
         );
       case _HeroType.notifications:
         return Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
-          children: const [
-            _HeroCardHeader(title: 'Hatirlatmalar'),
-            SizedBox(height: 12),
-            _HeroToggleRow(label: 'Sabah bildirimi', time: '20 dk once', enabled: true),
-            _HeroToggleRow(label: 'Ogle ezani', time: 'Vaktinde', enabled: true),
-            _HeroToggleRow(label: 'Aksam hatirlatma', time: '10 dk once', enabled: false),
-            SizedBox(height: 8),
-            _HeroMiniBadge(label: 'Sessiz gunler ve ozel ayarlar'),
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(26),
+              child: Image.asset(
+                'assets/images/icon3.jpg',
+                width: 88,
+                height: 88,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Ezanlar',
+              style: TextStyle(
+                color: Color(0xFF143D36),
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const _HeroMiniBadge(label: 'Bildirimlerini kolayca yonet'),
           ],
         );
       case _HeroType.explore:
@@ -557,12 +637,12 @@ class _HeroInnerCard extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: const [
             _HeroCardHeader(title: 'Kesfet'),
-            SizedBox(height: 12),
-            _HeroExploreRow(icon: Icons.explore_rounded, label: 'Kible yonu hazir'),
-            _HeroExploreRow(icon: Icons.mosque_rounded, label: 'Yakinda 12 cami'),
-            _HeroExploreRow(icon: Icons.location_city_rounded, label: 'Sehrin kaydedildi'),
             SizedBox(height: 8),
-            _HeroMiniBadge(label: 'Konumuna gore hizli erisim'),
+            _HeroExploreRow(icon: Icons.explore_rounded, label: 'Kible hazir'),
+            _HeroExploreRow(icon: Icons.mosque_rounded, label: '12 cami'),
+            _HeroExploreRow(icon: Icons.location_city_rounded, label: 'Sehir kayitli'),
+            SizedBox(height: 8),
+            _HeroMiniBadge(label: 'Hizli erisim'),
           ],
         );
     }
@@ -578,20 +658,18 @@ class _HeroCardHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const Icon(Icons.chevron_left_rounded, color: Color(0xFFB28118)),
-        const Icon(Icons.chevron_left_rounded, color: Color(0xFFB28118), size: 20),
+        const Icon(Icons.chevron_left_rounded, color: Color(0xFFB28118), size: 18),
         const Spacer(),
         Text(
           title,
           style: const TextStyle(
             color: Color(0xFFB28118),
             fontWeight: FontWeight.w900,
-            fontSize: 13,
+            fontSize: 12,
           ),
         ),
         const Spacer(),
-        const Icon(Icons.chevron_right_rounded, color: Color(0xFFB28118), size: 20),
-        const Icon(Icons.chevron_right_rounded, color: Color(0xFFB28118)),
+        const Icon(Icons.chevron_right_rounded, color: Color(0xFFB28118), size: 18),
       ],
     );
   }
@@ -602,57 +680,48 @@ class _HeroPrayerRow extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.time,
-    this.active = false,
   });
 
   final IconData icon;
   final String label;
   final String time;
-  final bool active;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: active ? const Color(0xFFFFF5DE) : Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
           Icon(
             icon,
-            size: 18,
-            color: active ? const Color(0xFFE2A62D) : const Color(0xFF4E565B),
+            size: 16,
+            color: const Color(0xFF4E565B),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Color(0xFF263238),
                 fontWeight: FontWeight.w600,
-                fontSize: 12,
+                fontSize: 11,
               ),
             ),
           ),
-          if (active)
-            Container(
-              width: 10,
-              height: 10,
-              margin: const EdgeInsets.only(right: 10),
-              decoration: const BoxDecoration(
-                color: Color(0xFFE2A62D),
-                shape: BoxShape.circle,
-              ),
-            ),
+          const SizedBox(width: 8),
           Text(
             time,
             style: const TextStyle(
               color: Color(0xFF263238),
               fontWeight: FontWeight.w700,
-              fontSize: 12,
+              fontSize: 11,
             ),
           ),
         ],
@@ -661,70 +730,62 @@ class _HeroPrayerRow extends StatelessWidget {
   }
 }
 
-class _HeroToggleRow extends StatelessWidget {
-  const _HeroToggleRow({
+class _HeroCompactTile extends StatelessWidget {
+  const _HeroCompactTile({
+    required this.icon,
     required this.label,
-    required this.time,
-    required this.enabled,
+    required this.value,
+    this.highlighted = false,
   });
 
+  final IconData icon;
   final String label;
-  final String time;
-  final bool enabled;
+  final String value;
+  final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 9),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFF0E6CF)),
+        color: highlighted ? const Color(0xFFFFF5DE) : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: highlighted ? const Color(0xFFF2D596) : const Color(0xFFF0E6CF),
+        ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+          Row(
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: const Color(0xFFE2A62D),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
                   label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Color(0xFF233137),
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  time,
-                  style: const TextStyle(
-                    color: Color(0xFF8B94A0),
                     fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-              ],
-            ),
-          ),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            width: 34,
-            height: 20,
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              color: enabled ? const Color(0xFFE2A62D) : const Color(0xFFD7DDE3),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            alignment: enabled ? Alignment.centerRight : Alignment.centerLeft,
-            child: Container(
-              width: 16,
-              height: 16,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
               ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(
+              color: highlighted ? const Color(0xFFB28118) : const Color(0xFF8B94A0),
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -745,22 +806,24 @@ class _HeroExploreRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 9),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+      margin: const EdgeInsets.only(bottom: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF9EB),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
-          Icon(icon, color: const Color(0xFFE2A62D), size: 18),
-          const SizedBox(width: 10),
+          Icon(icon, color: const Color(0xFFE2A62D), size: 15),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Color(0xFF233137),
-                fontSize: 11.5,
+                fontSize: 10.5,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -780,17 +843,17 @@ class _HeroMiniBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: const Color(0xFFF8ECD2),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
         label,
         textAlign: TextAlign.center,
         style: const TextStyle(
           color: Color(0xFFB28118),
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: FontWeight.w800,
         ),
       ),
@@ -817,6 +880,9 @@ class _OnboardingFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final widthScale =
+        (MediaQuery.of(context).size.width / 390).clamp(0.88, 1.08).toDouble();
+
     return Column(
       children: [
         Row(
@@ -825,9 +891,9 @@ class _OnboardingFooter extends StatelessWidget {
             final active = index == currentPage;
             return AnimatedContainer(
               duration: const Duration(milliseconds: 220),
-              margin: const EdgeInsets.symmetric(horizontal: 5),
-              width: active ? 30 : 12,
-              height: 12,
+              margin: EdgeInsets.symmetric(horizontal: 5 * widthScale),
+              width: active ? 30 * widthScale : 12 * widthScale,
+              height: 12 * widthScale,
               decoration: BoxDecoration(
                 color: active
                     ? const Color(0xFFE4A62D)
@@ -837,17 +903,20 @@ class _OnboardingFooter extends StatelessWidget {
             );
           }),
         ),
-        const SizedBox(height: 16),
-        Text(
-          welcomeLabel,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            color: Color(0xFFE2A62D),
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
+        SizedBox(height: 16 * widthScale),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            welcomeLabel,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: const Color(0xFFE2A62D),
+              fontSize: 16 * widthScale,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
-        const SizedBox(height: 18),
+        SizedBox(height: 18 * widthScale),
         SizedBox(
           width: double.infinity,
           child: FilledButton(
@@ -855,9 +924,9 @@ class _OnboardingFooter extends StatelessWidget {
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFFE9A82B),
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 22),
+              padding: EdgeInsets.symmetric(vertical: 20 * widthScale),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
+                borderRadius: BorderRadius.circular(28 * widthScale),
               ),
               elevation: 0,
             ),
@@ -875,13 +944,13 @@ class _OnboardingFooter extends StatelessWidget {
                     children: [
                       Text(
                         buttonLabel,
-                        style: const TextStyle(
-                          fontSize: 18,
+                        style: TextStyle(
+                          fontSize: 18 * widthScale,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                      const SizedBox(width: 14),
-                      const Icon(Icons.arrow_forward_rounded, size: 30),
+                      SizedBox(width: 14 * widthScale),
+                      Icon(Icons.arrow_forward_rounded, size: 30 * widthScale),
                     ],
                   ),
           ),

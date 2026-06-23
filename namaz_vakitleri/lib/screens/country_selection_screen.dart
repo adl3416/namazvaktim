@@ -186,6 +186,11 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen> {
   @override
   Widget build(BuildContext context) {
     final locale = context.read<AppSettings>().language;
+    final viewInsets = MediaQuery.of(context).viewInsets;
+    final keyboardVisible = viewInsets.bottom > 0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final widthScale = (screenWidth / 390).clamp(0.88, 1.16).toDouble();
+
     const backgroundTop = Color(0xFFF4F0FF);
     const backgroundBottom = Color(0xFFE9F0FF);
     const cardStart = Color(0xFFFFFCF6);
@@ -198,247 +203,433 @@ class _CountrySelectionScreenState extends State<CountrySelectionScreen> {
     return PopScope(
       canPop: widget.canPop,
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         backgroundColor: Colors.transparent,
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [backgroundTop, backgroundBottom],
-            ),
-          ),
-          child: SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-                  child: Row(
-                    children: [
-                      if (widget.canPop)
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.78),
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.arrow_back_rounded,
-                              color: titleColor,
-                            ),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ),
-                      if (widget.canPop) const SizedBox(width: 12),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 18,
-                            vertical: 14,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.78),
-                            borderRadius: BorderRadius.circular(28),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.9),
-                            ),
+        body: keyboardVisible
+            ? _buildKeyboardBody(
+                context: context,
+                locale: locale,
+                viewInsets: viewInsets,
+                titleColor: titleColor,
+                accentColor: accentColor,
+                bodyColor: bodyColor,
+                backgroundTop: backgroundTop,
+                backgroundBottom: backgroundBottom,
+                widthScale: widthScale,
+              )
+            : AnimatedPadding(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                padding: EdgeInsets.only(bottom: viewInsets.bottom),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [backgroundTop, backgroundBottom],
+                    ),
+                  ),
+                  child: SafeArea(
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            0,
+                            8 * widthScale,
+                            0,
+                            0,
                           ),
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(14),
-                                child: Image.asset(
-                                  'assets/images/icon3.jpg',
-                                  width: 34,
-                                  height: 34,
-                                  fit: BoxFit.cover,
+                              if (widget.canPop)
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.78),
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(
+                                      Icons.arrow_back_rounded,
+                                      color: titleColor,
+                                    ),
+                                    onPressed: () => Navigator.pop(context),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              const Text(
-                                'Ezanlar',
-                                style: TextStyle(
-                                  color: titleColor,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 22,
+                              if (widget.canPop) const SizedBox(width: 12),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 14,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.78),
+                                    borderRadius: BorderRadius.circular(28),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.9),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(14),
+                                        child: Image.asset(
+                                          'assets/images/icon3.jpg',
+                                      width: 34 * widthScale,
+                                      height: 34 * widthScale,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                      SizedBox(width: 12 * widthScale),
+                                      Flexible(
+                                        child: Text(
+                                          'Ezanlar',
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            color: titleColor,
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 22 * widthScale,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [cardStart, cardMid, cardEnd],
-                        ),
-                        borderRadius: BorderRadius.circular(34),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.92),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: accentColor.withOpacity(0.16),
-                            blurRadius: 30,
-                            offset: const Offset(0, 18),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
-                        child: Column(
-                          children: [
-                            if (!widget.canPop) ...[
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 10,
+                        Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              0,
+                              8 * widthScale,
+                              0,
+                              0,
+                            ),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [cardStart, cardMid, cardEnd],
                                 ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF7EBCF),
-                                  borderRadius: BorderRadius.circular(999),
-                                  border: Border.all(
-                                    color: const Color(0xFFE8C97E),
+                                borderRadius: BorderRadius.circular(0),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.92),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: accentColor.withOpacity(0.16),
+                                    blurRadius: 30,
+                                    offset: const Offset(0, 18),
                                   ),
+                                ],
+                              ),
+                              child: Padding(
+                                padding: EdgeInsets.fromLTRB(
+                                  20 * widthScale,
+                                  22 * widthScale,
+                                  20 * widthScale,
+                                  18 * widthScale,
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
+                                child: Column(
                                   children: [
-                                    const Icon(
-                                      Icons.public_rounded,
-                                      color: accentColor,
-                                      size: 22,
+                                    if (!widget.canPop) ...[
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 10,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF7EBCF),
+                                          borderRadius: BorderRadius.circular(999),
+                                          border: Border.all(
+                                            color: const Color(0xFFE8C97E),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(
+                                              Icons.public_rounded,
+                                              color: accentColor,
+                                              size: 22,
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Text(
+                                              AppLocalizations.translate(
+                                                'select_country',
+                                                locale,
+                                              ),
+                                              style: const TextStyle(
+                                                color: titleColor,
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      SizedBox(height: 18 * widthScale),
+                                      const Icon(
+                                        Icons.location_on_rounded,
+                                        color: accentColor,
+                                        size: 42,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        _text(
+                                          locale,
+                                          tr: 'Önce ülkenizi seçin',
+                                          en: 'Choose your country first',
+                                          ar: 'Choose your country first',
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: titleColor,
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.w900,
+                                          height: 1.16,
+                                        ),
+                                      ),
+                                      SizedBox(height: 12 * widthScale),
+                                      Text(
+                                        _text(
+                                          locale,
+                                          tr:
+                                              'Namaz vakitlerinin doğru gösterilmesi için önce ülkenizi, sonra şehrinizi seçin.',
+                                          en:
+                                              'Choose your country first, then your city, to see accurate prayer times.',
+                                          ar:
+                                              'Choose your country first, then your city, to see accurate prayer times.',
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          color: bodyColor,
+                                          fontSize: 16,
+                                          height: 1.5,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      SizedBox(height: 18 * widthScale),
+                                    ] else ...[
+                                      Text(
+                                        AppLocalizations.translate(
+                                          'select_country',
+                                          locale,
+                                        ),
+                                        style: TextStyle(
+                                          color: titleColor,
+                                          fontSize: 26 * widthScale,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                      SizedBox(height: 18 * widthScale),
+                                    ],
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withOpacity(0.92),
+                                        borderRadius: BorderRadius.circular(22 * widthScale),
+                                        border: Border.all(color: Colors.white),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: accentColor.withOpacity(0.08),
+                                            blurRadius: 20,
+                                            offset: const Offset(0, 10),
+                                          ),
+                                        ],
+                                      ),
+                                      child: TextField(
+                                        controller: _searchController,
+                                        autofocus: true,
+                                        decoration: InputDecoration(
+                                          hintText: _text(
+                                            locale,
+                                            tr: 'Ülke ara...',
+                                            en: 'Search country...',
+                                            ar: 'Search country...',
+                                          ),
+                                          hintStyle: const TextStyle(color: bodyColor),
+                                          prefixIcon: const Icon(
+                                            Icons.search_rounded,
+                                            color: accentColor,
+                                          ),
+                                          border: InputBorder.none,
+                                          contentPadding: const EdgeInsets.symmetric(
+                                            horizontal: 6,
+                                            vertical: 18,
+                                          ),
+                                        ),
+                                        style: const TextStyle(
+                                          color: titleColor,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                        onChanged: (_) => setState(() {}),
+                                      ),
                                     ),
-                                    const SizedBox(width: 10),
-                                    Text(
-                                      AppLocalizations.translate(
-                                        'select_country',
-                                        locale,
-                                      ),
-                                      style: const TextStyle(
-                                        color: titleColor,
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 16,
-                                      ),
+                                    SizedBox(height: 14 * widthScale),
+                                    Expanded(
+                                      child: _buildBody(locale: locale),
                                     ),
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 18),
-                              const Icon(
-                                Icons.location_on_rounded,
-                                color: accentColor,
-                                size: 42,
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                _text(
-                                  locale,
-                                  tr: 'Önce ülkenizi seçin',
-                                  en: 'Choose your country first',
-                                  ar: 'Choose your country first',
-                                ),
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: titleColor,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w900,
-                                  height: 1.16,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                _text(
-                                  locale,
-                                  tr:
-                                      'Namaz vakitlerinin doğru gösterilmesi için önce ülkenizi, sonra şehrinizi seçin.',
-                                  en:
-                                      'Choose your country first, then your city, to see accurate prayer times.',
-                                  ar:
-                                      'Choose your country first, then your city, to see accurate prayer times.',
-                                ),
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: bodyColor,
-                                  fontSize: 16,
-                                  height: 1.5,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-                            ] else ...[
-                              Text(
-                                AppLocalizations.translate(
-                                  'select_country',
-                                  locale,
-                                ),
-                                style: const TextStyle(
-                                  color: titleColor,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-                            ],
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.92),
-                                borderRadius: BorderRadius.circular(22),
-                                border: Border.all(color: Colors.white),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: accentColor.withOpacity(0.08),
-                                    blurRadius: 20,
-                                    offset: const Offset(0, 10),
-                                  ),
-                                ],
-                              ),
-                              child: TextField(
-                                controller: _searchController,
-                                autofocus: true,
-                                decoration: InputDecoration(
-                                  hintText: _text(
-                                    locale,
-                                    tr: 'Ülke ara...',
-                                    en: 'Search country...',
-                                    ar: 'Search country...',
-                                  ),
-                                  hintStyle: const TextStyle(color: bodyColor),
-                                  prefixIcon: const Icon(
-                                    Icons.search_rounded,
-                                    color: accentColor,
-                                  ),
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 18,
-                                  ),
-                                ),
-                                style: const TextStyle(
-                                  color: titleColor,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                onChanged: (_) => setState(() {}),
-                              ),
                             ),
-                            const SizedBox(height: 18),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildKeyboardBody({
+    required BuildContext context,
+    required String locale,
+    required EdgeInsets viewInsets,
+    required Color titleColor,
+    required Color accentColor,
+    required Color bodyColor,
+    required Color backgroundTop,
+    required Color backgroundBottom,
+    required double widthScale,
+  }) {
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: viewInsets.bottom),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [backgroundTop, backgroundBottom],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              16 * widthScale,
+              10 * widthScale,
+              16 * widthScale,
+              12 * widthScale,
+            ),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    if (widget.canPop)
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.82),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.arrow_back_rounded,
+                            color: titleColor,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ),
+                    if (widget.canPop) SizedBox(width: 10 * widthScale),
+                    Expanded(
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 14 * widthScale,
+                          vertical: 12 * widthScale,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          borderRadius: BorderRadius.circular(22),
+                          border: Border.all(color: Colors.white),
+                        ),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.asset(
+                                'assets/images/icon3.jpg',
+                            width: 28 * widthScale,
+                            height: 28 * widthScale,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                            SizedBox(width: 10 * widthScale),
                             Expanded(
-                              child: _buildBody(locale: locale),
+                              child: Text(
+                                _text(
+                                  locale,
+                                  tr: 'Ülke seç',
+                                  en: 'Choose country',
+                                  ar: 'Choose country',
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: titleColor,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
                             ),
                           ],
                         ),
                       ),
                     ),
+                  ],
+                ),
+                SizedBox(height: 12 * widthScale),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.94),
+                    borderRadius: BorderRadius.circular(22 * widthScale),
+                    border: Border.all(color: Colors.white),
+                    boxShadow: [
+                      BoxShadow(
+                        color: accentColor.withOpacity(0.08),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
+                  child: TextField(
+                    controller: _searchController,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: _text(
+                        locale,
+                        tr: 'Ülke ara...',
+                        en: 'Search country...',
+                        ar: 'Search country...',
+                      ),
+                      hintStyle: TextStyle(color: bodyColor.withOpacity(0.95)),
+                      prefixIcon: Icon(
+                        Icons.search_rounded,
+                        color: accentColor,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 18,
+                      ),
+                    ),
+                    style: TextStyle(
+                      color: titleColor,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                SizedBox(height: 12 * widthScale),
+                Expanded(
+                  child: _buildBody(locale: locale),
                 ),
               ],
             ),

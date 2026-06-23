@@ -328,25 +328,26 @@ class _DistrictSelectionScreenState extends State<DistrictSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final locale = context.read<AppSettings>().language;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+      backgroundColor: const Color(0xFFF4F0FF),
       appBar: AppBar(
-        backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+        backgroundColor: const Color(0xFFF4F0FF),
         elevation: 0,
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+          icon: const Icon(
+            Icons.arrow_back_rounded,
+            color: Color(0xFF143D36),
           ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           _levelTitle(locale),
-          style: AppTypography.h3.copyWith(
-            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+          style: const TextStyle(
+            color: Color(0xFF143D36),
+            fontSize: 21,
+            fontWeight: FontWeight.w900,
           ),
         ),
       ),
@@ -360,29 +361,38 @@ class _DistrictSelectionScreenState extends State<DistrictSelectionScreen> {
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
                 hintText: _inputHint(locale),
+                hintStyle: const TextStyle(color: Color(0xFF6D7684)),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  color: Color(0xFFE0A52C),
+                ),
+                filled: true,
+                fillColor: Colors.white,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  borderRadius: BorderRadius.circular(22),
+                  borderSide: BorderSide.none,
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  borderSide: BorderSide(
-                    color: isDark ? AppColors.darkDivider : AppColors.divider,
-                  ),
+                  borderRadius: BorderRadius.circular(22),
+                  borderSide: BorderSide.none,
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                  borderSide: BorderSide(
-                    color: isDark
-                        ? AppColors.darkAccentPrimary
-                        : AppColors.accentPrimary,
-                    width: 2,
+                  borderRadius: BorderRadius.circular(22),
+                  borderSide: const BorderSide(
+                    color: Color(0xFFE0A52C),
+                    width: 1.6,
                   ),
                 ),
+              ),
+              style: const TextStyle(
+                color: Color(0xFF143D36),
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: _buildBody(isDark: isDark, locale: locale),
+              child: _buildBody(locale: locale),
             ),
             const SizedBox(height: 12),
             SizedBox(
@@ -404,14 +414,11 @@ class _DistrictSelectionScreenState extends State<DistrictSelectionScreen> {
   }
 
   Widget _buildBody({
-    required bool isDark,
     required String locale,
   }) {
     if (_isLoading) {
-      return Center(
-        child: CircularProgressIndicator(
-          color: isDark ? AppColors.darkAccentPrimary : AppColors.accentPrimary,
-        ),
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFFE0A52C)),
       );
     }
 
@@ -462,30 +469,45 @@ class _DistrictSelectionScreenState extends State<DistrictSelectionScreen> {
       itemCount: filtered.length,
       itemBuilder: (context, index) {
         final item = filtered[index];
-        return ListTile(
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.xs,
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.94),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: Colors.white),
           ),
-          title: Text(
-            _displayLookupName(item),
-            style: AppTypography.bodyMedium.copyWith(
-              color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+          child: ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+            title: Text(
+              _displayLookupName(item),
+              style: const TextStyle(
+                color: Color(0xFF143D36),
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
             ),
-          ),
-          subtitle: Text(
-            item.name,
-            style: AppTypography.bodySmall.copyWith(
-              color: isDark
-                  ? AppColors.darkTextSecondary
-                  : AppColors.textSecondary,
+            subtitle: Text(
+              item.name,
+              style: const TextStyle(
+                color: Color(0xFF6D7684),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          onTap: _isSelecting ? null : () => _selectItem(item),
-          trailing: Icon(
-            Icons.location_on,
-            size: 16,
-            color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+            onTap: _isSelecting ? null : () => _selectItem(item),
+            trailing: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8E8BF),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.location_on_rounded,
+                size: 18,
+                color: Color(0xFFE0A52C),
+              ),
+            ),
           ),
         );
       },

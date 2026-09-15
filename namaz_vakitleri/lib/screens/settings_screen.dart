@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:in_app_update/in_app_update.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -306,6 +307,11 @@ class SettingsScreen extends StatelessWidget {
                           ),
                           onTap: () => _shareApp(locale),
                         ),
+                        const SizedBox(height: 8),
+                        _PlayStoreUpdateButton(
+                          locale: locale,
+                          isDark: isDark,
+                        ),
                         const SizedBox(height: 10),
                         Container(
                           width: double.infinity,
@@ -371,6 +377,277 @@ class SettingsScreen extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _PlayStoreUpdateButton extends StatefulWidget {
+  const _PlayStoreUpdateButton({
+    required this.locale,
+    required this.isDark,
+  });
+
+  final String locale;
+  final bool isDark;
+
+  @override
+  State<_PlayStoreUpdateButton> createState() => _PlayStoreUpdateButtonState();
+}
+
+class _PlayStoreUpdateButtonState extends State<_PlayStoreUpdateButton> {
+  bool _isChecking = true;
+  bool _isUpdating = false;
+  bool _hasUpdate = false;
+  String? _statusMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkForUpdate();
+  }
+
+  String _text({
+    required String tr,
+    required String en,
+    required String ar,
+    String? de,
+  }) {
+    switch (widget.locale) {
+      case 'tr':
+        return tr;
+      case 'de':
+        return de ?? en;
+      case 'ar':
+        return ar;
+      default:
+        return en;
+    }
+  }
+
+  Future<void> _checkForUpdate() async {
+    try {
+      final info = await InAppUpdate.checkForUpdate();
+      if (!mounted) return;
+      setState(() {
+        _hasUpdate =
+            info.updateAvailability == UpdateAvailability.updateAvailable;
+        _statusMessage = null;
+        _isChecking = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _hasUpdate = false;
+        _statusMessage = _text(
+          tr: 'Guncelleme bilgisi alinamadi',
+          en: 'Could not check for updates',
+          ar: 'تعذر التحقق من التحديثات',
+          de: 'Update-Prufung fehlgeschlagen',
+        );
+        _isChecking = false;
+      });
+    }
+  }
+
+  Future<void> _startUpdate() async {
+    if (!_hasUpdate || _isUpdating) return;
+
+    setState(() {
+      _isUpdating = true;
+      _statusMessage = null;
+    });
+
+    try {
+      await InAppUpdate.performImmediateUpdate();
+      if (!mounted) return;
+      setState(() {
+        _statusMessage = _text(
+          tr: 'Guncelleme baslatildi',
+          en: 'Update started',
+          ar: 'بدأ التحديث',
+          de: 'Update gestartet',
+        );
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _statusMessage = _text(
+          tr: 'Guncelleme baslatilamadi',
+          en: 'Update could not be started',
+          ar: 'تعذر بدء التحديث',
+          de: 'Update konnte nicht gestartet werden',
+        );
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isUpdating = false;
+      });
+      await _checkForUpdate();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasUpdate = _hasUpdate;
+    final buttonColor =
+        hasUpdate
+            ? const Color(0xFF2563EB)
+            : (widget.isDark
+                ? const Color(0xFF243041)
+                : const Color(0xFFF2E8D8));
+    final borderColor =
+        hasUpdate
+            ? const Color(0xFF60A5FA)
+            : (widget.isDark
+                ? Colors.white.withOpacity(0.10)
+                : const Color(0xFFE6D5B8));
+    final titleColor =
+        hasUpdate
+            ? Colors.white
+            : (widget.isDark
+                ? AppColors.darkTextPrimary
+                : const Color(0xFF184B43));
+    final subtitleColor =
+        hasUpdate
+            ? Colors.white.withOpacity(0.82)
+            : (widget.isDark
+                ? AppColors.darkTextSecondary
+                : const Color(0xFF7B6A57));
+
+    final title =
+        _isChecking
+            ? _text(
+              tr: 'Guncellemeler kontrol ediliyor',
+              en: 'Checking for updates',
+              ar: 'جارٍ التحقق من التحديثات',
+              de: 'Updates werden gepruft',
+            )
+            : hasUpdate
+            ? _text(
+              tr: 'Uygulamayi guncelle',
+              en: 'Update the app',
+              ar: 'حدّث التطبيق',
+              de: 'App aktualisieren',
+            )
+            : _text(
+              tr: 'Uygulama guncel',
+              en: 'App is up to date',
+              ar: 'التطبيق محدث',
+              de: 'App ist aktuell',
+            );
+
+    final subtitle =
+        _statusMessage ??
+        (hasUpdate
+            ? _text(
+              tr: 'Play Store uzerinden yeni surumu simdi yukle',
+              en: 'Install the latest version from Play Store now',
+              ar: 'ثبّت أحدث إصدار من متجر Play الآن',
+              de: 'Installiere jetzt die neueste Version aus dem Play Store',
+            )
+            : _text(
+              tr: 'Yeni bir surum yayinlandiginda bu buton mavi olur',
+              en: 'This button turns blue when a new version is published',
+              ar: 'سيتحول هذا الزر إلى الأزرق عند توفر إصدار جديد',
+              de: 'Dieser Button wird blau, sobald eine neue Version erscheint',
+            ));
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: hasUpdate && !_isChecking && !_isUpdating ? _startUpdate : null,
+        borderRadius: BorderRadius.circular(20),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          decoration: BoxDecoration(
+            color: buttonColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: borderColor),
+            boxShadow: [
+              BoxShadow(
+                color:
+                    hasUpdate
+                        ? const Color(0xFF2563EB).withOpacity(0.22)
+                        : Colors.black.withOpacity(widget.isDark ? 0.16 : 0.05),
+                blurRadius: hasUpdate ? 22 : 14,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color:
+                      hasUpdate
+                          ? Colors.white.withOpacity(0.16)
+                          : (widget.isDark
+                              ? Colors.white.withOpacity(0.06)
+                              : Colors.white.withOpacity(0.78)),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child:
+                    _isChecking || _isUpdating
+                        ? Padding(
+                          padding: const EdgeInsets.all(13),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.4,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              titleColor,
+                            ),
+                          ),
+                        )
+                        : Icon(
+                          hasUpdate
+                              ? Icons.system_update_alt_rounded
+                              : Icons.verified_rounded,
+                          color: titleColor,
+                          size: 26,
+                        ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: titleColor,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: subtitleColor,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Icon(
+                hasUpdate
+                    ? Icons.arrow_forward_rounded
+                    : Icons.check_circle_rounded,
+                color: titleColor,
+                size: 24,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -4,21 +4,53 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/prayer_widget_background"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="8dp">
+    android:orientation="vertical">
+
+    <FrameLayout
+        android:id="@+id/widget_header_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <ImageView
+            android:id="@+id/widget_header_background"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitXY"
+            android:src="@drawable/prayer_widget_header_default" />
+
+        <TextView
+            android:id="@+id/widget_header_city"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="1"
+            android:paddingLeft="8dp"
+            android:paddingTop="12dp"
+            android:paddingRight="8dp"
+            android:paddingBottom="12dp"
+            android:text="İstanbul"
+            android:textColor="#FFFDF8"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_header_date"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:visibility="gone" />
+    </FrameLayout>
 
     <LinearLayout
         android:id="@+id/widget_next_card"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_margin="3dp"
+        android:layout_weight="1"
         android:background="@drawable/prayer_widget_next_card"
         android:gravity="center"
         android:orientation="vertical"
-        android:paddingLeft="8dp"
-        android:paddingTop="8dp"
-        android:paddingRight="8dp"
-        android:paddingBottom="8dp">
+        android:padding="2dp">
 
         <TextView
             android:id="@+id/widget_next_name"
@@ -26,47 +58,40 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:gravity="center"
+            android:includeFontPadding="false"
             android:maxLines="1"
-            android:singleLine="true"
-            android:text="İkindiye kalan"
+            android:text="İkindiye"
             android:textColor="#205A54"
-            android:textSize="17sp"
+            android:textSize="22sp"
+            android:translationY="-6dp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/widget_next_time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="1dp"
             android:gravity="center"
+            android:includeFontPadding="false"
+            android:maxLines="1"
             android:text="14 dk"
             android:textColor="#2E8B57"
-            android:textSize="24sp"
+            android:textSize="30sp"
+            android:translationY="-6dp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/widget_countdown"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/widget_header_city"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/widget_header_date"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:visibility="gone" />
-
-        <LinearLayout
-            android:id="@+id/widget_header_container"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:visibility="gone" />
+            android:layout_marginTop="3dp"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="İkindi: 16:59"
+            android:textColor="#6B5A3A"
+            android:textSize="13sp"
+            android:visibility="visible" />
 
         <LinearLayout
             android:id="@+id/widget_prayer_list"

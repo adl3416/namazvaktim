@@ -408,19 +408,17 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           ),
           Expanded(
             child: Center(
-              child: _buildIconButton(
+              child: _buildAdhanSwitch(
                 isDark: isDark,
                 isActive: _azanSoundEnabled[prayerName] ?? false,
-                icon: Icons.volume_up_outlined,
-                onTap: () async {
-                  final newValue = !(_azanSoundEnabled[prayerName] ?? false);
+                onChanged: (value) async {
                   setState(() {
-                    _azanSoundEnabled[prayerName] = newValue;
+                    _azanSoundEnabled[prayerName] = value;
                   });
                   final settings = context.read<AppSettings>();
-                  await settings.setPrayerSound(prayerName, newValue);
+                  await settings.setPrayerSound(prayerName, value);
                   await context.read<PrayerProvider>().rescheduleNotifications();
-                  if (newValue) {
+                  if (value) {
                     await NotificationService.checkAndRequestCriticalPermissions();
                   }
                 },
@@ -518,7 +516,9 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           alignment: Alignment.center,
           children: [
             Icon(
-              Icons.notifications_outlined,
+              isActive
+                  ? Icons.notifications_active_rounded
+                  : Icons.notifications_off_rounded,
               size: 18,
               color:
                   isActive
@@ -594,39 +594,29 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     );
   }
 
-  Widget _buildIconButton({
+  Widget _buildAdhanSwitch({
     required bool isDark,
     required bool isActive,
-    required IconData icon,
-    required VoidCallback onTap,
+    required ValueChanged<bool> onChanged,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color:
-              isActive
-                  ? _accentColor(isDark).withOpacity(0.18)
-                  : (isDark
-                      ? Colors.white.withOpacity(0.06)
-                      : Colors.black.withOpacity(0.05)),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color:
-                isActive
-                    ? _accentColor(isDark).withOpacity(0.35)
-                    : _borderColor(isDark),
-          ),
-        ),
-        child: Icon(
-          icon,
-          size: 18,
-          color:
-              isActive
-                  ? _accentColor(isDark)
-                  : (isDark ? AppColors.darkTextLight : AppColors.textLight),
+    final activeColor = isDark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB);
+    final inactiveThumbColor = isDark ? Colors.white70 : Colors.white;
+    final inactiveTrackColor =
+        isDark ? Colors.white.withOpacity(0.18) : const Color(0xFFD7DFEC);
+
+    return SizedBox(
+      width: 52,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Switch(
+          value: isActive,
+          onChanged: onChanged,
+          activeColor: Colors.white,
+          activeTrackColor: activeColor,
+          inactiveThumbColor: inactiveThumbColor,
+          inactiveTrackColor: inactiveTrackColor,
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          splashRadius: 18,
         ),
       ),
     );

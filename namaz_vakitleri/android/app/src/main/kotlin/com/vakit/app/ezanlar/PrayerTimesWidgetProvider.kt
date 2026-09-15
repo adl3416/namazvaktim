@@ -8,6 +8,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -20,6 +21,7 @@ import android.widget.RemoteViews
 import org.json.JSONArray
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -106,7 +108,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             val language = prefs.getString(KEY_LANGUAGE, "tr") ?: "tr"
             val storedActivePrayerName = prefs.getString(KEY_ACTIVE_PRAYER_NAME, null)
             val prayersJson = prefs.getString(KEY_PRAYERS_JSON, "[]") ?: "[]"
-            val prayers = parsePrayers(prayersJson)
+            val prayers = prayersForCurrentDay(parsePrayers(prayersJson))
             val nextPrayer = findNextPrayer(prayers)
             val nextPrayerName = nextPrayer?.name
             val activePrayerName = findActivePrayerName(prayers) ?: storedActivePrayerName
@@ -119,8 +121,9 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             val isSingleRowHeight = isSingleRowHeightWidget(widgetOptions)
             val isSingleColumnWidth = isSingleColumnWidthWidget(widgetOptions)
             val isTiny = isTinyWidget(widgetOptions)
+            val useCompactLayout = isCompact || isTiny
 
-            val layoutId = if (isTiny) {
+            val layoutId = if (useCompactLayout) {
                 R.layout.prayer_times_widget_compact
             } else {
                 R.layout.prayer_times_widget
@@ -131,26 +134,26 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_header_date, dateLabel)
             views.setViewVisibility(
                 R.id.widget_header_city,
-                if (isSingleRowHeight || isSingleColumnWidth || isTiny) View.GONE else View.VISIBLE
+                View.VISIBLE
             )
             views.setViewVisibility(
                 R.id.widget_header_container,
-                if (isSingleRowHeight || isSingleColumnWidth || isTiny) View.GONE else View.VISIBLE
+                View.VISIBLE
             )
             views.setViewVisibility(
                 R.id.widget_header_date,
-                if (isSingleRowHeight || isSingleColumnWidth || isTiny) View.GONE else View.VISIBLE
+                if (useCompactLayout) View.GONE else View.VISIBLE
             )
 
-            if (!isTiny) {
-                views.setImageViewResource(
-                    R.id.widget_header_background,
-                    resolvePrayerHeaderBackground(activePrayerName ?: nextPrayerName)
-                )
-            }
+            views.setImageViewResource(
+                R.id.widget_header_background,
+                resolvePrayerHeaderBackground(activePrayerName ?: nextPrayerName)
+            )
 
-            bindNextPrayerCard(views, nextPrayer, language, isTiny)
-            bindPrayerRows(views, visiblePrayers, nextPrayerName, isCompact || isTiny)
+            bindNextPrayerCard(views, nextPrayer, language, useCompactLayout)
+            if (!useCompactLayout) {
+                bindPrayerRows(views, visiblePrayers, nextPrayerName, false)
+            }
             applyTextSizing(
                 views = views,
                 isCompact = isCompact,
@@ -192,10 +195,14 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
                 nextPrayer?.let { formatRemainingStyled(it.remainingMillis) } ?: "--"
             )
             views.setViewVisibility(R.id.widget_next_name, View.VISIBLE)
-            views.setViewVisibility(R.id.widget_countdown, if (isTiny) View.GONE else View.VISIBLE)
+            views.setViewVisibility(R.id.widget_countdown, View.VISIBLE)
             views.setTextViewText(
                 R.id.widget_countdown,
-                nextPrayer?.let { "Saat ${it.timeLabel} ${it.displayLabel} vakti" } ?: "Saat --:--"
+                if (isTiny) {
+                    nextPrayer?.let { "${it.displayLabel}: ${it.timeLabel}" } ?: "--:--"
+                } else {
+                    nextPrayer?.let { "Saat ${it.timeLabel}" } ?: "Saat --:--"
+                }
             )
         }
 
@@ -247,13 +254,14 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
         ) {
             when {
                 isTiny -> {
-                    views.setTextViewTextSize(R.id.widget_next_name, TypedValue.COMPLEX_UNIT_SP, 17f)
-                    views.setTextViewTextSize(R.id.widget_next_time, TypedValue.COMPLEX_UNIT_SP, 22f)
+                    views.setTextViewTextSize(R.id.widget_next_name, TypedValue.COMPLEX_UNIT_SP, 18f)
+                    views.setTextViewTextSize(R.id.widget_next_time, TypedValue.COMPLEX_UNIT_SP, 23f)
+                    views.setTextViewTextSize(R.id.widget_countdown, TypedValue.COMPLEX_UNIT_SP, 11f)
                 }
                 isCompact || isSingleColumnWidth -> {
-                    views.setTextViewTextSize(R.id.widget_next_name, TypedValue.COMPLEX_UNIT_SP, 15f)
-                    views.setTextViewTextSize(R.id.widget_next_time, TypedValue.COMPLEX_UNIT_SP, 24f)
-                    views.setTextViewTextSize(R.id.widget_countdown, TypedValue.COMPLEX_UNIT_SP, 11f)
+                    views.setTextViewTextSize(R.id.widget_next_name, TypedValue.COMPLEX_UNIT_SP, 22f)
+                    views.setTextViewTextSize(R.id.widget_next_time, TypedValue.COMPLEX_UNIT_SP, 30f)
+                    views.setTextViewTextSize(R.id.widget_countdown, TypedValue.COMPLEX_UNIT_SP, 13f)
                 }
                 isSingleRowHeight -> {
                     views.setTextViewTextSize(R.id.widget_next_name, TypedValue.COMPLEX_UNIT_SP, 15f)
@@ -280,6 +288,48 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
             }
 
             return prayers
+        }
+
+        /**
+         * Flutter normally stores today and tomorrow in the widget preferences. If the
+         * application is not opened for several days, however, every stored timestamp
+         * is in the past. Treat the newest stored day as a time-of-day template for
+         * today so the native widget can still advance through the prayers instead of
+         * rolling only the first prayer (Fajr) forward.
+         *
+         * The times may drift by a few minutes until Flutter fetches fresh data, but
+         * the selected prayer and countdown remain useful and, most importantly, do
+         * not stay stuck on Fajr all day.
+         */
+        private fun prayersForCurrentDay(prayers: List<WidgetPrayer>): List<WidgetPrayer> {
+            if (prayers.isEmpty()) return prayers
+
+            val today = LocalDate.now()
+            val datedPrayers = prayers.mapNotNull { prayer ->
+                prayer.zonedDateTime?.let { dateTime -> prayer to dateTime }
+            }
+            if (datedPrayers.isEmpty()) return prayers
+
+            if (datedPrayers.any { (_, dateTime) -> dateTime.toLocalDate() == today }) {
+                return prayers.sortedBy { it.timestamp }
+            }
+
+            val newestStoredDate = datedPrayers.maxOf { (_, dateTime) -> dateTime.toLocalDate() }
+            if (!newestStoredDate.isBefore(today)) {
+                return prayers.sortedBy { it.timestamp }
+            }
+
+            return datedPrayers
+                .filter { (_, dateTime) -> dateTime.toLocalDate() == newestStoredDate }
+                .map { (prayer, dateTime) ->
+                    val projectedDateTime = ZonedDateTime.of(
+                        today,
+                        dateTime.toLocalTime(),
+                        dateTime.zone,
+                    )
+                    prayer.copy(isoTime = projectedDateTime.toOffsetDateTime().toString())
+                }
+                .sortedBy { it.timestamp }
         }
 
         private fun findNextPrayer(prayers: List<WidgetPrayer>): WidgetPrayer? {
@@ -485,11 +535,33 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
                 ((now / 60000) + 1) * 60000
             }
 
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                updateAt,
-                widgetUpdatePendingIntent(context)
-            )
+            val pendingIntent = widgetUpdatePendingIntent(context)
+            try {
+                if (
+                    Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                    alarmManager.canScheduleExactAlarms()
+                ) {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        updateAt,
+                        pendingIntent,
+                    )
+                } else {
+                    alarmManager.setAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        updateAt,
+                        pendingIntent,
+                    )
+                }
+            } catch (_: SecurityException) {
+                // Exact alarm access can be revoked after installation. Keep the
+                // update chain alive with an inexact alarm in that case.
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    updateAt,
+                    pendingIntent,
+                )
+            }
         }
 
         private fun cancelWidgetUpdate(context: Context) {
@@ -502,7 +574,7 @@ class PrayerTimesWidgetProvider : AppWidgetProvider() {
         private fun getNextPrayer(context: Context): WidgetPrayer? {
             val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val prayersJson = prefs.getString(KEY_PRAYERS_JSON, "[]") ?: "[]"
-            val prayers = parsePrayers(prayersJson)
+            val prayers = prayersForCurrentDay(parsePrayers(prayersJson))
             return findNextPrayer(prayers)
         }
 

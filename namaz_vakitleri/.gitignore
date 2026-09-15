@@ -47,5 +47,6 @@ app.*.map.json
 # Signing - keystore ve şifreler git'e gitmemeli
 /android/key.properties
 /android/upload-keystore.jks
+playstore_guncelleme_bilgileri.md
 *.jks
 *.keystore
